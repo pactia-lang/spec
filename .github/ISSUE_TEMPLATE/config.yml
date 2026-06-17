@@ -1,0 +1,14 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Compiler (pactiac)
+    url: https://github.com/pactia-lang/pactiac/issues
+    about: Parser, lowering, CLI — implementation, not normative spec text
+  - name: Package manager (kabol)
+    url: https://github.com/pactia-lang/kabol/issues
+    about: kabol.toml, kabol.lock, registry resolve — not normative spec text
+  - name: Editor extension (vscode-pactia)
+    url: https://github.com/pactia-lang/vscode-pactia/issues
+    about: Syntax highlighting and grammar — not normative spec text
+  - name: Examples
+    url: https://github.com/pactia-lang/examples/issues
+    about: Sample programs and workspaces — not normative spec text

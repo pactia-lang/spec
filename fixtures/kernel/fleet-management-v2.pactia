@@ -1,0 +1,400 @@
+// Pactia 1.0 — Fleet Management
+// Canonical tag syntax reference — keep in sync with spec/fixtures/kernel/fleet-management-v2.pactia
+
+pactia 1.0
+
+use @pactia/protocol-rest;
+use @pactia/rust-anb;
+
+product FleetManagement {
+  > Platform for tracking vehicles and managing fleets
+
+  @stack rust-anb { }
+
+  @topology {
+    mode: microservices,
+  }
+
+  @tenancy {
+    mode: single,
+  }
+
+  @guide {
+    > All services follow clean architecture: api → application → domain → infrastructure
+    > Handlers must map errors to the platform error envelope before returning
+    > Never log JWT tokens, secrets, or fields marked @pii
+    > Every list endpoint uses cursor pagination — not offset
+  }
+
+  module fleet {
+
+    define template fleet_list(path, ListDto) {
+      @auth { roles: [Customer, Admin] }
+      #[list]
+      #[paginated]
+      #[owner]
+      @returns ListDto
+      @errors { names: [Forbidden] }
+      @rest list {
+        method: GET,
+        path: path,
+
+        #[a11y(WCAG_AA)]
+        @web vehicle_list {
+          @screen { id: vehicle_list }
+          @route { path: "/fleet/vehicles" }
+          > Customer browses their vehicles in a paginated table
+        }
+
+        @ios vehicle_list {
+          @screen { id: vehicle_list }
+          @nav { tab: FleetTab }
+          > Customer scrolls fleet on phone with pull-to-refresh
+        }
+      }
+    }
+
+    @actor admins {
+      role: Admin,
+      capabilities: [manage_fleets, manage_users],
+    }
+
+    @actor customers {
+      role: Customer,
+      capabilities: [track_vehicles, view_history],
+    }
+
+    @rule single_customer {
+      statement: "Vehicles belong to exactly one customer",
+    }
+
+    @rule gps_retention {
+      statement: "GPS position history must be stored indefinitely",
+    }
+
+    @rule admin_only_register {
+      statement: "Only admins may register or decommission vehicles",
+    }
+
+    @rule device_required {
+      statement: "A vehicle must have an active device before GPS ingestion is accepted",
+    }
+
+    > Single-region deployment for MVP — no real-time streaming required
+
+    @observe fleet_slos {
+      slos: [
+        { service: FleetService, metric: error_rate, target: "< 1%" },
+        { service: FleetService, metric: availability, target: "99.9%" },
+      ],
+    }
+
+    @deploy fleet {
+      @environment staging {
+        replicas: 2,
+        region: "eu-west-1",
+      },
+      @environment production {
+        replicas: 3,
+        region: "eu-west-1",
+      },
+      @gate production {
+        scenarios: pass,
+        coverage: ">= 80%",
+      },
+    }
+
+    @security fleet {
+      > All admin mutations must be audit-logged
+    }
+
+    @config backend {
+      DATABASE_URL: {
+        required: true,
+        description: "PostgreSQL connection string",
+      },
+      GPS_DEVICE_API_KEY: {
+        secret: true,
+        required: true,
+        description: "Inbound device API key",
+      },
+      JWT_PUBLIC_KEY: {
+        secret: true,
+        required: true,
+        description: "RSA public key for token verification",
+      },
+      LOG_LEVEL: {
+        required: false,
+        default: "info",
+        description: "Log verbosity",
+      },
+    }
+
+    @errorCatalog platform {
+      NotFound: {
+        status: 404,
+        code: RESOURCE_NOT_FOUND,
+        message: "The requested resource does not exist",
+      },
+      Forbidden: {
+        status: 403,
+        code: ACCESS_DENIED,
+        message: "Actor lacks permission",
+      },
+      ValidationFailed: {
+        status: 422,
+        code: INVALID_INPUT,
+        message: "Request failed validation",
+      },
+      Conflict: {
+        status: 409,
+        code: ALREADY_EXISTS,
+        message: "VIN already registered",
+      },
+      DeviceUnknown: {
+        status: 404,
+        code: DEVICE_NOT_FOUND,
+        message: "No vehicle for this device",
+      },
+    }
+
+    @event vehicle.created {
+      payload: VehicleCreatedPayload,
+      handler: NotificationService.onVehicleCreated,
+      > Fired when a vehicle is registered in the platform
+    }
+
+    @event position.received {
+      payload: GpsIngestRequest,
+      handler: NotificationService.onPositionReceived,
+      > Fired when a GPS device pushes a valid position update
+    }
+
+    data {
+      @enum VehicleStatus {
+        values: [ACTIVE, INACTIVE, DECOMMISSIONED],
+      }
+
+      @entity VehicleListItem {
+        id: uuid,
+        label: string,
+        status: VehicleStatus,
+        vin: string,
+      }
+
+      @entity VehicleListResponse {
+        vehicles: VehicleListItem[],
+        @nullable
+        nextCursor: string,
+      }
+
+      @entity VehicleDetailResponse {
+        id: uuid,
+        customerId: uuid,
+        label: string,
+        status: VehicleStatus,
+        vin: string,
+      }
+
+      @entity CreateVehicleRequest {
+        customerId: uuid,
+        vin: string,
+        label: string,
+        deviceId: string,
+      }
+
+      @entity CreateVehicleResponse {
+        vehicleId: uuid,
+      }
+
+      @entity GpsIngestRequest {
+        deviceId: string,
+        latitude: decimal,
+        longitude: decimal,
+        recordedAt: datetime,
+      }
+
+      @entity GpsIngestResponse {
+        positionId: uuid,
+      }
+
+      @entity VehicleCreatedPayload {
+        vehicleId: uuid,
+        customerId: uuid,
+        vin: string,
+      }
+
+      @entity Customer {
+        @pk
+        id: uuid,
+        name: string,
+        @pii
+        @unique
+        email: string,
+        createdAt: datetime,
+      }
+
+      @entity Vehicle {
+        @pk
+        id: uuid,
+        @fk { entity: Customer }
+        @index
+        customerId: uuid,
+        @unique
+        vin: string,
+        label: string,
+        status: VehicleStatus,
+        deviceId: string,
+        createdAt: datetime,
+      }
+
+      @entity GpsPosition {
+        @pk
+        id: uuid,
+        @fk { entity: Vehicle }
+        @index
+        vehicleId: uuid,
+        latitude: decimal,
+        longitude: decimal,
+        recordedAt: datetime,
+        deviceId: string,
+      }
+
+      @relation customer_owns_vehicles {
+        from: Customer,
+        to: Vehicle,
+        verb: owns,
+        cardinality: many,
+      }
+
+      @relation vehicle_has_positions {
+        from: Vehicle,
+        to: GpsPosition,
+        verb: has,
+        cardinality: many,
+      }
+
+      @states vehicle_lifecycle {
+        entity: Vehicle.status,
+        transitions: [
+          { from: ACTIVE, to: INACTIVE },
+          { from: ACTIVE, to: DECOMMISSIONED },
+          { from: INACTIVE, to: DECOMMISSIONED },
+        ],
+      }
+
+      @rule domain_single_customer {
+        statement: "Every vehicle belongs to exactly one customer",
+      }
+
+      @rule domain_gps_immutable {
+        statement: "GPS position history must never be deleted",
+      }
+    }
+
+    #[database]
+    #[cache]
+    #[events]
+    service FleetService {
+      > Core fleet management and vehicle tracking
+
+      @guide service {
+        > Return errors via platform error envelope only — never raw stack traces to clients
+      }
+
+      #[fleet_list("/api/v1/vehicles", VehicleListResponse)]
+
+      // Prefix decorations (default) — stacked above @rest
+      @auth { roles: [Customer, Admin] }
+      #[detail]
+      #[owner]
+      @returns VehicleDetailResponse
+      @errors { names: [NotFound, Forbidden] }
+      @rest get_vehicle {
+        method: GET,
+        path: "/api/v1/vehicles/:id",
+
+        @web vehicle_detail {
+          @screen { id: vehicle_detail }
+          @route { path: "/fleet/vehicles/:id" }
+          > Customer opens vehicle detail with latest GPS position
+        }
+      }
+
+      // Grouped @endpoint form (optional sugar for dense endpoints)
+      @endpoint create_vehicle {
+        auth: { roles: [Admin] },
+        macros: [create, idempotent],
+        body: CreateVehicleRequest,
+        returns: CreateVehicleResponse,
+        status: 201,
+        emit: vehicle.created,
+        errors: [ValidationFailed, Conflict],
+        method: POST,
+        path: "/api/v1/vehicles",
+
+        #[form]
+        @web vehicle_create {
+          @screen { id: vehicle_create }
+          > Admin registers a vehicle from the fleet console
+        },
+      }
+
+      @public
+      #[create]
+      #[idempotent]
+      #[rate_limit(1000, rpm)]
+      @body GpsIngestRequest
+      @returns GpsIngestResponse
+      @status 201
+      @emit position.received
+      @errors { names: [ValidationFailed, DeviceUnknown] }
+      @rest gps_ingest {
+        method: POST,
+        path: "/api/v1/gps/ingest",
+
+        > Telematics device posts coordinates — no user UI
+      }
+
+      @test admin_registers_vehicle {
+        name: "Admin registers a vehicle",
+        when: "Admin is logged in and POST /api/v1/vehicles with valid body",
+        then: "status is 201 and vehicle.created is emitted",
+      }
+
+      @test customer_cannot_register {
+        name: "Customer cannot register vehicles",
+        when: "Customer is logged in and POST /api/v1/vehicles",
+        then: "status is 403",
+      }
+
+      @test customer_views_own_vehicles {
+        name: "Customer views their own vehicles",
+        when: "Customer is logged in as owner and GET /api/v1/vehicles",
+        then: "status is 200 and response matches VehicleListResponse",
+      }
+    }
+
+    #[database]
+    #[events]
+    service NotificationService {
+      > Fleet event notifications and alerts
+    }
+
+    @integration gps_devices {
+      direction: inbound,
+      auth: {
+        type: api_key,
+        env: GPS_DEVICE_API_KEY,
+      },
+      maps_to: "POST /api/v1/gps/ingest",
+
+      > Ingests GPS position updates from telematics devices
+    }
+
+    @policy fleet_retention {
+      retain: { entity: GpsPosition, period: forever, reason: "position history audit rule" },
+      residency: EU,
+    }
+  }
+}

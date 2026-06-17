@@ -1,0 +1,65 @@
+name: Spec clarification
+description: Question or fix for normative Pactia 1.0 specification text
+title: "[spec]: "
+labels:
+  - spec
+body:
+  - type: dropdown
+    id: pactia_version
+    attributes:
+      label: Pactia language version
+      description: Normative spec version this issue applies to
+      options:
+        - "1.0"
+    validations:
+      required: true
+  - type: dropdown
+    id: document
+    attributes:
+      label: Document
+      description: Under spec/docs/ unless noted
+      options:
+        - overview.md
+        - language-spec.md
+        - registry.md
+        - packages.md
+        - platform.md
+        - compilation.md
+        - editor-support.md
+        - CHANGELOG.md
+        - fixtures/
+        - other
+    validations:
+      required: true
+  - type: input
+    id: section
+    attributes:
+      label: Section or anchor
+      description: Heading name, anchor link, or line reference (e.g. `#imports`, `registry.md#workspace-registry`)
+    validations:
+      required: false
+  - type: textarea
+    id: question
+    attributes:
+      label: Clarification or proposed change
+      description: Quote the section if possible. State whether the spec is ambiguous, inconsistent, or wrong.
+    validations:
+      required: true
+  - type: dropdown
+    id: change_kind
+    attributes:
+      label: Change kind
+      options:
+        - clarification only (no behavior change)
+        - bug fix (spec contradicts intended behavior)
+        - RFC (behavior change — needs discussion)
+    validations:
+      required: true
+  - type: checkboxes
+    id: tooling
+    attributes:
+      label: Related tooling (optional)
+      options:
+        - label: pactiac (compiler)
+        - label: kabol (package manager / lockfile)
+        - label: vscode-pactia (editor grammar)

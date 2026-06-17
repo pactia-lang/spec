@@ -1,0 +1,31 @@
+// Package source example — @acme/fintech-rules
+// Normative grammar: spec/docs/packages.md#package-authoring
+// Published via pactia package build → tags[] + macros[] + schemas/
+
+pactia 1.0
+
+define tag sanctions_check {
+  scope endpoint
+
+  body {
+    level: string
+    provider: string @optional { }
+  }
+
+  lowers {
+    > input/security-policy.yaml sanctions_checks[]
+    > input/services/{serviceKebab}.yaml endpoints[].sanctions
+  }
+}
+
+define macro sanctions_screen {
+  expands {
+    @sanctions_check { level enhanced }
+  }
+}
+
+data {
+  @enum {
+    > ScreeningLevel { STANDARD, ENHANCED }
+  }
+}
