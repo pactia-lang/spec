@@ -3,11 +3,13 @@
 Version: **1.0**  
 Status: **Specification**
 
+> **If you are not importing packages with `use`, skip this document** — kernel tags and macros are always available with no setup. Return when you add `use @scope/name;` or publish packages.
+
 Part of: [language-spec.md](language-spec.md) | [packages.md](packages.md) | [compilation.md](compilation.md)
 
-Single reference for **`@tag { }`**, **`#[macro]`**, and policy / security / observe / deploy blocks. Macros are documented in [Macros](#macros); cross-cutting cascade and IR routing in [Cross-cutting concerns](#cross-cutting-concerns).
+Single reference for **`@tag { }`**, **`#[macro]`**, and policy / security / observe / deploy blocks when you use packages or need the full tag matrix.
 
-**Registry model:** tags and macros are **workspace-scoped**, not global — see [Workspace registry](#workspace-registry).
+**Registry model:** tags and macros are **workspace-scoped** — see [Workspace registry](#workspace-registry).
 
 ---
 
@@ -42,9 +44,9 @@ Every tag and macro in a package manifest carries a **category** for tooling, do
 
 | Category | Typical members |
 | --- | --- |
-| `core` | Kernel tags: `@entity`, `@rest`, `@auth`, `@guide`, … |
+| `core` | Kernel tags: `@entity`, `@api`, `@auth`, `@guide`, … |
 | `stack` | Stack macros: `#[database]`, platform defaults |
-| `protocol` | `@rest`, REST/GraphQL/gRPC wire tags and macros |
+| `protocol` | `@api`, REST/GraphQL/gRPC wire tags and macros |
 | `surface` | `@web`, `@ios`, `#[form]`, `#[a11y]` |
 | `compliance` | HIPAA, GDPR, sanctions tags |
 | `domain` | Vertical domain tags (`@escrow`, `@listing`, …) |
@@ -149,7 +151,7 @@ Tags are **annotations on named clauses** inside a host block — see [Tag appli
 }
 ```
 
-Bare `@tag { }` without `clauseName` is allowed only for **singleton** tags per scope (`@topology`, `@guide` on product). Multi-instance tags (`@entity`, `@event`, `@config`, `@integration`, `@rest`) **require** a target name.
+Bare `@tag { }` without `clauseName` is allowed only for **singleton** tags per scope (`@topology`, `@guide` on product). Multi-instance tags (`@entity`, `@event`, `@config`, `@integration`, `@api`) **require** a target name.
 
 Tags attach to the **nearest host scope** and **cascade downward** unless overridden — see [Tag cascade](#tag-cascade-inheritance).
 
@@ -166,10 +168,10 @@ Canonical shapes match [fleet-management-v2.pactia](../fixtures/kernel/fleet-man
 | `@tenancy` | clause | `product` | omit | assignments | `project.tenancy` |
 | `@guide` | clause | `product`, `module`, `service` | optional | prose | `guidance.yaml` |
 | `@actor` | clause | `module` | required | assignments | `business.actors[]` |
-| `@rule` | clause | `module`, `data` | required | assignments | `rules[]` |
+| `@rule` | clause | `module`, `data` | required | prose or assignments | `rules[]` |
 | `@config` | clause | `module` | required | map | `config.yaml` |
-| `@errorCatalog` | clause | `module` | required | map | `errors.catalog` |
-| `@errors` | modifier | `@rest`, `@endpoint` | omit | `{ names: [...] }` | `endpoint.errors` |
+| `@errors` | clause | `module` | required | map | `errors.catalog` — defines error entries |
+| `@throws` | modifier | `@api` | omit | `{ names: [...] }` | `endpoint.errors` — references catalog |
 | `@event` | clause | `module` | reference | assignments | `communication.yaml` |
 | `@entity` | clause | `data` | PascalCase | entity-fields | `domain.yaml` |
 | `@enum` | clause | `data` | PascalCase | assignments | `domain.yaml` |
@@ -182,22 +184,21 @@ Canonical shapes match [fleet-management-v2.pactia](../fixtures/kernel/fleet-man
 | `@gate` | clause | `@deploy` | required | assignments | `deployment.gates[]` |
 | `@security` | clause | `module` | required | prose / assignments | `security-policy.yaml` |
 | `@policy` | clause | `module` | required | assignments | `policies.yaml` |
-| `@rest` | clause | `service`, template | snake_case | assignments | `services/*.yaml` |
-| `@endpoint` | clause | `service` | snake_case | assignments + nested | same as `@rest` |
-| `@web` / `@ios` | clause | `@rest`, `@endpoint` | snake_case | assignments | `surfaces/*.yaml` |
+| `@api` | clause | `service`, template | snake_case | assignments | `services/*.yaml` |
+| `@web` / `@ios` | clause | `@api` | snake_case | assignments | `surfaces/*.yaml` |
 | `@test` | clause | `service` | snake_case | assignments | `scenarios.yaml` |
 | `@must` | clause | `service` | snake_case | assignments + prose | `obligations.yaml` |
-| `@auth` | modifier | `@rest`, `@endpoint` | omit | assignments | `authorization` |
-| `@public` | modifier flag | `@rest` | omit | flag | `authorization.type: PUBLIC` |
-| `@body` | modifier shorthand | `@rest`, `@endpoint` | omit | type ref | `request.dto` |
-| `@returns` | modifier shorthand | `@rest`, `@endpoint` | omit | type ref | `response.dto` |
-| `@status` | modifier shorthand | `@rest`, `@endpoint` | omit | number | `response.status` |
-| `@emit` | modifier shorthand | `@rest`, `@endpoint` | omit | event ref | `emits` |
+| `@auth` | modifier | `@api` | omit | assignments | `authorization` |
+| `@public` | modifier flag | `@api` | omit | flag | `authorization.type: PUBLIC` |
+| `@body` | modifier shorthand | `@api` | omit | type ref | `request.dto` |
+| `@returns` | modifier shorthand | `@api` | omit | type ref | `response.dto` |
+| `@status` | modifier shorthand | `@api` | omit | number | `response.status` |
+| `@emit` | modifier shorthand | `@api` | omit | event ref | `emits` |
 | `@pk` `@unique` `@index` `@nullable` `@pii` | modifier flag | `@entity` field | omit | flag | field annotations |
 | `@fk` | modifier | `@entity` field | omit | `{ entity: T }` | `annotations.references` |
-| `@bind` | modifier | `@web`, `@ios` | omit | assignments | optional — inherits from `@rest` |
+| `@bind` | modifier | `@web`, `@ios` | omit | assignments | optional — inherits from `@api` |
 | `#[database]` etc. | macro | `service` | — | expands | `service.flags` |
-| `#[list]` `#[owner]` etc. | macro | `@rest`, `@endpoint` | — | expands | endpoint patterns |
+| `#[list]` `#[owner]` etc. | macro | `@api` | — | expands | endpoint patterns |
 
 JSON Schemas: `spec/schemas/tags/<name>-v1.json` (planned) — IDE completion keys off the same schemas `pactiac` validates at compile time.
 
@@ -250,7 +251,7 @@ Prefer macros `#[database]` `#[cache]` `#[events]` **immediately above** `servic
 | `@returns` | `@returns VehicleListResponse` | `response.dto` |
 | `@status` | `@status 201` | `response.status` |
 | `@emit` | `@emit vehicle.created` | `emits` |
-| `@errors` | `@errors { names: [NotFound, Forbidden] }` on `@rest` | `response.errors` |
+| `@throws` | `@throws { names: [NotFound, Forbidden] }` on `@api` | `response.errors` |
 | `@transition` | `@transition { from: PENDING, to: PAID }` | statemachine edge on endpoint |
 
 Endpoint **patterns** use macros — not tags: `#[list]` `#[paginated]` `#[owner]` `#[create]` `#[idempotent]` — see #macros.
@@ -276,7 +277,7 @@ Prefix modifier tags on the line **above** the field declaration:
 | Tag | Example | Lowers to |
 | --- | --- | --- |
 | `@config` | `@config backend { DATABASE_URL: { required: true, ... }, }` | `config.yaml` |
-| `@errorCatalog` | `@errorCatalog platform { NotFound: { status: 404, code: RESOURCE_NOT_FOUND, message: "..." }, }` | error catalog |
+| `@errors` | `@errors platform { NotFound: { status: 404, code: RESOURCE_NOT_FOUND, message: "..." }, }` | error catalog |
 | `@policy` | `@policy { retain Entity forever because "..." }` | `policies.yaml` |
 | `@guide` | `@guide { Handlers use error envelope }` | `guidance.yaml` (not enforced) |
 | `@security` | `@security { ... }` | `security-policy.yaml` |
@@ -286,7 +287,7 @@ Prefix modifier tags on the line **above** the field declaration:
 | `@event` | `@event { vehicle.created payload X handler Service.method "desc" }` | `communication.yaml` + `eventHandlers[]` |
 | `@test` | `@test { "name" When ... Then ... }` | `scenarios.yaml` |
 | `@must` | `@must { on trigger outcome lines }` | `obligations.yaml` |
-| `@rule` | `@rule { Every vehicle belongs to one customer }` | `rules[]` (enforced) |
+| `@rule` | `@rule single_customer { > Vehicles belong to exactly one customer. }` | `rules[]` (enforced) |
 
 See [Cross-cutting concerns](#cross-cutting-concerns) for cascade rules.
 
@@ -328,11 +329,11 @@ A line like `> on vehicle.created -> NotificationService.onVehicleCreated` **out
 
 | Tag | Package | Example |
 | --- | --- | --- |
-| `@rest` | `@pactia/protocol-rest` | `@rest { method GET path /api/v1/vehicles @auth { Customer } ... }` |
+| `@api` | `@pactia/protocol-rest` | `@api { method GET path /api/v1/vehicles @auth { Customer } ... }` |
 | `@grpc` | `@pactia/protocol-grpc` | `@grpc { service trade.TradeService rpc MarkPaymentSent }` |
 | `@graphql` | `@pactia/protocol-graphql` | `@graphql { type Query field vehicles }` |
 
-REST endpoints **must** use `@rest { }` after `use @pactia/protocol-rest`. The kernel does not parse bare `GET` / `POST` lines.
+REST endpoints **must** use `@api { }` after `use @pactia/protocol-rest`. The kernel does not parse bare `GET` / `POST` lines.
 
 See [platform.md](platform.md#protocol-packages).
 
@@ -467,7 +468,7 @@ Hand-authored `extensions[]` / `tags[]` in manifest remains valid (protocol pack
 #[cache(ttl: 300)]
 ```
 
-Macros attach to the **nearest `@rest { }` block**, `service` block, or surface block (`@web { }`, …). Multiple macros on one line are expanded left-to-right.
+Macros attach to the **nearest `@api { }` block**, `service` block, or surface block (`@web { }`, …). Multiple macros on one line are expanded left-to-right.
 
 Arguments are **scalars only** — identifiers, numbers, strings, simple `key: value` pairs. No nested blocks inside macro argument lists.
 
@@ -613,7 +614,7 @@ These remain **tags** (always `{ }`):
 - `@auth { roles: [Customer, Admin] }` — roles are facts
 - `@returns VehicleListResponse` — response DTO is a fact
 - `@body CreateVehicleRequest` — request DTO is a fact
-- `@errors { names: [NotFound, Forbidden] }` — error list is a fact
+- `@throws { names: [NotFound, Forbidden] }` — error list is a fact
 - `@emit vehicle.created` — event name is a fact
 - `@public` — public route is a fact
 - `@transition { from: PENDING, to: PAID }` — legal edge is a fact
@@ -652,7 +653,7 @@ Tags and prose **attach to the nearest scope** and **cascade downward** unless o
 product
   └── module
         └── service
-              └── `@rest { }` / data field / `@web` screen
+              └── `@api { }` / data field / `@web` screen
 ```
 
 | Scope | Typical cross-cutting content |
@@ -750,7 +751,7 @@ Used with compliance packages (`use @pactia/gdpr-eu::…`, `use @pactia/hipaa::c
 }
 ```
 
-Package registers `@compliance` block schema in `pactia.package.yaml` (same mechanism as protocol `@rest`).
+Package registers `@compliance` block schema in `pactia.package.yaml` (same mechanism as protocol `@api`).
 
 | Lowers to | `policies.yaml` + `data` annotations + `rules[]` |
 | Enforced | Yes (schema-validated) |
@@ -815,12 +816,12 @@ CI/CD **tool choice** (GitHub Actions, ArgoCD) stays in the **stack package**. `
 
 | Form | Example | IR |
 | --- | --- | --- |
-| `#[rate_limit(n, unit)]` | `#[rate_limit(100, rpm)]` inside `@rest { }` or `@security { }` | `endpoint.rateLimit` |
+| `#[rate_limit(n, unit)]` | `#[rate_limit(100, rpm)]` inside `@api { }` or `@security { }` | `endpoint.rateLimit` |
 | `@require_mfa { }` | `@require_mfa { Admin }` | `security.mfa.roles` |
 | `#[a11y(...)]` | `#[a11y(WCAG-AA)]` inside `@web { }` | `surfaces/*.yaml` |
 | `@retain { }` | `@retain { 7y }` on field | `policies.retention` |
 | `@encrypt { }` | `@encrypt { at_rest }` on field | `policies.encryption` |
-| `@audit { }` | `@audit { }` on `@rest { }` POST | `security.auditRequired` |
+| `@audit { }` | `@audit { }` on `@api { }` POST | `security.auditRequired` |
 
 ---
 
@@ -854,7 +855,7 @@ Example — MVP constraint as prose (not a keyword):
 | p99 latency target | `@observe { slo ... }` |
 | HIPAA PHI tagging | `use @pactia/hipaa` + `@compliance` |
 | Hexagonal architecture preference | `@guide` prose |
-| Endpoint rate limit | `#[rate_limit(100, rpm)]` inside `@rest { }` or `@security { }` |
+| Endpoint rate limit | `#[rate_limit(100, rpm)]` inside `@api { }` or `@security { }` |
 | VoiceOver on iOS | `@ios { ... #[a11y(VoiceOver)] ... }` |
 | Never log secrets | `@guide` or `@must always` + `@test` |
 

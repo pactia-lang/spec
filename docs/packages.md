@@ -531,7 +531,7 @@ The **Pactia standard library** is a curated set of packages on pactia.io — no
 
 | Package | Provides |
 | --- | --- |
-| `@pactia/protocol-rest` | REST wire validation, `@rest { }` (category `protocol`) |
+| `@pactia/protocol-rest` | REST wire validation, `@api { }` (category `protocol`) |
 | `@pactia/api-patterns` | Default `#[list]`, `#[paginated]`, `#[owner]`, … (overridable by stack) |
 | `@pactia/surface-react` | `@web { }`, `#[form]`, `#[a11y(...)]` (category `surface`) |
 | `@pactia/surface-swiftui` | `@ios { }`, mobile macros (category `surface`) |
@@ -712,12 +712,12 @@ Pactia has **11 kernel keywords** — see [language-spec.md](language-spec.md#th
 | `lowers` | `define tag` | IR file + JSON path targets when the tag is used |
 | `expands` | `define macro` | Lines that replace `#[name]` at consumer compile time |
 
-**Do not confuse** registry `body { }` with kernel `@body { DtoName }` on `@rest { }`. They share a name but live in different grammars:
+**Do not confuse** registry `body { }` with kernel `@body { DtoName }` on `@api { }`. They share a name but live in different grammars:
 
 | Syntax | Context | Meaning |
 | --- | --- | --- |
 | `body { level: string }` | Inside `define tag` | Package tag field schema |
-| `@body { CreateVehicleRequest }` | Inside `@rest { }` | Request DTO reference (kernel tag) |
+| `@body { CreateVehicleRequest }` | Inside `@api { }` | Request DTO reference (kernel tag) |
 
 ---
 
@@ -782,7 +782,7 @@ Declares where `@sanctions_check { }` may appear in a consumer product.
 | `product` | Direct child of `product { }` |
 | `module` | Inside `module { }` |
 | `service` | Inside `service { }` |
-| `endpoint` | Inside `@rest { }`, `@grpc { }`, `@graphql { }` |
+| `endpoint` | Inside `@api { }`, `@grpc { }`, `@graphql { }` |
 | `field` | On an `@entity { }` field line |
 
 Multiple scopes: `scope module endpoint` (space-separated on one line).
@@ -937,7 +937,7 @@ use @acme/fintech-rules::{sanctions_screen, sanctions_check};
 product MyApp {
   module payments {
     service TransferService {
-      @rest {
+      @api {
         method POST
         path /api/v1/transfers
         #[sanctions_screen]
@@ -1064,14 +1064,14 @@ Packages are **not** new keywords — they are **bundles of kernel constructs** 
 
 ```pactia
 define template crud_list(Entity, path) {
-  @rest {
+  @api {
     method GET
     path path
     @auth { Admin }
     #[list] #[paginated]
   }
 
-  @rest {
+  @api {
     method GET
     path path/:id
     @auth { Admin }
@@ -1084,7 +1084,7 @@ service AdminService {
 }
 ```
 
-After expansion → `@rest { }` blocks. Reconciler runs on expanded output only.
+After expansion → `@api { }` blocks. Reconciler runs on expanded output only.
 
 **Rules for `define template`:**
 
@@ -1139,14 +1139,14 @@ Both expand at compile time. They solve different problems and **compose** — t
 
 | Question | Answer → use |
 | --- | --- |
-| Repeat the same **multi-line** kernel block (`@rest { }` + tags + surfaces)? | `define template name(...) { ... }` then `#[name(args)]` |
+| Repeat the same **multi-line** kernel block (`@api { }` + tags + surfaces)? | `define template name(...) { ... }` then `#[name(args)]` |
 | One-line pattern shared across **all products** on a stack? | `define macro` in stack package `index.pactia` — consumers write `#[list]` |
 | Stack team changes pagination defaults ecosystem-wide? | Update `define macro list` in `@pactia/rust-anb` — not product `define template` |
 | New `@name { }` for a vertical (HIPAA, sanctions)? | `define tag` in package `index.pactia` — consumers `use` the package |
 | Structured fact at use site? | `@tag { }` after `use` — not `define tag` in product |
 | Needs `{ }` for its meaning? | **Tag** (`define tag` in package) — one line → **macro** (`define macro` in package) |
 | Org shares CRUD template across 50 repos? | `define template` in `@acme/admin-crud` package source |
-| Single endpoint, written once? | Hand-write `@rest { }` — no `define template` |
+| Single endpoint, written once? | Hand-write `@api { }` — no `define template` |
 
 | | `define template` (product) | `define macro` / `define tag` (package) | `#[macro]` / `@tag` (use) |
 | --- | --- | --- | --- |
@@ -1156,13 +1156,13 @@ Both expand at compile time. They solve different problems and **compose** — t
 | **Expands to** | Kernel blocks | `macros[]` / `tags[]` in manifest | Tags → IR |
 | **Provenance** | `DEFINE` | `PACKAGE` (registry) | `PACKAGE` or `MACRO` |
 | **Compile phase** | Product compile — before `#[macro]` | `pactia package build` | Product compile — registry lookup |
-| **Example** | `define template fleet_list(path, Dto) { @rest { ... } }` | `define macro list { expands { ... } }` in `@pactia/rust-anb` | `#[list]` inside `@rest { }` after `use` |
+| **Example** | `define template fleet_list(path, Dto) { @api { ... } }` | `define macro list { expands { ... } }` in `@pactia/rust-anb` | `#[list]` inside `@api { }` after `use` |
 
 ```
 Product file                          Package manifest (@pactia/rust-anb)
 ────────────────                      ───────────────────────────────────
 define template fleet_list(...) {       - name: list
-  @rest { method GET path path            expands_to: ["@cursor { ... }", "#[paginated]"]
+  @api { method GET path path            expands_to: ["@cursor { ... }", "#[paginated]"]
     #[list] #[paginated]    ──invoke──▶ - name: owner
     @returns { Dto }                      expands_to: ["@filter { ... }"]
 }
@@ -1176,7 +1176,7 @@ define template fleet_list(...) {       - name: list
 | `define Money = decimal` or `define X = Enum.VALUE` | Use scalar kinds (`fiatAmount: decimal`) and enum refs inline |
 | `define macro list` in a consumer product | Publish `define macro list` in stack or `@pactia/api-patterns` |
 | `define tag foo` in a consumer product | Publish `define tag foo` in a package on pactia.io |
-| `define macro` for one endpoint | `define template` or hand-write `@rest { }` |
+| `define macro` for one endpoint | `define template` or hand-write `@api { }` |
 | Bare `@list` as a tag | `#[list]` macro invocation |
 
 See [language-spec.md](language-spec.md#define--templates-and-package-registry) and [registry.md](registry.md#macros).
@@ -1248,7 +1248,7 @@ service OrderService {
   #[paginated]
   #[owner]
   @returns OrderListResponse
-  @rest list_orders {
+  @api list_orders {
     method: GET,
     path: "/api/v1/orders",
   },

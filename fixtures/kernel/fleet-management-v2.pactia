@@ -28,32 +28,6 @@ product FleetManagement {
 
   module fleet {
 
-    define template fleet_list(path, ListDto) {
-      @auth { roles: [Customer, Admin] }
-      #[list]
-      #[paginated]
-      #[owner]
-      @returns ListDto
-      @errors { names: [Forbidden] }
-      @rest list {
-        method: GET,
-        path: path,
-
-        #[a11y(WCAG_AA)]
-        @web vehicle_list {
-          @screen { id: vehicle_list }
-          @route { path: "/fleet/vehicles" }
-          > Customer browses their vehicles in a paginated table
-        }
-
-        @ios vehicle_list {
-          @screen { id: vehicle_list }
-          @nav { tab: FleetTab }
-          > Customer scrolls fleet on phone with pull-to-refresh
-        }
-      }
-    }
-
     @actor admins {
       role: Admin,
       capabilities: [manage_fleets, manage_users],
@@ -65,19 +39,19 @@ product FleetManagement {
     }
 
     @rule single_customer {
-      statement: "Vehicles belong to exactly one customer",
+      > Vehicles belong to exactly one customer.
     }
 
     @rule gps_retention {
-      statement: "GPS position history must be stored indefinitely",
+      > GPS position history must be stored indefinitely.
     }
 
     @rule admin_only_register {
-      statement: "Only admins may register or decommission vehicles",
+      > Only admins may register or decommission vehicles.
     }
 
     @rule device_required {
-      statement: "A vehicle must have an active device before GPS ingestion is accepted",
+      > A vehicle must have an active device before GPS ingestion is accepted.
     }
 
     > Single-region deployment for MVP — no real-time streaming required
@@ -111,26 +85,26 @@ product FleetManagement {
     @config backend {
       DATABASE_URL: {
         required: true,
-        description: "PostgreSQL connection string",
+        > PostgreSQL connection string for the fleet database.
       },
       GPS_DEVICE_API_KEY: {
         secret: true,
         required: true,
-        description: "Inbound device API key",
+        > Inbound API key for telematics devices posting GPS updates.
       },
       JWT_PUBLIC_KEY: {
         secret: true,
         required: true,
-        description: "RSA public key for token verification",
+        > RSA public key for verifying user JWT tokens.
       },
       LOG_LEVEL: {
         required: false,
         default: "info",
-        description: "Log verbosity",
+        > Log verbosity — debug only in non-production environments.
       },
     }
 
-    @errorCatalog platform {
+    @errors platform {
       NotFound: {
         status: 404,
         code: RESOURCE_NOT_FOUND,
@@ -284,11 +258,11 @@ product FleetManagement {
       }
 
       @rule domain_single_customer {
-        statement: "Every vehicle belongs to exactly one customer",
+        > Every vehicle belongs to exactly one customer.
       }
 
       @rule domain_gps_immutable {
-        statement: "GPS position history must never be deleted",
+        > GPS position history must never be deleted.
       }
     }
 
@@ -302,15 +276,36 @@ product FleetManagement {
         > Return errors via platform error envelope only — never raw stack traces to clients
       }
 
-      #[fleet_list("/api/v1/vehicles", VehicleListResponse)]
+      @auth { roles: [Customer, Admin] }
+      #[list]
+      #[paginated]
+      #[owner]
+      @returns VehicleListResponse
+      @throws { names: [Forbidden] }
+      @api list_vehicles {
+        method: GET,
+        path: "/api/v1/vehicles",
 
-      // Prefix decorations (default) — stacked above @rest
+        #[a11y(WCAG_AA)]
+        @web vehicle_list {
+          @screen { id: vehicle_list }
+          @route { path: "/fleet/vehicles" }
+          > Customer browses their vehicles in a paginated table
+        }
+
+        @ios vehicle_list {
+          @screen { id: vehicle_list }
+          @nav { tab: FleetTab }
+          > Customer scrolls fleet on phone with pull-to-refresh
+        }
+      }
+
       @auth { roles: [Customer, Admin] }
       #[detail]
       #[owner]
       @returns VehicleDetailResponse
-      @errors { names: [NotFound, Forbidden] }
-      @rest get_vehicle {
+      @throws { names: [NotFound, Forbidden] }
+      @api get_vehicle {
         method: GET,
         path: "/api/v1/vehicles/:id",
 
@@ -321,15 +316,15 @@ product FleetManagement {
         }
       }
 
-      // Grouped @endpoint form (optional sugar for dense endpoints)
-      @endpoint create_vehicle {
-        auth: { roles: [Admin] },
-        macros: [create, idempotent],
-        body: CreateVehicleRequest,
-        returns: CreateVehicleResponse,
-        status: 201,
-        emit: vehicle.created,
-        errors: [ValidationFailed, Conflict],
+      @auth { roles: [Admin] }
+      #[create]
+      #[idempotent]
+      @body CreateVehicleRequest
+      @returns CreateVehicleResponse
+      @status 201
+      @emit vehicle.created
+      @throws { names: [ValidationFailed, Conflict] }
+      @api create_vehicle {
         method: POST,
         path: "/api/v1/vehicles",
 
@@ -348,8 +343,8 @@ product FleetManagement {
       @returns GpsIngestResponse
       @status 201
       @emit position.received
-      @errors { names: [ValidationFailed, DeviceUnknown] }
-      @rest gps_ingest {
+      @throws { names: [ValidationFailed, DeviceUnknown] }
+      @api gps_ingest {
         method: POST,
         path: "/api/v1/gps/ingest",
 

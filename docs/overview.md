@@ -2,6 +2,69 @@
 
 **Pactia standardizes AI-native product intent** — from a short rule file for your coding agent to a full whole-product spec — and makes that intent **reusable through versioned packages**. It is the human-facing layer of the stack described in BSC vision.
 
+> **The one rule that matters:** Pactia never requires more than prose. Every tag, every macro, every keyword beyond `pactia` + `product` is something you reach for when you want enforcement — never something you're forced to learn to get started.
+
+---
+
+## Three altitudes
+
+Every Pactia file is legal at **altitude 0**. Tags are an opt-in upgrade, one fact at a time, never all-or-nothing.
+
+### Altitude 0 — prose only
+
+The smallest legal program. `>` prose inside `product { }` — at least one line describing **what the product is**, then optional agent rules. No tags, no `module`.
+
+```pactia
+pactia 1.0
+
+product MyApp {
+  > A mobile app for tracking personal fitness goals and sharing progress with friends.
+  > Never commit secrets. Map errors to our envelope before returning.
+  > List endpoints use cursor pagination.
+}
+```
+
+### Altitude 1 — light tagging
+
+Add structure where it helps. Keep a **product description** in `product { }`, then add one tag at a time.
+
+```pactia
+pactia 1.0
+
+product MyApp {
+  > A mobile app for tracking personal fitness goals and sharing progress with friends.
+
+  module fitness {
+    service WorkoutService {
+      @api list_workouts {
+        > Customers browse their workout history, paginated.
+        @auth Customer
+        @returns WorkoutListResponse
+      }
+    }
+  }
+}
+```
+
+### Altitude 2 — fully specified
+
+Full enforcement surface — same file shape as [fleet-management-v2.pactia](../fixtures/kernel/fleet-management-v2.pactia).
+
+```pactia
+service FleetService {
+  @auth { roles: [Customer, Admin] }
+  #[list] #[paginated] #[owner]
+  @returns VehicleListResponse
+  @throws { names: [Forbidden] }
+  @api list_vehicles {
+    method: GET,
+    path: "/api/v1/vehicles",
+  }
+}
+```
+
+Same language, same compiler, your chosen density. See [language-spec.md — Three altitudes](language-spec.md#three-altitudes).
+
 ---
 
 ## Philosophy
@@ -54,30 +117,17 @@ The LLM step does **not** re-parse `.pactia` or change enforceable facts. It ela
 
 Humans author once. The pipeline adapts to the consumer — and can make a 50-line Pactia file feel like a 200-page spec in your agent’s inbox, without bloating the source.
 
-### Graded intent — freedom for engineers and AI
+### Graded intent — three altitudes
 
-Pactia **does not** force you to specify everything. It enforces **skeleton**, not completeness:
+See [Three altitudes](#three-altitudes) above. In short:
 
 | Always | Your choice |
 | --- | --- |
 | `pactia 1.0` + `product { }` | `module`, `service`, `data` |
-| Nesting via nine kernel keywords | `@stack`, entities, APIs, deploy gates |
-| Inside blocks: tag, macro, or prose | How much prose vs `@tag { }` |
+| Altitude 0 `>` prose in `product` — what it is + agent rules | Altitude 1: same product line + light `@tag` |
+| Inside blocks: tag, macro, or prose | How much structure vs narrative |
 
-**Light** — agent rules only:
-
-```pactia
-pactia 1.0
-
-product MyApp {
-  > Never commit secrets. Map API errors to our envelope before returning.
-  > Use cursor pagination on list endpoints.
-}
-```
-
-**Heavy** — full product: [fleet-management-v2.pactia](../fixtures/kernel/fleet-management-v2.pactia).
-
-More tags → more deterministic, checkable intent. More prose → more freedom for engineers and AI on implementation. Same language, same compiler, your chosen density.
+**Heavy** reference: [fleet-management-v2.pactia](../fixtures/kernel/fleet-management-v2.pactia).
 
 ### Structure without suffocation
 
@@ -178,7 +228,7 @@ Pactia is how humans **author**. `pactiac` produces **vendor-neutral IR**. BSC *
 | Role                         | Writes                                                    |
 | ---------------------------- | --------------------------------------------------------- |
 | Product / domain expert      | Prose, `> rules`, `@actor { }`                          |
-| Senior architect / tech lead | `data`, `service`, `@rest { }`, `@tag { }`, `#[macro]`, `@web { }` / `@ios { }`, `@test { }` |
+| Senior architect / tech lead | `data`, `service`, `@api { }`, `@tag { }`, `#[macro]`, `@web { }` / `@ios { }`, `@test { }` |
 | Platform team                | Stack packages on pactia.io — not Pactia                   |
 | Frontend / mobile leads      | `@web { }`, `@ios { }`, `@bind { }` in same `.pactia` file |
 | Community / vendors          | Pactia packages (`use @pactia/*` on pactia.io)            |
@@ -191,6 +241,8 @@ Pactia is how humans **author**. `pactiac` produces **vendor-neutral IR**. BSC *
 Grammar: [language-spec.md](language-spec.md)
 
 ## Minimal example
+
+A mid-altitude program: actors and entities are tagged; **payment lifecycle is prose** — rich context for agents without forcing every edge into `@transition` until you need conformance.
 
 ```pactia
 pactia 1.0
@@ -231,34 +283,36 @@ product P2PExchange {
 
       @states trade_payment {
         entity: Trade.status,
-        transitions: [
-          { from: PAYMENT_PENDING, to: PAYMENT_SENT },
-          { from: PAYMENT_SENT, to: PAYMENT_CONFIRMED },
-        ],
+        > PAYMENT_PENDING — buyer has accepted the trade; fiat payment not yet acknowledged.
+        > PAYMENT_SENT — buyer marked payment sent; seller reviews off-platform receipt.
+        > PAYMENT_CONFIRMED — seller confirmed; escrow may release crypto to the buyer.
+        > Valid edges: PAYMENT_PENDING → PAYMENT_SENT (buyer only), PAYMENT_SENT → PAYMENT_CONFIRMED (seller or system after escrow check).
       }
     }
 
     service TradeService {
       @auth { roles: [Trader] }
       #[buyer]
-      @transition { from: PAYMENT_PENDING, to: PAYMENT_SENT }
       @body MarkPaymentSentRequest
       @returns TradeResponse
-      @rest mark_payment_sent {
+      @api mark_payment_sent {
         method: POST,
         path: "/api/v1/trades/:id/mark-payment-sent",
+        > Buyer asserts fiat was sent; moves trade PAYMENT_PENDING → PAYMENT_SENT.
+        > Idempotent if already PAYMENT_SENT. Reject if buyer is not party to the trade.
       }
     }
 
     @event trade.payment_confirmed {
       payload: TradePaymentConfirmedPayload,
       handler: EscrowService.onPaymentConfirmed,
+      > Fired when trade reaches PAYMENT_CONFIRMED and escrow can release funds.
     }
   }
 }
 ```
 
-Full programs: [examples](https://github.com/pactia-lang/examples) repository — minimal v2 sample in this repo: [fleet-management-v2.pactia](../fixtures/kernel/fleet-management-v2.pactia). [Workspace](language-spec.md#workspace-layout) layouts use the same v2 syntax inside each file.
+When you need **enforceable** state edges, add `@transition { from, to }` on `@api` and a `transitions: [...]` array on `@states` — same IR path as prose, but conformance-checked. See [fleet-management-v2.pactia](../fixtures/kernel/fleet-management-v2.pactia) for altitude 2.
 
 ## Coherence with BSC goals
 
@@ -356,8 +410,8 @@ From [fleet-management-v2.pactia](../fixtures/kernel/fleet-management-v2.pactia)
 #[paginated]
 #[owner]
 @returns VehicleListResponse
-@errors { names: [Forbidden] }
-@rest list_vehicles {
+@throws { names: [Forbidden] }
+@api list_vehicles {
   method: GET,
   path: "/api/v1/vehicles",
 }
@@ -365,7 +419,7 @@ From [fleet-management-v2.pactia](../fixtures/kernel/fleet-management-v2.pactia)
 
 | Fact                                               | Provenance              | Side  |
 | -------------------------------------------------- | ----------------------- | ----- |
-| Operation exists at `GET /api/v1/vehicles`         | Pactia (`@rest { }`)    | Above |
+| Operation exists at `GET /api/v1/vehicles`         | Pactia (`@api { }`)    | Above |
 | Roles `Customer`, `Admin`                          | Pactia (`@auth { }`)    | Above |
 | Ownership scope `OWN_ROWS` on `Vehicle.customerId` | MACRO (`#[owner]`)      | Above |
 | Response shape `VehicleListResponse`               | Pactia (`@returns { }`) | Above |
@@ -571,7 +625,7 @@ Even when Pactia is minimal, the specification package must include everything a
 | -------------------------------------- | ---------------------------------------------------- |
 | `project-overview.md`                  | `product`, `@actor { }`, prose rules               |
 | `domain-model.md`                      | `data { @entity @enum @relation @states }`         |
-| `api-spec.md`                          | `@rest { }` + nested `@tag { }` + `#[macro]`       |
+| `api-spec.md`                          | `@api { }` + nested `@tag { }` + `#[macro]`       |
 | `surfaces/*.yaml` / UI intent docs     | `@web { }`, `@ios { }`, `@android { }`, `@bind { }`                  |
 | `module-design.md`                     | services + stack layers                              |
 | `integrations.md`                      | `@integration { }` / integration prose                   |
@@ -589,7 +643,7 @@ The architect reads the **generated** deployment and testing docs to verify; the
 
 | Tier         | Audience               | Pactia size | Contents                                      |
 | ------------ | ---------------------- | ----------- | --------------------------------------------- |
-| **Express**  | PM + tech lead         | ~50 lines   | `product`, `data`, `@rest { }`, `>` rules, `@auth` |
+| **Express**  | PM + tech lead         | ~50 lines   | `product`, `data`, `@api { }`, `>` rules, `@auth` |
 | **Standard** | Senior architect       | ~150 lines  | + `@event`, `@integration`, `@policy`, key `@test` |
 | **Extended** | Regulated / high-scale | ~250 lines  | + `@observe`, `@deploy`, `@security`, pipeline gates |
 
@@ -611,7 +665,7 @@ CI tool vendor → (1). Metrics per event → (2). SLO targets → (3). Entity r
 
 | Construct | Expression |
 | --- | --- |
-| Product, data, services | `product`, `data { @entity … }`, `@rest { }` in `service` |
+| Product, data, services | `product`, `data { @entity … }`, `@api { }` in `service` |
 | State machines, party roles | `@states { }` + `#[buyer]` / `#[owner]` + `@transition { }` |
 | Request/response shapes | `@body { }` `@returns { }` |
 | Packages | `use @scope/name`, `import`, `define template` |
