@@ -3,9 +3,73 @@
 Version: **1.0**  
 Status: **Specification**
 
-Part of: [overview.md](overview.md) | [registry.md](registry.md) | [packages.md](packages.md) | [compilation.md](compilation.md)
+Part of: [overview.md](overview.md) | [registry.md](registry.md) | [packages.md](packages.md) | [grammar-reference.md](grammar-reference.md)
 
-Pactia programs describe **whole-product intent**: who can act, what data exists, what APIs and screens are offered, how services connect, what compliance requires, and what outcomes are expected — across backend and client surfaces. The compiler reads one or more `.pactia` files (single file or [workspace](language-spec.md#workspace-layout)) and emits provenance-tagged YAML contract IR (`input/**/*.yaml`, including `input/surfaces/`).
+---
+
+## Three altitudes
+
+Every Pactia file is legal at altitude 0. Tags are an opt-in upgrade, one fact at a time, never all-or-nothing.
+
+> **The one rule that matters:** Pactia never requires more than prose. Every tag, every macro, every keyword beyond `pactia` + `product` is something you reach for when you want enforcement — never something you're forced to learn to get started.  
+> — also stated in [overview.md](overview.md#three-altitudes)
+
+| Altitude | What you write | When |
+| --- | --- | --- |
+| **0** | `> prose` in `product { }` — product description + optional agent rules | What the product is; coding standards for agents |
+| **1** | `product` prose + light `@tag` | Product description in `product { }`; one fact per endpoint or block |
+| **2** | Full tag + macro surface | Deterministic IR, conformance, multi-surface |
+
+### Altitude 0 — prose only
+
+```pactia
+pactia 1.0
+
+product MyApp {
+  > A mobile app for tracking personal fitness goals and sharing progress with friends.
+  > Never commit secrets. Map errors to our envelope before returning.
+  > List endpoints use cursor pagination.
+}
+```
+
+`>` prose in `product { }` with no `module`, `service`, or `data` — the smallest legal program. Include at least one line that says **what the product is**; additional lines are coding standards or agent rules.
+
+### Altitude 1 — light tagging
+
+```pactia
+pactia 1.0
+
+product MyApp {
+  > A mobile app for tracking personal fitness goals and sharing progress with friends.
+
+  module fitness {
+    service WorkoutService {
+      @api list_workouts {
+        > Customers browse their workout history, paginated.
+        @auth Customer
+        @returns WorkoutListResponse
+      }
+    }
+  }
+}
+```
+
+Keep **what the product is** in `product { }` prose. Add `module`, `service`, and tags one at a time — endpoint prose inside `@api { }` describes that feature.
+
+### Altitude 2 — fully specified
+
+```pactia
+@auth { roles: [Customer, Admin] }
+#[list] #[paginated] #[owner]
+@returns VehicleListResponse
+@throws { names: [Forbidden] }
+@api list_vehicles {
+  method: GET,
+  path: "/api/v1/vehicles",
+}
+```
+
+Canonical reference: [fleet-management-v2.pactia](../fixtures/kernel/fleet-management-v2.pactia).
 
 ---
 
@@ -29,7 +93,7 @@ You are writing the **permanent, versioned prompt** for your product. Teams publ
 4. **Multi-surface** — same file drives APIs and `@web { }` / `@ios { }` / `@android { }` / `@desktop { }` blocks.
 5. **Shareable** — one file in git, one digest in `kabol.lock`, same context in every AI session.
 6. **No behavior scripts** — no numbered flows; use `@must { }` for outcomes, `@test { }` for acceptance.
-7. **Protocol-agnostic kernel** — REST, gRPC, GraphQL are **packages** (`@rest { }`, `@grpc { }`). The kernel never parses `GET` or `POST`.
+7. **Protocol-agnostic kernel** — REST, gRPC, GraphQL are **packages**. The kernel endpoint tag is **`@api`** — not protocol-flavored. Wire-format macros come from protocol packages.
 
 ---
 
@@ -63,7 +127,7 @@ Every line in a `{ }` block is exactly one of:
 | **Macro** | `#[name]` or `#[name(args)]` | Registered pattern — expanded before IR emit (includes `define template` invocations) |
 | **Prose** | `> sentence` | AI context — scoped to nearest block; not lowered as structured IR |
 
-**No exceptions** for bare sentences at block level — prose **must** begin with `>`. There are no HTTP fact lines, no `Role can ...` lines outside `@actor { }`, no bare relation lines, and no bare `enum` / `Entity { }` declarations. Those facts live inside kernel tags: `@rest { }`, `@actor { }`, `@relation { }`, `@entity { }`, `@enum { }`, `@states { }`.
+**No exceptions** — prose **always** begins with `>`, in `product { }` and everywhere else. There are no HTTP fact lines, no `Role can ...` lines outside `@actor { }`, no bare relation lines, and no bare `enum` / `Entity { }` declarations. Those facts live inside kernel tags: `@api { }`, `@actor { }`, `@relation { }`, `@entity { }`, `@enum { }`, `@states { }`.
 
 **Boundary:** if it needs `{ }` for its content, it is a **tag**. If it is a one-line pattern reference, it is a **macro**. Narrative context uses **`>`**. See [registry.md](registry.md#tags) and [registry.md](registry.md#macros).
 
@@ -75,7 +139,9 @@ Lines that *look* like wiring but use `>` remain **guidance only** — e.g. `> o
 
 ### Prose (`>`)
 
-Every **prose line** MUST start with `>` (after indentation):
+Every **prose line** MUST start with `>` (after indentation). One rule everywhere — `product`, `module`, `service`, and inside tag bodies.
+
+**Multiline prose** is multiple `>` lines in the same block. There is no block-prose syntax (no heredoc, no paragraph under a single `>`).
 
 ```pactia
 product FleetManagement {
@@ -92,7 +158,7 @@ product FleetManagement {
     service FleetService {
       > Core fleet management and vehicle tracking
 
-      @rest {
+      @api {
         method GET
         path /api/v1/vehicles
         @web {
@@ -107,8 +173,9 @@ product FleetManagement {
 
 | Rule | Detail |
 | --- | --- |
-| Prefix | `>` required on every prose line — no bare sentences at block level |
-| Scope | Prose attaches to the nearest `{ }` block (`product`, `module`, `service`, `@rest { }`, `@web { }`, …) |
+| **Prefix** | `>` required on every prose line — no bare sentences |
+| **Multiline** | One `>` per line; same block scope accumulates all lines |
+| Scope | Prose attaches to the nearest `{ }` block (`product`, `module`, `service`, `@api { }`, `@web { }`, …) |
 | IR | Lowered to `prose[]` / `guidance.yaml` with provenance `GUIDANCE` — not conformance-enforced alone |
 | Inside tag bodies | Schema lines do not use `>`; narrative uses `> sentence` — see [Unified tag body grammar](language-spec.md#unified-tag-body-grammar) |
 
@@ -152,7 +219,7 @@ Tags are the primary authoring surface in Pactia. Every structured fact uses `@t
 
 | Role | Placement | Declares or decorates? | Example |
 | --- | --- | --- | --- |
-| **Clause tag** | Standalone line in host body | **Declares** a named clause | `@entity Vehicle { }`, `@rest get_vehicle { }` |
+| **Clause tag** | Standalone line in host body | **Declares** a named clause | `@entity Vehicle { }`, `@api get_vehicle { }` |
 | **Modifier tag** | Line **above** host (prefix) | **Decorates** next line | `@auth { }`, `@pk`, `@returns VehicleDetailResponse` |
 | **Macro** | Line **above** host, or template invoke | **Expands** to tags before IR | `#[database]`, `#[list]` |
 
@@ -166,28 +233,27 @@ Canonical reference file: [fleet-management-v2.pactia](../fixtures/kernel/fleet-
 
 Clause tags work like **NestJS class/method decorators**: `@tagName clauseName { body }`.
 
-```
-ClauseTag       ::= "@" TagName TagTarget "{" ClauseBody "}"
-ModifierFlag    ::= "@" TagName                                    // empty body — @pk, @public
-ModifierShorthand ::= "@" TagName ( Reference | Number )          // @returns VehicleDto, @status 201
-ModifierTag       ::= "@" TagName "{" ModifierBody "}"             // @auth { roles: [...] }
-Macro             ::= "#[" Identifier MacroArgs? "]"
-
-TagName         ::= Identifier
-TagTarget       ::= Identifier | Reference                         // vehicle.created, get_vehicle
-ClauseBody      ::= ( Assignment "," | FieldDecl "," | ProseLine | NestedClauseTag )*
-ModifierBody    ::= Assignment ( "," Assignment )*
-```
-
-| Part | Role | NestJS analogy |
+| Part | Role | Example |
 | --- | --- | --- |
-| `@TagName` | Annotation **kind** | `@Controller()`, `@Get()` |
-| `TagTarget` | **Clause id** (required for multi-instance) | `'users'`, `'findOne'` |
-| `{ ... }` | Structured body | decorator options object |
+| `@TagName` | Annotation **kind** | `@api`, `@entity` |
+| `TagTarget` | **Clause id** (required for multi-instance) | `list_vehicles`, `Vehicle` |
+| `{ ... }` | Structured body | `method: GET, path: "/api/v1/vehicles",` |
 
-**Host blocks:** `product`, `module`, `service`, `data`, `@rest { }`, `@web { }`, `@deploy { }`.
+**Host blocks:** `product`, `module`, `service`, `data`, `@api { }`, `@web { }`, `@deploy { }`.
 
-The compiler resolves: **tag kind** + **target** + **host scope** → IR path.
+Full BNF: [grammar-reference.md](grammar-reference.md#tag-application-bnf).
+
+### One form per modifier arity
+
+Every modifier tag has exactly one canonical form:
+
+| Arity | Form | Examples |
+| --- | --- | --- |
+| Zero | Flag | `@pk`, `@public`, `@unique` |
+| One | Shorthand | `@returns VehicleListResponse`, `@status 201`, `@emit vehicle.created`, `@auth Customer` |
+| Multiple | Body | `@auth { roles: [Customer, Admin] }`, `@fk { entity: Customer }` |
+
+If a tag takes one value, the body form (`@returns { type: X }`) **does not parse**. There is no alternate spelling.
 
 ### Target naming conventions
 
@@ -203,22 +269,14 @@ The compiler resolves: **tag kind** + **target** + **host scope** → IR path.
 
 | Pattern | Target | Example |
 | --- | --- | --- |
-| **Multi-instance** | **Required** | `@entity Vehicle { }`, `@errorCatalog platform { }`, `@environment staging { }` |
+| **Multi-instance** | **Required** | `@entity Vehicle { }`, `@errors platform { }`, `@environment staging { }` |
 | **Singleton** per host | **Omit** | `@topology { mode: microservices }` on `product` |
 | **Modifier** on next line | **Omit** (host is implicit) | `@pk` then `id: uuid` |
 | **Event** | **Reference** | `@event vehicle.created { }` |
 
-### Modifier shorthand (developer ergonomics)
+### Modifier arity (summary)
 
-| Form | When allowed | Example |
-| --- | --- | --- |
-| **Flag** (no `{ }`) | Modifier has no slots | `@pk`, `@unique`, `@index`, `@nullable`, `@pii`, `@public` |
-| **Type reference** | Single `type` slot | `@returns VehicleDetailResponse`, `@body CreateVehicleRequest` |
-| **Event reference** | Single `emit` slot | `@emit vehicle.created` |
-| **Number** | Single `code` slot | `@status 201` |
-| **Full body** | Multiple slots or clarity | `@auth { roles: [Customer, Admin] }`, `@fk { entity: Customer }` |
-
-Legacy `{ type: VehicleDetailResponse }` lowers identically but `MODIFIER_TYPE_WRAPPER` lint recommends shorthand.
+See [One form per modifier arity](#one-form-per-modifier-arity). Full rules: [grammar-reference.md](grammar-reference.md#tag-application-bnf).
 
 ### Repeated fields → arrays
 
@@ -243,19 +301,21 @@ Object clauses must not repeat the same key. Use JSON-style arrays:
 
 Duplicate key in clause body → `CLAUSE_DUPLICATE_KEY`.
 
-### `@errorCatalog` vs `@errors`
+### `@errors` vs `@throws`
 
-| Tag | Scope | Body | Purpose |
+| Tag | Role | Scope | Example |
 | --- | --- | --- | --- |
-| `@errorCatalog` | `module` | map of error name → `{ status, code, message }` | Platform error catalog |
-| `@errors` | prefix on `@rest` | `{ names: [NotFound, Forbidden] }` | References catalog entries |
+| `@errors` | **Defines** catalog entries | `module` | `@errors platform { NotFound: { status: 404, ... } }` |
+| `@throws` | **References** catalog on an API | prefix on `@api` | `@throws { names: [NotFound, Forbidden] }` |
+
+Verb distance makes define vs reference obvious — `errors` declares, `throws` refers.
 
 ### `@bind` inheritance
 
-`@web` / `@ios` clauses **inside** `@rest` inherit `service`, `method`, and `path` from the parent `@rest` when `@bind` is omitted:
+`@web` / `@ios` clauses **inside** `@api` inherit `service`, `method`, and `path` from the parent `@api` when `@bind` is omitted:
 
 ```pactia
-@rest get_vehicle {
+@api get_vehicle {
   method: GET,
   path: "/api/v1/vehicles/:id",
 
@@ -269,30 +329,9 @@ Duplicate key in clause body → `CLAUSE_DUPLICATE_KEY`.
 
 Explicit `@bind { }` overrides inheritance for cross-service or alternate paths.
 
-### Optional `@endpoint` grouped form
+### Deprecated endpoint forms
 
-Dense endpoints may use **`@endpoint`** instead of a decoration stack + `@rest`. One clause, comma-separated fields, lowers to the same IR as prefix form:
-
-```pactia
-@endpoint create_vehicle {
-  auth: { roles: [Admin] },
-  macros: [create, idempotent],
-  body: CreateVehicleRequest,
-  returns: CreateVehicleResponse,
-  status: 201,
-  emit: vehicle.created,
-  errors: [ValidationFailed, Conflict],
-  method: POST,
-  path: "/api/v1/vehicles",
-
-  @web vehicle_create {
-    @screen { id: vehicle_create }
-    > Admin registers a vehicle from the fleet console
-  },
-}
-```
-
-`macros: [...]` expands to `#[name]` prefix macros. Prefer **prefix + `@rest`** for simple endpoints; use **`@endpoint`** when metadata would span many lines.
+`@api`, and legacy `{ type: X }` modifier wrappers still parse for backward compatibility. **New files should use `@api`** with prefix decorators. See [grammar-reference.md — Deprecated forms](grammar-reference.md#api-endpoints).
 
 ### Canonical example (excerpt)
 
@@ -303,7 +342,7 @@ product FleetManagement {
   @topology { mode: microservices, }
 
   module fleet {
-    @errorCatalog platform {
+    @errors platform {
       NotFound: { status: 404, code: RESOURCE_NOT_FOUND, message: "..." },
     },
 
@@ -319,8 +358,8 @@ product FleetManagement {
     service FleetService {
       @auth { roles: [Customer, Admin] }
       @returns VehicleDetailResponse
-      @errors { names: [NotFound, Forbidden] }
-      @rest get_vehicle {
+      @throws { names: [NotFound, Forbidden] }
+      @api get_vehicle {
         method: GET,
         path: "/api/v1/vehicles/:id",
       },
@@ -338,9 +377,9 @@ product FleetManagement {
 | `@config backend { ... }` | `config.profiles.backend` | env var map |
 | `@integration gps_devices { ... }` | `integrations[].id` | `direction`, `auth`, `maps_to` |
 | `@entity Vehicle { ... }` | `domain.entities.Vehicle` | fields + field modifiers |
-| `@errorCatalog platform { ... }` | `errors.catalog` | error definitions |
-| `@errors { names: [...] }` on `@rest` | `endpoint.errors` | catalog refs |
-| `@rest get_vehicle { ... }` | `services.*.endpoints[].id` | `method`, `path`, surfaces |
+| `@errors platform { ... }` | `errors.catalog` | error definitions |
+| `@throws { names: [...] }` on `@api` | `endpoint.errors` | catalog refs |
+| `@api get_vehicle { ... }` | `services.*.endpoints[].id` | `method`, `path`, surfaces |
 
 ### Field-level modifiers (prefix)
 
@@ -354,16 +393,19 @@ product FleetManagement {
 
 Inline modifiers after the type → `DECORATOR_MUST_PREFIX`.
 
-### Tag errors
+### Author errors
+
+Errors a beginner writing altitude 0–1 Pactia will realistically hit:
 
 | Code | Condition |
 | --- | --- |
-| `TAG_TARGET_REQUIRED` | Multi-instance tag without target |
-| `TAG_SCOPE_VIOLATION` | Tag outside allowed host (scope matrix) |
-| `TAG_BODY_INVALID` | Body fails tag JSON Schema |
-| `CLAUSE_DUPLICATE_KEY` | Same assignment key twice in one clause |
-| `MODIFIER_TYPE_WRAPPER` | Warn: `{ type: X }` — use `@returns X` shorthand |
-| `DECORATOR_MUST_PREFIX` | Modifier inside body instead of above host |
+| `TAG_UNKNOWN` | `@name` not in kernel or any imported package |
+| `STRING_REQUIRED` | Path or message not wrapped in `"..."` |
+| `PROSE_QUOTED` | Prose incorrectly wrapped in quotes instead of using `>` |
+| `PROSE_PREFIX_REQUIRED` | Non-empty line looks like prose but does not start with `>` |
+| `TAG_BODY_INVALID` | Tag body fails schema — wrong field or arity |
+
+Implementer codes (registry collision, decorator placement, clause validation): [grammar-reference.md](grammar-reference.md#implementer-error-codes).
 
 See [registry.md — Tag scope matrix](registry.md#tag-scope-matrix).
 
@@ -371,38 +413,18 @@ See [registry.md — Tag scope matrix](registry.md#tag-scope-matrix).
 
 ## Prefix decorations (macros and modifier tags)
 
-Pactia follows the same placement as **NestJS decorators** and **Rust attributes**: a decoration sits **immediately above** the clause it modifies. Software engineers should never hunt inside a block body for `#[database]` or `@auth { }` on the service they care about.
+Pactia follows **NestJS decorators** and **Rust attributes**: decorations sit **immediately above** the clause they modify.
 
-```
-DecorationLine     ::= MacroApplication | ModifierFlag | ModifierShorthand | ModifierTag
-MacroApplication   ::= "#[" Identifier MacroArgs? "]"
-ModifierFlag       ::= "@" TagName
-ModifierShorthand  ::= "@" TagName ( Reference | Number )
-ModifierTag        ::= "@" TagName "{" ModifierBody "}"
-HostLine           ::= ModuleDecl | ServiceDecl | FieldDecl | RestDecl | EndpointDecl | WebDecl | IosDecl
-```
-
-**Rule:** one or more `DecorationLine`s prefix a single `HostLine`. Read order is **bottom-up** — the line closest to the host applies first after expansion.
-
-### Valid hosts
+**Rule:** one or more decoration lines prefix a single host line. Read order is **bottom-up**.
 
 | Host | Decoration examples |
 | --- | --- |
 | `service Name { }` | `#[database]` `#[cache]` `#[events]` |
 | Field line in `@entity { }` | `@pk`, `@fk { entity: Customer }`, `@pii` |
-| `@rest id { }` | `@auth { }`, `#[list]`, `@returns VehicleDto`, `@body CreateRequest`, `@status 201` |
+| `@api id { }` | `@auth { }`, `#[list]`, `@returns VehicleDto`, `@body CreateRequest`, `@status 201` |
 | `@web id { }` / `@ios id { }` | `#[form]`, `#[a11y(WCAG_AA)]` |
 
-**Clause-introducing tags** (`@entity Vehicle { }`, `@config backend { }`, `@integration gps_devices { }`) are **not** prefix decorations — they *are* the host declaration.
-
-### What belongs inside a host body
-
-| Inside `service { }` | Allowed |
-| --- | --- |
-| `> prose` | Yes |
-| `@guide`, `@rest`, `@endpoint`, `@test`, `@must` | Yes — nested clauses |
-| `#[templateName(args)]` | Yes — compile-time expansion (not a decoration) |
-| `#[database]` `@auth` above endpoints | **No** — prefix form on `service` / `@rest` |
+Placement rules and implementer errors: [grammar-reference.md](grammar-reference.md#tag-application-bnf).
 
 ```pactia
 #[database]
@@ -412,8 +434,8 @@ service FleetService {
   @auth { roles: [Customer, Admin] }
   #[list] #[paginated] #[owner]
   @returns VehicleListResponse
-  @errors { names: [Forbidden] }
-  @rest list {
+  @throws { names: [Forbidden] }
+  @api list {
     method: GET,
     path: "/api/v1/vehicles",
     @web vehicle_list {
@@ -423,27 +445,7 @@ service FleetService {
     },
   },
 }
-
-@entity Vehicle {
-  @pk
-  id: uuid,
-  @fk { entity: Customer }
-  @index
-  customerId: uuid,
-  @unique
-  vin: string,
-}
 ```
-
-### Errors
-
-| Code | Condition |
-| --- | --- |
-| `DECORATOR_MUST_PREFIX` | Macro or modifier tag appears inside a host body where prefix placement is required |
-| `DECORATOR_WITHOUT_HOST` | Decoration line is not immediately followed by a valid host |
-| `DECORATOR_HOST_MISMATCH` | Tag `scope` does not allow the following host (see registry) |
-
-See [registry.md — Macros](registry.md#macros) for per-macro allowed hosts.
 
 ---
 
@@ -456,7 +458,10 @@ Pactia uses familiar value syntax — no bespoke string or object rules beyond `
 **All human text, paths, URLs, version constraints, and scenario steps must be double-quoted strings:**
 
 ```pactia
-statement: "Vehicles belong to exactly one customer",
+@rule single_customer {
+  > Vehicles belong to exactly one customer.
+}
+
 path: "/api/v1/vehicles",
 version: "^1.0",
 when: "Admin is logged in and POST /api/v1/vehicles with valid body",
@@ -504,12 +509,12 @@ Numeric literals are **bare integers** — never quoted. Use them wherever the s
 | Slot | Example | Do not use |
 | --- | --- | --- |
 | HTTP status | `status: 404,` | `status: "404"` |
-| Response status on `@rest` | `@status 201` | `@status "201"` |
+| Response status on `@api` | `@status 201` | `@status "201"` |
 | Replicas | `replicas: 2,` | `replicas: "2"` |
 | Rate limit | `#[rate_limit(1000, rpm)]` | `#[rate_limit("1000", rpm)]` |
 
 ```pactia
-@errorCatalog platform {
+@errors platform {
   NotFound: {
     status: 404,
     code: RESOURCE_NOT_FOUND,
@@ -563,7 +568,7 @@ ArrayElement  ::= String | Identifier | Reference | Number | Boolean
 
 @auth { roles: [Customer, Admin] }
 
-@errors { names: [NotFound, Forbidden] }
+@throws { names: [NotFound, Forbidden] }
 
 @enum VehicleStatus {
   values: [ACTIVE, INACTIVE, DECOMMISSIONED],
@@ -578,7 +583,7 @@ ArrayElement  ::= String | Identifier | Reference | Number | Boolean
 
 Unquoted tokens that contain spaces, `/`, `:`, `-` (except inside identifiers), or other punctuation → `INVALID_LITERAL` at compile time.
 
-Tag **targets** (`@rest get_vehicle`, `@entity Vehicle`) use **Identifier** form — prefer `snake_case` or `PascalCase`, not kebab-case (`get-vehicle` is invalid).
+Tag **targets** (`@api get_vehicle`, `@entity Vehicle`) use **Identifier** form — prefer `snake_case` or `PascalCase`, not kebab-case (`get-vehicle` is invalid).
 
 ### Comma-separated clause fields
 
@@ -609,11 +614,11 @@ Every object-shaped clause — tag bodies, `@entity` field lists, inline `{ }` b
 @config backend {
   DATABASE_URL: {
     required: true,
-    description: "PostgreSQL connection string",
+    > PostgreSQL connection string for the fleet database.
   },
 }
 
-@rest list_vehicles {
+@api list_vehicles {
   method: GET,
   path: "/api/v1/vehicles",
 }
@@ -650,82 +655,9 @@ Every object-shaped clause — tag bodies, `@entity` field lists, inline `{ }` b
 
 ## Unified tag body grammar
 
-Every `@tag { }` block — kernel or package — follows **one rule**:
+Every `@tag { }` block follows one rule: inside `{ }`, lines are comma-terminated fields/assignments **or** prose (`> ...`). Bare unquoted sentences inside tag bodies → `TAG_BODY_INVALID`.
 
-```
-TagApplication ::= "@" TagName TagTarget? "{" TagBodyItem* "}"
-TagBodyItem    ::= ProseLine | AssignmentLine | FieldDeclLine | NestedTagApplication | DecorationLine
-ProseLine      ::= ">" ProseText
-AssignmentLine ::= Identifier ":" AssignmentValue ","
-FieldDeclLine  ::= Identifier ":" TypeRef ","
-NestedAssignBlock ::= "{" (AssignmentLine | FieldDeclLine | ProseLine | NestedTagApplication)* "}"
-AssignmentValue ::= String | Reference | Identifier | Number | Boolean | Array | NestedAssignBlock
-```
-
-| Inside `{ }` | Allowed? | Lowered as |
-| --- | --- | --- |
-| `key: value,` assignment | Yes | Structured IR fields |
-| `name: Type,` field (in `@entity` only) | Yes | entity field schema |
-| `> sentence` prose | Yes — anywhere, any count | `prose[]` / guidance on that tag |
-| Bare line (no `:` and no `>`) | **No** | `TAG_BODY_INVALID` |
-| `//` / `/* */` | Yes | Stripped by lexer |
-
-**Strict rule:** every structured line inside a clause is **either** a comma-terminated field/assignment, **or** prose (`> ...`). Narrative that is not formal structure uses `> prose` or a quoted string value — never bare unquoted sentences.
-
-**Examples:**
-
-```pactia
-@relation customerOwnsVehicles {
-  from: Customer,
-  to: Vehicle,
-  verb: owns,
-  cardinality: many,
-}
-
-@states vehicleLifecycle {
-  entity: Vehicle.status,
-  transition: { from: ACTIVE, to: INACTIVE },
-  transition: { from: ACTIVE, to: DECOMMISSIONED },
-}
-
-@states vehicleLifecycleLoose {
-  entity: Vehicle.status,
-  > ACTIVE may become INACTIVE or DECOMMISSIONED; INACTIVE may become DECOMMISSIONED
-}
-```
-
-**`@entity` field lines** use `name: Type,` with **prefix** modifiers on the line above. See [Literals and clause fields](#literals-and-clause-fields).
-
-Each tag publishes a **JSON Schema** (`schemas/<tag>-v1.json` at package build, or built-in for kernel tags). The compiler validates every `SchemaLine` and rejects unknown slots (`TAG_BODY_UNKNOWN_FIELD`, `TAG_BODY_INVALID`).
-
-### Schema line styles
-
-All schema lines lower to JSON. Authors use **one assignment form** wherever the tag is object-shaped:
-
-```
-AssignmentLine ::= Identifier ":" AssignmentValue ","
-FieldDeclLine  ::= Identifier ":" TypeRef ","
-AssignmentValue ::= String | Reference | Identifier | Number | Boolean | Array | NestedAssignBlock
-NestedAssignBlock ::= "{" (AssignmentLine | FieldDeclLine | ProseLine)* "}"
-```
-
-| Style | Used in | Example | JSON |
-| --- | --- | --- | --- |
-| **Assignment** | All tag bodies | `from: Customer,`, `when: "...",` | JSON property |
-| **Field declaration** | `@entity` fields only | `id: uuid,` | field schema (type slot) |
-
-**Rule:** object-shaped tags use comma-separated `key: value,` fields. Narrative without formal fields uses `> prose` or quoted strings. Legacy space-separated slots (`method GET`) and bare clause lines → `TAG_BODY_INVALID` or `LEGACY_SLOT_SYNTAX` warning.
-
-**Nested objects:**
-
-```pactia
-auth: {
-  type: api_key,
-  env: GPS_DEVICE_API_KEY,
-},
-```
-
-Nested `@tag { }` (e.g. `@auth { roles: [Customer] }` inside `@rest`) uses the same rule: assignments or `>` only.
+Full BNF and schema line styles: [grammar-reference.md](grammar-reference.md#unified-tag-body-grammar).
 
 **No clause exceptions** — `@actor`, `@test`, `@must`, `@relation`, `@states` use assignments (`role:`, `when:`, `from:`) or `> prose`, not bare sentence templates.
 
@@ -751,7 +683,7 @@ Nested `@tag { }` (e.g. `@auth { roles: [Customer] }` inside `@rest`) uses the s
 | *(target `gps_devices`)* | yes | integration id — `integrations[].name` |
 | `direction` | yes | `inbound` \| `outbound` |
 | `auth` | yes | object — `{ type, env }` or `{ type, header }` |
-| `maps_to` | yes when `direction: inbound` | string `METHOD /path` — must match an `@rest` endpoint |
+| `maps_to` | yes when `direction: inbound` | string `METHOD /path` — must match an `@api` endpoint |
 | `> ...` | no | prose — lowers to `integrations[].purpose` |
 
 **Lowering → `input/integrations.yaml`:**
@@ -894,8 +826,8 @@ Authorization has **two layers** — application roles and party-scoped access o
 | Construct | Scope | IR |
 | --- | --- | --- |
 | `@actor <id> { role: Role, capabilities: [...] }` | `module` | `business.actors[]` |
-| `@auth { roles: [Role, ...] }` | `@rest` / `@endpoint` | `authorization.roles` |
-| `@public` | `@rest` / `@endpoint` | `authorization.type: PUBLIC` |
+| `@auth { roles: [Role, ...] }` | `@api` / `@api` | `authorization.roles` |
+| `@public` | `@api` / `@api` | `authorization.type: PUBLIC` |
 
 Roles declared in `@actor` must match identifiers used in `@auth { roles: [...] }`. Capabilities are documentation and AI context unless linked to `@test` / `@must`.
 
@@ -917,7 +849,7 @@ Stack packages declare baseline JWT claim names in `platformLaw.jwtClaims` (e.g.
 #[list]
 #[paginated]
 #[owner]
-@rest list_vehicles {
+@api list_vehicles {
   method: GET,
   path: "/api/v1/vehicles",
 }
@@ -932,7 +864,7 @@ See [registry.md — Authorization / ownership macros](registry.md#authorization
 ```pactia
 service FleetService {
   @rule domain_single_customer {
-    statement: "Every vehicle belongs to exactly one customer",
+    > Every vehicle belongs to exactly one customer.
   }
 
   @test customer_cannot_register {
@@ -951,7 +883,7 @@ service FleetService {
 
 | Syntax | IR |
 | --- | --- |
-| `@rule <id> { statement: "..." }` | `rules[]` (enforced) |
+| `@rule <id> { > ... }` | `rules[]` (enforced) |
 | `> ...` prose | `prose[]` (guidance / AI context) |
 | `@test <id> { name:, when:, then: }` | `scenarios[]` |
 | `@must <id> { on: trigger, > outcomes... }` | `obligations[]` |
@@ -960,7 +892,7 @@ service FleetService {
 
 ## Endpoints (protocol packages)
 
-REST APIs are declared with **`@rest { }`** from `use @pactia/protocol-rest` — not bare `GET` / `POST` lines.
+REST APIs are declared with **`@api { }`** from `use @pactia/protocol-rest` — not bare `GET` / `POST` lines.
 
 ```pactia
 use @pactia/protocol-rest;
@@ -971,8 +903,8 @@ service FleetService {
   #[paginated]
   #[owner]
   @returns VehicleListResponse
-  @errors { names: [Forbidden] }
-  @rest list_vehicles {
+  @throws { names: [Forbidden] }
+  @api list_vehicles {
     method: GET,
     path: "/api/v1/vehicles",
   }
@@ -984,15 +916,15 @@ service FleetService {
   @returns CreateVehicleResponse
   @status 201
   @emit vehicle.created
-  @errors { names: [ValidationFailed, Conflict] }
-  @rest create_vehicle {
+  @throws { names: [ValidationFailed, Conflict] }
+  @api create_vehicle {
     method: POST,
     path: "/api/v1/vehicles",
   }
 }
 ```
 
-The kernel routes `@rest { }` to `input/services/*.yaml` using the protocol package schema. gRPC and GraphQL attach `@grpc { }` / `@graphql { }` alongside the same logical `@rest { }` operation — see [platform.md](platform.md#protocol-packages).
+The kernel routes `@api { }` to `input/services/*.yaml` using the protocol package schema. gRPC and GraphQL attach `@grpc { }` / `@graphql { }` alongside the same logical `@api { }` operation — see [platform.md](platform.md#protocol-packages).
 
 ---
 
@@ -1043,7 +975,7 @@ data {
   }
 
   @rule domain_single_customer {
-    statement: "Every vehicle belongs to exactly one customer",
+    > Every vehicle belongs to exactly one customer.
   }
 }
 ```
@@ -1059,7 +991,7 @@ Types: `uuid`, `string`, `int`, `decimal`, `bool`, `datetime`, `json`. Array typ
 ## Multi-surface
 
 ```pactia
-@rest {
+@api {
   method GET
   path /api/v1/vehicles
   @auth { Customer, Admin }
@@ -1085,8 +1017,8 @@ Types: `uuid`, `string`, `int`, `decimal`, `bool`, `datetime`, `json`. Array typ
 
 Compiler emits:
 
-- `input/services/*.yaml` — `@rest { }` blocks and nested API tags
-- `input/surfaces/web.yaml`, `input/surfaces/ios.yaml`, … — surface tags nested under `@rest { }`
+- `input/services/*.yaml` — `@api { }` blocks and nested API tags
+- `input/surfaces/web.yaml`, `input/surfaces/ios.yaml`, … — surface tags nested under `@api { }`
 
 Surface packages (`@pactia/surface-react`, `@pactia/surface-swiftui`) register extra tags — not new kernel words.
 
@@ -1197,7 +1129,7 @@ Products **invoke** package macros and tags via `#[name]` and `@name { }` after 
 
 ```pactia
 define template fleet_list(path, ListDto) {
-  @rest {
+  @api {
     method GET
     path path
     @auth { Customer, Admin }
@@ -1221,7 +1153,7 @@ module fleet {
 }
 ```
 
-After expansion → `@rest { }` blocks with `#[macro]` invocations intact; macro expansion runs in the next phase.
+After expansion → `@api { }` blocks with `#[macro]` invocations intact; macro expansion runs in the next phase.
 
 **Rules:**
 
@@ -1230,7 +1162,7 @@ After expansion → `@rest { }` blocks with `#[macro]` invocations intact; macro
 - Expansion is **pure** (same input → same output)
 - Invocation is always `#[templateName(Arg, ...)]` — never a bare call line
 - Errors cite template name and invocation site
-- Prefer `define template` for **3+ repetitions**; single endpoints stay explicit `@rest { }`
+- Prefer `define template` for **3+ repetitions**; single endpoints stay explicit `@api { }`
 
 ### Policy template
 
@@ -1316,7 +1248,7 @@ define tag sanctions_check {
 Consumer after `use @acme/fintech-rules::{sanctions_check, sanctions_screen};`:
 
 ```pactia
-@rest {
+@api {
   method POST
   path /api/v1/transfers
   #[sanctions_screen]
@@ -1360,7 +1292,7 @@ Declare events and their consumers inside **`@event { }`** — not as bare `on .
 | `handler:` | Consumer — lowers to `eventHandlers[]` on the target service |
 | `> sentence` | Description for AI and generated docs |
 
-Producers attach with `@emit { event.name }` on `@rest { }` blocks (see [registry.md](registry.md#tags)).
+Producers attach with `@emit { event.name }` on `@api { }` blocks (see [registry.md](registry.md#tags)).
 
 A standalone line such as `on vehicle.created -> NotificationService.onVehicleCreated` **outside** `@event { }` is **prose only** — useful for AI context, not compiled to `eventHandlers[]`. For enforceable wiring, put the `handler` line inside `@event { }`.
 
@@ -1414,7 +1346,7 @@ Every IR field is tagged with one of:
 6. Validate @tag { } bodies (kernel + package JSON schemas)
 7. Lower @tags → structured IR fields
 8. Lower prose → scoped strings
-9. Lower @rest / @entity / @relation / … → services/*.yaml, domain.yaml
+9. Lower @api / @entity / @relation / … → services/*.yaml, domain.yaml
 10. Lower @web/@ios/... → surfaces/*.yaml; resolve @bind
 11. Apply yaml merge embeds (schema-validated)
 12. Validate @pactia/schema
@@ -1448,20 +1380,11 @@ Pactia does not generate code. It generates the **shared spec** every agent impl
 | --- | --- |
 | `flow { 1. charge 2. emit }` | `@must on failure` + `@test` |
 | Use `@list` as a tag | `#[list]` macro — see [registry.md](registry.md#macros) |
-| Bare `@auth Customer` | `@auth { Customer }` — tags require `{ }` |
-| Bare `GET /path` or `POST /path` | `@rest { method GET path /path ... }` after `use @pactia/protocol-rest` |
-| Bare `Admin can ...` | `@actor { Admin can ... }` |
-| Bare `Customer owns many Vehicle` | `@relation { Customer owns many Vehicle }` |
-| Bare `enum` / `Entity { }` in `data` | `@enum { }` / `@entity { }` |
-| `define Vin = string` or `define X = Enum.VALUE` | Scalar kinds on fields; enum refs inline — no aliases |
-| Per-service `runtime: node@20` | `@stack` on product |
-| Bare sentence without `>` | `> sentence` — use `PROSE_PREFIX_REQUIRED` |
-| Standalone `on event -> handler` for wiring | `@event { handler Service.method }` — or `> ...` as guidance only |
-| Register `#[list]` with `define macro` in a product | Publish `define macro list` in a stack/std package |
-| Register `@foo` with `define tag` in a product | Publish `define tag foo` in a package on pactia.io |
-| `define template` for a single endpoint | Write `@rest { }` explicitly |
-| Bare `fleet_list(...)` template call | `#[fleet_list(...)]` |
-| Unshareable chat one-offs | Versioned `.pactia` in git / pactia.io |
+| Bare `GET /path` or `POST /path` | `@api { method: GET, path: "/path", ... }` |
+| `@auth Customer` (one role) | Valid shorthand at altitude 1 — or `@auth { roles: [Customer] }` for multiple |
+| Bare sentence without `>` | `> sentence` on its own line |
+| `@api` / `@api` in new files | `@api` with prefix decorators |
+| `define template` for a single endpoint | Write `@api { }` explicitly |
 
 ---
 
@@ -1482,7 +1405,7 @@ Each level answers one question. Each level can be its own file — one AI conte
 | **Feature** | What API? What rules? What outcomes? | Engineer | `features/*.pactia` |
 | **Entity** | What data exists? | Engineer | `entities/*.pactia` |
 
-**Feature** files hold `@rest { }` API contracts (nested tags + prose). **Entity** files hold `data { }` blocks with `@entity { }`, `@enum { }`, etc.
+**Feature** files hold `@api { }` API contracts (nested tags + prose). **Entity** files hold `data { }` blocks with `@entity { }`, `@enum { }`, etc.
 
 ---
 
@@ -1569,7 +1492,7 @@ module commerce {
     handler: NotificationModule.onOrderPlaced,
   }
 
-  @errorCatalog platform {
+  @errors platform {
     PaymentFailed: {
       status: 402,
       code: PAYMENT_FAILED,
@@ -1598,7 +1521,7 @@ service OrderService {
 
 ### `features/*.pactia`
 
-One file = one API contract = one AI task. Modifier tags and macros prefix `@rest { }` — no `feature` keyword.
+One file = one API contract = one AI task. Modifier tags and macros prefix `@api { }` — no `feature` keyword.
 
 ```pactia
 @auth { roles: [Customer, Admin] }
@@ -1606,7 +1529,7 @@ One file = one API contract = one AI task. Modifier tags and macros prefix `@res
 #[paginated]
 #[owner]
 @returns VehicleListResponse
-@rest list_vehicles {
+@api list_vehicles {
   method: GET,
   path: "/api/v1/vehicles",
 
@@ -1689,7 +1612,7 @@ If omitted, `pactiac compile` discovers `product.pactia` and follows `import` ed
 2. Resolve use / import (depth-first, lockfile pins)
 3. Merge module.pactia files per module path
 4. Merge service.pactia + imported entities + imported features
-5. Expand #[template(...)] and merge feature @rest { } blocks into parent service
+5. Expand #[template(...)] and merge feature @api { } blocks into parent service
 6. Continue standard compile pipeline (validate, lower to IR)
 ```
 
@@ -1725,7 +1648,7 @@ implementation_hint PlaceOrder {
 }
 ```
 
-Never put numbered `flow {}` or step `on_failure` in feature files or `@rest { }` blocks — use `@must` for enforceable outcomes.
+Never put numbered `flow {}` or step `on_failure` in feature files or `@api { }` blocks — use `@must` for enforceable outcomes.
 
 ---
 

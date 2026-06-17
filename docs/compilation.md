@@ -37,7 +37,7 @@ Pactia compiles to **AI-neutral YAML IR** (`input/**/*.yaml`) — not vendor-spe
 6.  Expand define (templates only) → kernel constructs
 7.  Expand #[macro] using effectiveRegistry (stack > use > std > defaults)
 8.  Validate @tag { } bodies against kernel rules + package JSON schemas
-9.  Validate protocol package @grpc / @rest blocks against JSON schemas
+9.  Validate protocol package @grpc / @api blocks against JSON schemas
 10. Verify protocol packages against stack allowedProtocolPackages
 11. Validate state graphs in data { states ... }
 12. Infer missing response/request shapes; warn on ambiguity
@@ -79,15 +79,15 @@ This is how a minimal Pactia file becomes a **contentful** agent brief without a
 | Pactia source | Output file |
 | --- | --- |
 | `product { @stack @topology @tenancy ... }` | `input/project.yaml` |
-| `service { @rest { } + nested @tag { } + #[macro] }` | `input/services/<kebab-name>.yaml` |
+| `service { @api { } + nested @tag { } + #[macro] }` | `input/services/<kebab-name>.yaml` |
 | `@actor { }` | `input/business.yaml` |
 | `data { @entity @enum @relation @states }` | `input/domain.yaml` |
 | `>` rules, constraint prose | `input/business.yaml` (prose / guidance) |
 | `@integration` / integration prose | `input/integrations.yaml` |
 | `@event { }` with `handler` line | `input/communication.yaml` + `eventHandlers[]` |
 | `@policy { ... }` | `input/policies.yaml` |
-| `@errorCatalog` | `input/errors.yaml` (catalog) |
-| `@errors` on `@rest` | `response.errors[]` per endpoint |
+| `@errors` | `input/errors.yaml` (catalog) |
+| `@errors` on `@api` | `response.errors[]` per endpoint |
 | `@event` declarations | `input/communication.yaml` → `events[].payload` |
 | `@config { ... }` | `input/config.yaml` |
 | `@test` blocks | `input/scenarios.yaml` |
@@ -195,6 +195,14 @@ pactia package build -C ./packages/rust-anb
 pactia publish -C ./packages/rust-anb
 pactia build fleet-management-v2.pactia -o ./specification
 ```
+
+---
+
+## Error codes
+
+**Author-facing** (beginners at altitude 0–1): see [language-spec.md — Author errors](language-spec.md#author-errors).
+
+**Implementer-facing** (registry collision, decorator placement, clause validation, legacy syntax): see [grammar-reference.md — Implementer error codes](grammar-reference.md#implementer-error-codes).
 
 ---
 

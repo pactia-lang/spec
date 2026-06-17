@@ -5,7 +5,7 @@ Status: **Specification**
 
 Part of: [packages.md](packages.md) | [language-spec.md](language-spec.md) | [compilation.md](compilation.md)
 
-Stack packages (`@stack`), semver locking, and wire-format protocol packages (`@rest`, `@grpc`, `@graphql`).
+Stack packages (`@stack`), semver locking, and wire-format protocol packages (`@api`, `@grpc`, `@graphql`).
 
 ---
 
@@ -489,7 +489,7 @@ pactia update --stack                # refresh stack pin in kabol.lock
 
 ## One sentence
 
-**Declare each API inside `@rest { }` (or `@grpc { }` / `@graphql { }` from protocol packages); attach `@auth { }`, `#[macro]`, and surface blocks inside the protocol tag; the compiler lowers to YAML.**
+**Declare each API inside `@api { }` (or `@grpc { }` / `@graphql { }` from protocol packages); attach `@auth { }`, `#[macro]`, and surface blocks inside the protocol tag; the compiler lowers to YAML.**
 
 ---
 
@@ -505,7 +505,7 @@ pactia update --stack                # refresh stack pin in kabol.lock
 | Correct pattern | Benefit |
 | --- | --- |
 | `use @pactia/protocol-rest` | REST is a library |
-| `@rest { method GET path /api/v1/vehicles ... }` | Wire format is a tag block |
+| `@api { method GET path /api/v1/vehicles ... }` | Wire format is a tag block |
 | `use @vendor/protocol-odata` | New protocol without a language version bump |
 
 ---
@@ -519,7 +519,7 @@ pactia update --stack                # refresh stack pin in kabol.lock
                             │
 ┌───────────────────────────▼─────────────────────────────┐
 │  PROTOCOL PACKAGES (pactia.io)                          │
-│  @pactia/protocol-rest   → @rest { } + schema + YAML   │
+│  @pactia/protocol-rest   → @api { } + schema + YAML   │
 │  @pactia/protocol-grpc   → @grpc { } + schema + YAML   │
 └───────────────────────────┬─────────────────────────────┘
                             │ compile
@@ -541,21 +541,21 @@ service FleetService {
   #[paginated]
   #[owner]
   @returns VehicleListResponse
-  @errors { names: [Forbidden] }
-  @rest list_vehicles {
+  @throws { names: [Forbidden] }
+  @api list_vehicles {
     method: GET,
     path: "/api/v1/vehicles",
   }
 }
 ```
 
-`@rest { }` is **required** for REST endpoints. Import `@pactia/protocol-rest` for wire-format validation and OpenAPI-oriented defaults.
+`@api { }` is **required** for REST endpoints. Import `@pactia/protocol-rest` for wire-format validation and OpenAPI-oriented defaults.
 
 ---
 
 ## gRPC and GraphQL
 
-Attach a protocol block to the same logical `@rest { }` operation:
+Attach a protocol block to the same logical `@api { }` operation:
 
 ```pactia
 use @pactia/protocol-grpc;
@@ -564,7 +564,7 @@ use @pactia/protocol-grpc;
 #[buyer]
 @body MarkPaymentSentRequest
 @returns TradeResponse
-@rest mark_payment_sent {
+@api mark_payment_sent {
   method: POST,
   path: "/api/v1/trades/:id/mark-payment-sent",
 
@@ -575,7 +575,7 @@ use @pactia/protocol-grpc;
 }
 ```
 
-Block names (`@rest`, `@grpc`, `@graphql`) come from the package manifest — not from the kernel.
+Block names (`@api`, `@grpc`, `@graphql`) come from the package manifest — not from the kernel.
 
 ---
 
@@ -594,7 +594,7 @@ See [packages.md](packages.md). New wire formats are **packages**, not kernel ke
 
 ## See also
 
-- [language-spec.md](language-spec.md) — strict kernel, `@rest { }`, data tags
+- [language-spec.md](language-spec.md) — strict kernel, `@api { }`, data tags
 - [packages.md](packages.md#extensibility)
 - [packages.md](packages.md)
 - [compilation.md](compilation.md)

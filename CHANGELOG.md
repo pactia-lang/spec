@@ -6,6 +6,16 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+### Changed
+
+- Lead with **three altitudes** (prose-only → light tagging → fully specified) in overview and language-spec.
+- Collapse endpoint tags: **`@api`** is canonical; `@rest` / `@endpoint` deprecated (still parse).
+- Rename error tags: **`@errors`** defines catalog; **`@throws`** references on `@api`.
+- One modifier form per arity — remove `MODIFIER_TYPE_WRAPPER` and `{ type: X }` alternates.
+- One prose rule: `>` required on every prose line (including altitude 0 in `product { }`).
+- Split author vs implementer error codes; new [grammar-reference.md](docs/grammar-reference.md).
+- Gate [registry.md](docs/registry.md) as opt-in for package `use` authors.
+
 ## [1.0.0] - TBD
 
 First public language version.
@@ -18,7 +28,7 @@ First public language version.
 - Workspace registry: categories, selective `use @pkg::{symbol};`, `@stack` + `use` for stack packages.
 - Tag system: clause / modifier / macro roles, scope matrix, prefix decorations, comma-separated fields, array literals.
 - Cross-cutting blocks: `@policy`, `@security`, `@observe`, `@deploy`, `@guide`, `@must`, `@test`.
-- Protocol packages: `@rest`, `@grpc`, `@graphql` via `use @pactia/protocol-*`.
+- Protocol packages: `@api`, `@grpc`, `@graphql` via `use @pactia/protocol-*`.
 - Canonical reference: [fleet-management-v2.pactia](../fixtures/kernel/fleet-management-v2.pactia).
 
 [Unreleased]: https://github.com/pactia-lang/spec/compare/v1.0.0...HEAD

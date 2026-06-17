@@ -2,7 +2,7 @@
 
 Syntax highlighting for `.pactia` in Cursor / VS Code.
 
-Extension: [vscode-pactia](../../vscode-pactia/) | [language-spec.md](language-spec.md)
+Extension: [vscode-pactia](../../vscode-pactia/) | [language-spec.md](language-spec.md) | [registry.md](registry.md)
 
 ## Install (required)
 
@@ -26,21 +26,26 @@ cd vscode-pactia && npm install && npm run test:grammar
 
 | Highlight as | Examples |
 | --- | --- |
-| **Keywords (11)** | `pactia`, `product`, `module`, `service`, `data`, `use`, `import`, `define`, `yaml` |
-| **Clause tags (teal)** | `@entity Vehicle { }`, `@rest list { }`, `@actor customers { }` |
-| **Macros (purple, bold)** | `#[list]`, `#[database]` — above `service` / `@rest` |
-| **Modifier flags** | `@pk`, `@public`, `@pii` — no `{ }` when empty |
+| **Kernel keywords (9)** | `pactia`, `product`, `module`, `service`, `data`, `use`, `import`, `define`, `yaml` |
+| **Registry headers** | `scope endpoint`, `body { }`, `lowers { }`, `expands { }`, `category compliance` |
+| **Clause tags (teal)** | `@entity Vehicle { }`, `@api list { }`, `@actor customers { }` |
+| **Macros (purple, bold)** | `#[list]`, `#[database]`, `#[alias::macro]` — above `service` / `@api` |
+| **Modifier flags** | `@pk`, `@public`, `@pii`, `@optional` — no `{ }` when empty |
 | **Modifier shorthand** | `@returns VehicleDto`, `@status 201`, `@emit vehicle.created` |
+| **Imports** | `use @scope/name;`, `use @pkg::{a, b};`, `use @pkg as alias;` |
+| **Qualified tags** | `@alias::sanctions_check { }` |
 | **Prose (purple, italic)** | `> sentence` |
 | **Strings (green)** | `"PostgreSQL connection string"`, `"/api/v1/orders"` |
 | **Braces (gold)** | `{` `}` on blocks and inline objects |
 
-## Grammar rules (v0.1.6)
+## Grammar rules (v1.0.0)
 
 1. **Multiline blocks** open only when `{` is the **last character on the line** (`@entity Vehicle {`, `product X {`).
 2. **Single-line modifiers** — `@auth { roles: [...] }`, `@screen { id: x }` matched before multiline rules.
 3. **Indent-aware close** — `}` at the same indent as the opening line closes the block.
 4. **Inline objects** — `{ service: FleetService, metric: error_rate }` inside arrays.
+5. **Package authoring** — `define tag` / `define macro` with nested `body { }`, `lowers { }`, `expands { }` registry blocks.
+6. **Qualified symbols** — `@alias::tag`, `#[alias::macro]` after `use @pkg as alias;`.
 
 ## Keeping grammar in sync
 
