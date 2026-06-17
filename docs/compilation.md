@@ -112,12 +112,12 @@ See [registry.md](registry.md#cross-cutting-concerns) for cascade and provenance
 
 ```pactia
 product FleetManagement {
-  @stack { rust-anb ^1.0 }
+  @stack rust-anb { }
 }
 ```
 
-1. Read `@stack { }` and optional semver constraint from `product`; expand bare id to `@pactia/<id>`.
-2. Check `kabol.lock` — use cached copy when digest matches.
+1. Read `@stack <id> { }` from `product`; expand bare id to `@pactia/<id>`.
+2. Resolve semver from `kabol.toml` — use `kabol.lock` when digest matches.
 3. Otherwise query pactia.io for the highest matching release; write pin to `kabol.lock`.
 4. Download, verify digest, cache locally.
 
@@ -159,6 +159,7 @@ Name collisions without alias → `EXPORT_COLLISION` error.
 | `DEFINE` | Supplied by `define template` expansion |
 | `YAML_EMBED` | Supplied by a `yaml merge` embed |
 | `GUIDANCE` | `@guide` or non-enforced prose |
+| `GENERATED` | Optional `bsc expand` (LLM) narrative from IR |
 | `NOT_DERIVABLE` | IR slot exists but Pactia does not contain the fact |
 
 `NOT_DERIVABLE` entries are never enforced by conformance — they mark [the intent line](overview.md#the-intent-line).
@@ -187,7 +188,7 @@ Published tarball is what consumers load into `effectiveRegistry` at product com
 ## CLI
 
 ```bash
-pactiac compile ../examples/single-file/fleet-management-v2.pactia -o ./input
+pactiac compile ../fixtures/kernel/fleet-management-v2.pactia -o ./input
 pactiac compile -w ./my-product -o ./input
 pactia check fleet-management-v2.pactia
 pactia package build -C ./packages/rust-anb

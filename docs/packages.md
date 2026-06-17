@@ -536,7 +536,7 @@ The **Pactia standard library** is a curated set of packages on pactia.io — no
 | `@pactia/surface-react` | `@web { }`, `#[form]`, `#[a11y(...)]` (category `surface`) |
 | `@pactia/surface-swiftui` | `@ios { }`, mobile macros (category `surface`) |
 
-`pactia init` adds default selective `use` lines (protocol + api-patterns). Stack package (`@stack { rust-anb }`) **overrides** std macro definitions. See [registry.md — Workspace registry](registry.md#workspace-registry).
+`pactia init` adds default selective `use` lines (protocol + api-patterns). Stack package (`@stack rust-anb { }`) **overrides** std macro definitions. See [registry.md — Workspace registry](registry.md#workspace-registry).
 
 ---
 
@@ -1026,7 +1026,7 @@ Pactia optimizes for: **one kernel language every agent and tool understands**, 
 
 ## The kernel stays fixed
 
-The Pactia **kernel** has **11 keywords** — see [language-spec.md](language-spec.md):
+The Pactia **kernel** has **nine keywords** — see [language-spec.md](language-spec.md):
 
 `pactia`, `product`, `module`, `service`, `data`, `use`, `import`, `define`, `yaml`
 
@@ -1237,7 +1237,7 @@ Stack authors publish `@pactia/rust-anb` by writing `yaml package/*` blocks — 
 **Use case:** Stack- and package-owned patterns — pagination, ownership filters, rate limits — that expand to tags before IR emit.
 
 ```pactia
-// Stack macros from @stack { rust-anb } — resolved via kabol.lock, not `use`
+// Stack macros from @stack rust-anb { } — resolved via kabol.lock, not `use`
 
 #[database]
 #[cache]

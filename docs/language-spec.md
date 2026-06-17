@@ -33,7 +33,7 @@ You are writing the **permanent, versioned prompt** for your product. Teams publ
 
 ---
 
-## The 11 keywords
+## The nine kernel keywords
 
 | Keyword | Purpose |
 | --- | --- |
@@ -158,7 +158,7 @@ Tags are the primary authoring surface in Pactia. Every structured fact uses `@t
 
 **Why tags vs macros:** tags map to **schema slots** in IR (validated JSON Schema per tag). Macros are **compile-time patterns** registered by stack/protocol packages — they expand to tags/macros deterministically.
 
-Canonical reference file: [examples/single-file/fleet-management-v2.pactia](../../examples/single-file/fleet-management-v2.pactia). Full scope matrix: [registry.md — Tag scope matrix](registry.md#tag-scope-matrix).
+Canonical reference file: [fleet-management-v2.pactia](../fixtures/kernel/fleet-management-v2.pactia). Runnable workspaces: [pactia-lang/examples](https://github.com/pactia-lang/examples). Full scope matrix: [registry.md — Tag scope matrix](registry.md#tag-scope-matrix).
 
 ---
 
@@ -296,7 +296,7 @@ Dense endpoints may use **`@endpoint`** instead of a decoration stack + `@rest`.
 
 ### Canonical example (excerpt)
 
-See full file: [fleet-management-v2.pactia](../../examples/single-file/fleet-management-v2.pactia).
+See full file: [fleet-management-v2.pactia](../fixtures/kernel/fleet-management-v2.pactia).
 
 ```pactia
 product FleetManagement {
@@ -846,13 +846,14 @@ DefineBody  ::= "template" Identifier "(" ParamList ")" "{" TemplateBody "}"
 pactia 1.0
 
 use @pactia/protocol-rest;
+use @pactia/rust-anb;
 
 product FleetManagement {
   > Platform for tracking vehicles and managing fleets
 
-  @stack { rust-anb ^1.0 }
-  @topology { microservices }
-  @tenancy { single }
+  @stack rust-anb { }
+  @topology { mode: microservices, }
+  @tenancy { mode: single, }
 
   module fleet {
     ...
@@ -860,7 +861,7 @@ product FleetManagement {
 }
 ```
 
-First prose line after `{` = description. Stack, topology, and tenancy use `@tags` on `product` — see [registry.md](registry.md#tags) and [platform.md](platform.md#stack-versions).
+First `> prose` line after `{` is the product description. Stack semver is declared in `kabol.toml` / `kabol.lock` — not inside `@stack { }`. See [registry.md](registry.md#tags) and [platform.md](platform.md#stack-versions).
 
 ---
 
@@ -868,17 +869,61 @@ First prose line after `{` = description. Stack, topology, and tenancy use `@tag
 
 ```pactia
 module fleet {
-  @actor {
-    Admin can manage fleets and manage users
+  @actor admins {
+    role: Admin,
+    capabilities: [manage_fleets, manage_users],
   }
 
-  @actor {
-    Customer can track vehicles and view history
+  @actor customers {
+    role: Customer,
+    capabilities: [track_vehicles, view_history],
   }
 }
 ```
 
-`@actor { }` lowers to `business.actors[]` (capabilities snake_cased in IR). Same actors gate API `@auth { }` and UI visibility on every surface. See #authorization.
+`@actor` lowers to `business.actors[]` (capabilities are `snake_case` identifiers in IR). The same roles gate API `@auth { }` and UI visibility on every surface. See [Authorization](#authorization).
+
+---
+
+## Authorization
+
+Authorization has **two layers** — application roles and party-scoped access on resources.
+
+### Application roles
+
+| Construct | Scope | IR |
+| --- | --- | --- |
+| `@actor <id> { role: Role, capabilities: [...] }` | `module` | `business.actors[]` |
+| `@auth { roles: [Role, ...] }` | `@rest` / `@endpoint` | `authorization.roles` |
+| `@public` | `@rest` / `@endpoint` | `authorization.type: PUBLIC` |
+
+Roles declared in `@actor` must match identifiers used in `@auth { roles: [...] }`. Capabilities are documentation and AI context unless linked to `@test` / `@must`.
+
+### Party scope (resource-bound)
+
+Party macros express **row- or field-level** rules on top of role checks:
+
+| Macro | Meaning | IR |
+| --- | --- | --- |
+| `#[owner]` | Actor may access rows they own (FK inference, e.g. `customerId`) | `ownership.scope: OWN_ROWS` |
+| `#[buyer]` | `auth.sub == resource.buyerId` | `ownership.scope: PARTY_BUYER` |
+| `#[seller]` | `auth.sub == resource.sellerId` | `ownership.scope: PARTY_SELLER` |
+| `#[participant]` | Buyer or seller on the resource | `ownership.scope: PARTY_PARTICIPANT` |
+
+Stack packages declare baseline JWT claim names in `platformLaw.jwtClaims` (e.g. `sub`, `role`, `iat`, `exp`). Party macros lower to conformance checks on those claims — not to middleware implementation (below [the intent line](overview.md#the-intent-line)).
+
+```pactia
+@auth { roles: [Customer, Admin] }
+#[list]
+#[paginated]
+#[owner]
+@rest list_vehicles {
+  method: GET,
+  path: "/api/v1/vehicles",
+}
+```
+
+See [registry.md — Authorization / ownership macros](registry.md#authorization--ownership-party-scope).
 
 ---
 
@@ -886,29 +931,30 @@ module fleet {
 
 ```pactia
 service FleetService {
-  @rule { Vehicles belong to exactly one customer }
-  @rule { Only admins may register vehicles }
-
-  @test {
-    "Customer cannot register vehicles"
-    When Customer is logged in and POST /api/v1/vehicles
-    Then status is 403
+  @rule domain_single_customer {
+    statement: "Every vehicle belongs to exactly one customer",
   }
 
-  @must {
-    on payment_failed
-    inventory reservation is released
-    order status becomes cancelled
+  @test customer_cannot_register {
+    name: "Customer cannot register vehicles",
+    when: "Customer is logged in and POST /api/v1/vehicles",
+    then: "status is 403",
+  }
+
+  @must payment_failed_release {
+    on: payment_failed,
+    > inventory reservation is released
+    > order status becomes cancelled
   }
 }
 ```
 
 | Syntax | IR |
 | --- | --- |
-| `@rule { ... }` | `rules[]` (enforced) |
+| `@rule <id> { statement: "..." }` | `rules[]` (enforced) |
 | `> ...` prose | `prose[]` (guidance / AI context) |
-| `@test { ... }` + When/Then | `scenarios[]` |
-| `@must { on trigger ... }` | `obligations[]` |
+| `@test <id> { name:, when:, then: }` | `scenarios[]` |
+| `@must <id> { on: trigger, > outcomes... }` | `obligations[]` |
 
 ---
 
@@ -920,25 +966,28 @@ REST APIs are declared with **`@rest { }`** from `use @pactia/protocol-rest` —
 use @pactia/protocol-rest;
 
 service FleetService {
-  @rest {
-    method GET
-    path /api/v1/vehicles
-    @auth { Customer, Admin }
-    #[list] #[paginated] #[owner]
-    @returns { VehicleListResponse }
-    @errors { Forbidden }
+  @auth { roles: [Customer, Admin] }
+  #[list]
+  #[paginated]
+  #[owner]
+  @returns VehicleListResponse
+  @errors { names: [Forbidden] }
+  @rest list_vehicles {
+    method: GET,
+    path: "/api/v1/vehicles",
   }
 
-  @rest {
-    method POST
-    path /api/v1/vehicles
-    @auth { Admin }
-    #[create] #[idempotent]
-    @body { CreateVehicleRequest }
-    @returns { CreateVehicleResponse }
-    @status { 201 }
-    @emit { vehicle.created }
-    @errors { ValidationFailed, Conflict }
+  @auth { roles: [Admin] }
+  #[create]
+  #[idempotent]
+  @body CreateVehicleRequest
+  @returns CreateVehicleResponse
+  @status 201
+  @emit vehicle.created
+  @errors { names: [ValidationFailed, Conflict] }
+  @rest create_vehicle {
+    method: POST,
+    path: "/api/v1/vehicles",
   }
 }
 ```
@@ -953,41 +1002,49 @@ One place for entities, enums, relations, state machines, and request/response s
 
 ```pactia
 data {
-  @enum {
-    VehicleStatus { ACTIVE, INACTIVE, DECOMMISSIONED }
+  @enum VehicleStatus {
+    values: [ACTIVE, INACTIVE, DECOMMISSIONED],
   }
 
   @entity Vehicle {
-    @pk { }
-    id: uuid
+    @pk
+    id: uuid,
     @fk { entity: Customer }
-    @index { }
-    customerId: uuid
-    @unique { }
-    vin: string
-    status: VehicleStatus
-    label: string
+    @index
+    customerId: uuid,
+    @unique
+    vin: string,
+    status: VehicleStatus,
+    label: string,
   }
 
   @entity Customer {
-    @pk { }
-    id: uuid
-    name: string
-    @pii { }
-    @unique { }
-    email: string
+    @pk
+    id: uuid,
+    name: string,
+    @pii
+    @unique
+    email: string,
   }
 
-  @relation { Customer owns many Vehicle }
-
-  @states {
-    Vehicle.status
-    ACTIVE -> INACTIVE
-    INACTIVE -> DECOMMISSIONED
-    * -> DECOMMISSIONED
+  @relation customer_owns_vehicles {
+    from: Customer,
+    to: Vehicle,
+    verb: owns,
+    cardinality: many,
   }
 
-  @rule { Every vehicle belongs to exactly one customer }
+  @states vehicle_lifecycle {
+    entity: Vehicle.status,
+    transitions: [
+      { from: ACTIVE, to: INACTIVE },
+      { from: INACTIVE, to: DECOMMISSIONED },
+    ],
+  }
+
+  @rule domain_single_customer {
+    statement: "Every vehicle belongs to exactly one customer",
+  }
 }
 ```
 
@@ -1284,24 +1341,24 @@ See [packages.md](packages.md#extensibility) and [registry.md#tags](registry.md#
 Declare events and their consumers inside **`@event { }`** — not as bare `on ... ->` lines.
 
 ```pactia
-@event {
-  vehicle.created payload VehicleCreatedPayload
-  handler NotificationService.onVehicleCreated
-  Fired when a vehicle is registered in the platform
+@event vehicle.created {
+  payload: VehicleCreatedPayload,
+  handler: NotificationService.onVehicleCreated,
+  > Fired when a vehicle is registered in the platform
 }
 
-@event {
-  position.received payload GpsIngestRequest
-  handler NotificationService.onPositionReceived
-  Fired when a GPS device pushes a valid position update
+@event position.received {
+  payload: GpsIngestRequest,
+  handler: NotificationService.onPositionReceived,
+  > Fired when a GPS device pushes a valid position update
 }
 ```
 
-| Line in `@event { }` | Meaning |
+| Field in `@event` | Meaning |
 | --- | --- |
-| `event.name payload DtoName` | Event identity and payload type in `communication.yaml` |
-| `handler Service.method` | Consumer — lowers to `eventHandlers[]` on the target service |
-| Prose sentence | Description for AI and generated docs |
+| `payload:` | Payload type in `communication.yaml` |
+| `handler:` | Consumer — lowers to `eventHandlers[]` on the target service |
+| `> sentence` | Description for AI and generated docs |
 
 Producers attach with `@emit { event.name }` on `@rest { }` blocks (see [registry.md](registry.md#tags)).
 
@@ -1339,6 +1396,7 @@ Every IR field is tagged with one of:
 | `MACRO` | Supplied by `#[macro]` expansion (see expanded tags in IR) |
 | `DEFINE` | Supplied by `define template` expansion |
 | `GUIDANCE` | `@guide { }` or non-enforced prose |
+| `GENERATED` | Optional `bsc expand` (LLM) narrative — never overrides formal IR |
 | `NOT_DERIVABLE` | IR slot exists but Pactia does not contain the fact |
 
 `NOT_DERIVABLE` marks [the contract line](overview.md#the-intent-line) — not a defect.
@@ -1348,7 +1406,7 @@ Every IR field is tagged with one of:
 ## Compile pipeline
 
 ```
-1. Parse: 11 keywords + three line kinds (tag, macro, prose)
+1. Parse: nine kernel keywords + three line kinds (tag, macro, prose)
 2. Assemble workspace (if multi-file) — see [language-spec.md#workspace-layout](language-spec.md#workspace-layout)
 3. Resolve @stack { } + use / import; build effectiveRegistry (kernel + package tags[] + macros[])
 4. Expand define (templates only) → kernel tags
@@ -1475,13 +1533,14 @@ Product metadata, stack selection, topology, tenancy, and **global imports**.
 pactia 1.0
 
 use @pactia/protocol-rest;
+use @pactia/rust-anb;
 
 product EcommercePlatform {
-  Peer marketplace platform
+  > Peer marketplace platform
 
-  @stack { rust-anb ^1.0 }
-  @topology { microservices }
-  @tenancy { single }
+  @stack rust-anb { }
+  @topology { mode: microservices, }
+  @tenancy { mode: single, }
 }
 ```
 
@@ -1493,23 +1552,29 @@ Capability grouping: `@actor { }`, module-wide rules, errors, `@event { }` block
 
 ```pactia
 module commerce {
-  depends_on Identity
+  depends_on: Identity,
 
-  @actor {
-    Customer can place orders and view orders
+  @actor customers {
+    role: Customer,
+    capabilities: [place_orders, view_orders],
   }
 
-  @actor {
-    Admin can manage orders
+  @actor admins {
+    role: Admin,
+    capabilities: [manage_orders],
   }
 
-  @event {
-    order.placed payload OrderPlacedPayload
-    handler NotificationModule.onOrderPlaced
+  @event order.placed {
+    payload: OrderPlacedPayload,
+    handler: NotificationModule.onOrderPlaced,
   }
 
-  @errors {
-    PaymentFailed 402 PAYMENT_FAILED "Payment could not be captured"
+  @errorCatalog platform {
+    PaymentFailed: {
+      status: 402,
+      code: PAYMENT_FAILED,
+      message: "Payment could not be captured",
+    },
   }
 }
 ```
@@ -1540,24 +1605,25 @@ One file = one API contract = one AI task. Modifier tags and macros prefix `@res
 #[list]
 #[paginated]
 #[owner]
-@returns { type: VehicleListResponse }
-@rest list-vehicles {
-  method: GET
-  path: /api/v1/vehicles
+@returns VehicleListResponse
+@rest list_vehicles {
+  method: GET,
+  path: "/api/v1/vehicles",
 
-  @web vehicle-list {
-    @screen { id: vehicle-list }
-    @route { path: /fleet/vehicles }
-    @bind { service: FleetService, method: GET, path: /api/v1/vehicles }
+  @web vehicle_list {
+    @screen { id: vehicle_list }
+    @route { path: "/fleet/vehicles" }
+    @bind { service: FleetService, method: GET, path: "/api/v1/vehicles" }
+    > Customer browses their vehicles in a paginated table
   }
 }
 
 > Results scoped to authenticated owner
 
-@test {
-  "Customer views vehicles"
-  When Customer is logged in as owner and GET /api/v1/vehicles
-  Then status is 200
+@test customer_views_vehicles {
+  name: "Customer views vehicles",
+  when: "Customer is logged in as owner and GET /api/v1/vehicles",
+  then: "status is 200",
 }
 ```
 
@@ -1569,26 +1635,28 @@ Persistent data in `data { }` blocks using kernel domain tags.
 
 ```pactia
 data {
-  @enum {
-    OrderStatus { PENDING, PAID, SHIPPED, CANCELLED }
+  @enum OrderStatus {
+    values: [PENDING, PAID, SHIPPED, CANCELLED],
   }
 
   @entity Order {
-    @pk { }
-    id: uuid
+    @pk
+    id: uuid,
     @fk { entity: User }
-    @index { }
-    userId: uuid
-    status: OrderStatus
-    total: decimal
-    createdAt: datetime
+    @index
+    userId: uuid,
+    status: OrderStatus,
+    total: decimal,
+    createdAt: datetime,
   }
 
-  @states {
-    Order.status
-    PENDING -> PAID
-    PENDING -> CANCELLED
-    PAID -> SHIPPED
+  @states order_lifecycle {
+    entity: Order.status,
+    transitions: [
+      { from: PENDING, to: PAID },
+      { from: PENDING, to: CANCELLED },
+      { from: PAID, to: SHIPPED },
+    ],
   }
 
   > Order total must be zero or positive
@@ -1642,7 +1710,7 @@ Pactia defines **what must stay true**. AI owns **how** — checked by `bsc conf
 
 ---
 
-### Below the line: implementation hints: implementation hints
+### Below the line: implementation hints
 
 Optional non-enforced guidance lives in **separate** files:
 
@@ -1675,7 +1743,7 @@ Never put numbered `flow {}` or step `on_failure` in feature files or `@rest { }
 - [registry.md](registry.md#macros) — `#[macro]` patterns
 - [registry.md](registry.md#cross-cutting-concerns) — `@guide`, `@security`, `@observe`, `@deploy`
 - [Workspace layout](#workspace-layout) — multi-file layout
-- #authorization — roles and party model
+- [Authorization](#authorization) — roles and party model
 - [platform.md](platform.md#protocol-packages) — REST, gRPC, GraphQL packages
 - [packages.md](packages.md) — pactia.io registry
 - [fixtures/kernel/fleet-management-v2.pactia](../fixtures/kernel/fleet-management-v2.pactia) — full example

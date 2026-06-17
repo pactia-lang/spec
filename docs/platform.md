@@ -15,29 +15,27 @@ Stack packages (`@stack`), semver locking, and wire-format protocol packages (`@
 
 ```pactia
 product FleetManagement {
-  Fleet tracking platform
+  > Fleet tracking platform
 
-  @stack { rust-anb ^1.0 }
-  @topology { microservices }
+  @stack rust-anb { }
+  @topology { mode: microservices, }
 }
 ```
 
-`@stack { id ^semver }` selects a stack package. The compiler resolves the bare id as `@pactia/<id>`. For a private or scoped stack use the full coordinate:
+`@stack <id> { }` selects a stack package. The compiler resolves a bare id as `@pactia/<id>`. For a private or scoped stack use the full coordinate as the tag target:
 
 ```pactia
 product OrderPlatform {
-  @stack { @acme/node-bff ^2.0 }
+  @stack @acme/node-bff { }
 }
 ```
 
 | Syntax | Resolves to |
 | --- | --- |
-| `@stack { rust-anb }` | `@pactia/rust-anb` at catalog default (`^1.0`) |
-| `@stack { rust-anb ^1.0 }` | `@pactia/rust-anb` semver `>=1.0.0 <2.0.0` |
-| `@stack { rust-anb 1.0.0 }` | `@pactia/rust-anb` exactly `1.0.0` |
-| `@stack { @acme/node-bff ^2.0 }` | Private package at configured registry |
+| `@stack rust-anb { }` | `@pactia/rust-anb` — version from `kabol.toml` / `kabol.lock` |
+| `@stack @acme/node-bff { }` | Private package at configured registry |
 
-The resolved version and digest are written to `kabol.lock` alongside domain and protocol packages.
+**Do not** put semver inside `@stack { }`. Constraints live in `kabol.toml`; pins in `kabol.lock`. `VERSION_IN_STACK` if `version:` appears in the tag body. See [packages.md — @stack vs use](packages.md#stack-vs-use-for-stack-packages-eg-rust-anb).
 
 ---
 
@@ -130,7 +128,7 @@ Stack packages define platform law. Products select and narrow — they do not r
 | --- | --- |
 | `@policy { retain Entity 7y }` | Yes — narrows retention for one entity |
 | `@deploy { @environment production { replicas: 5 } }` | Yes — scale per environment |
-| `@stack { rust-anb }` → `@stack { @acme/node-bff }` | Yes — pick a different stack package |
+| `@stack rust-anb { }` → `@stack @acme/node-bff { }` | Yes — pick a different stack package |
 | Importing a crate forbidden by the stack | No — `technologyPolicy.forbid` is enforced by conformance |
 | Overriding `platformLaw.errorEnvelope` shape | No — platform law is locked |
 
@@ -138,7 +136,7 @@ Stack packages define platform law. Products select and narrow — they do not r
 
 ## Publishing a stack package
 
-Stack packages are **YAML-native**. The kernel has no `profile` or `platformLaw` syntax — authors use `yaml package/<section>` blocks in `index.pactia`, or hand-author `pactia.package.yaml` directly. See [packages.md](packages.md) (authoring) and [language-spec.md](language-spec.md) §24.
+Stack packages are **YAML-native**. The kernel has no `profile` or `platformLaw` syntax — authors use `yaml package/<section>` blocks in `index.pactia`, or hand-author `pactia.package.yaml` directly. See [packages.md](packages.md) (authoring) and [language-spec.md — `yaml` embed](language-spec.md#yaml-embed).
 
 ### Author with `yaml` blocks (recommended)
 
@@ -241,23 +239,19 @@ pactia publish                                       # upload to pactia.io
 
 ```pactia
 product FleetManagement {
-  Fleet tracking platform
+  > Fleet tracking platform
 
-  @stack { rust-anb ^1.0 }
-  @topology { microservices }
+  @stack rust-anb { }
+  @topology { mode: microservices, }
 }
 ```
 
 The compiler fetches the published bundle, verifies the digest from `kabol.lock`, and merges `profile` + `platformLaw` + `technologyPolicy` into workspace IR. No local `stacks/` directory is needed.
 
-Full reference package: [examples/packages/rust-anb/](examples/packages/rust-anb/).
-
----
-
 ## Compiler behavior
 
-1. Parse `@stack { }` from `product`; expand bare id to `@pactia/<id>`.
-2. Resolve semver against pactia.io (or read pinned digest from `kabol.lock`).
+1. Parse `@stack <id> { }` from `product`; expand bare id to `@pactia/<id>`.
+2. Resolve semver from `kabol.toml` against pactia.io (or read pinned digest from `kabol.lock`).
 3. Download and verify package digest.
 4. Merge `profile` + `platformLaw` + `technologyPolicy` into workspace IR.
 5. Emit `input/project.yaml` with `stackId`, `stackVersion`, `stackDigest`.
@@ -298,39 +292,46 @@ Full reference package: [examples/packages/rust-anb/](examples/packages/rust-anb
 
 | Field | Where | Meaning |
 | --- | --- | --- |
-| `product { version "2.1.0" }` | Pactia `product` block | Your product semver |
+| Product release semver | Git tags / release process (not a kernel field in 1.0) | Your product version |
 | `package.version` in `pactia.package.yaml` | Stack package manifest | Platform stack semver |
-| `@stack { rust-anb ^1.0 }` on `product` | Pactia `product` block | Constraint on which stack release to load |
+| `[stack]` / `[dependencies]` in `kabol.toml` | Project manifest | Semver **constraint** on which stack release to load |
+| `kabol.lock` | Lock file | **Pinned** stack version + digest |
 
-Do not confuse product `version` with stack version. They are independent.
+Do not confuse product release versioning with stack package semver. They are independent.
 
 ---
 
 ## Selecting a stack
 
 ```
-StackDecl ::= "@stack" "{" StackCoordinate [ StackVersionConstraint ] "}"
-StackCoordinate      ::= Identifier | "@" Identifier "/" Identifier
-StackVersionConstraint ::= "^" Major "." Minor | Major "." Minor "." Patch
+StackDecl ::= "@stack" StackCoordinate "{" StackBody "}"
+StackCoordinate ::= Identifier | "@" Identifier "/" Identifier
+StackBody       ::= ( AssignmentLine | ProseLine )*
 ```
 
 ```pactia
 product FleetManagement {
-  @stack { rust-anb }              // shorthand for @pactia/rust-anb, default ^1.0
-  @stack { rust-anb ^1.0 }         // semver: >=1.0.0 <2.0.0
-  @stack { rust-anb 1.0.0 }        // exact pin
-  @stack { @acme/node-bff ^2.0 }   // private or org-scoped stack
+  @stack rust-anb { }              // resolves to @pactia/rust-anb
+  @stack @acme/node-bff { }        // private or org-scoped stack
 }
 ```
 
 | Form | Resolves to |
 | --- | --- |
-| `@stack { rust-anb }` | `@pactia/rust-anb` at catalog default (`^1.0`) |
-| `@stack { rust-anb ^1.0 }` | `@pactia/rust-anb` where `1.0.0 ≤ v < 2.0.0` |
-| `@stack { rust-anb 1.0.0 }` | `@pactia/rust-anb` exactly `1.0.0` |
-| `@stack { @acme/node-bff ^2.0 }` | Package `@acme/node-bff` from configured registry |
+| `@stack rust-anb { }` | `@pactia/rust-anb` — version from `kabol.toml` / `kabol.lock` |
+| `@stack @acme/node-bff { }` | Package `@acme/node-bff` from configured registry |
 
-Bare ids resolve to `@pactia/<id>` on pactia.io. Private stacks use full `@scope/name` coordinates.
+Bare ids resolve to `@pactia/<id>` on pactia.io. Semver constraints and exact pins belong in `kabol.toml`, not in the `@stack` tag body.
+
+```toml
+# kabol.toml
+[stack]
+package = "@pactia/rust-anb"
+
+[dependencies]
+"@pactia/rust-anb" = "^1.0"    # >=1.0.0 <2.0.0
+# "@pactia/rust-anb" = "1.0.0" # exact pin
+```
 
 ### Compilation output
 
@@ -443,7 +444,7 @@ Planned:
 ## Migrating between stack versions
 
 1. Read the package changelog on pactia.io.
-2. Update `product`: `@stack { rust-anb ^1.1 }` or exact pin.
+2. Update `kabol.toml` constraint (e.g. `"@pactia/rust-anb" = "^1.1"`).
 3. Run `pactia update --stack` or delete `kabol.lock` and recompile.
 4. Review diff in `specification/implementation-constraints.md` and `platformLaw` sections.
 5. Run conformance tests against forbidden crate list if enabled.
@@ -513,7 +514,7 @@ pactia update --stack                # refresh stack pin in kabol.lock
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│  Pactia KERNEL (11 keywords + @tag { } + #[macro] + prose) │
+│  Pactia KERNEL (nine keywords + @tag { } + #[macro] + prose) │
 └───────────────────────────┬─────────────────────────────┘
                             │
 ┌───────────────────────────▼─────────────────────────────┐
@@ -535,13 +536,15 @@ pactia update --stack                # refresh stack pin in kabol.lock
 use @pactia/protocol-rest;
 
 service FleetService {
-  @rest {
-    method GET
-    path /api/v1/vehicles
-    @auth { Customer, Admin }
-    #[list] #[paginated] #[owner]
-    @returns { VehicleListResponse }
-    @errors { Forbidden }
+  @auth { roles: [Customer, Admin] }
+  #[list]
+  #[paginated]
+  #[owner]
+  @returns VehicleListResponse
+  @errors { names: [Forbidden] }
+  @rest list_vehicles {
+    method: GET,
+    path: "/api/v1/vehicles",
   }
 }
 ```
@@ -557,17 +560,17 @@ Attach a protocol block to the same logical `@rest { }` operation:
 ```pactia
 use @pactia/protocol-grpc;
 
-@rest {
-  method POST
-  path /api/v1/trades/:id/mark-payment-sent
-  @auth { Trader }
-  #[buyer]
-  @body { MarkPaymentSentRequest }
-  @returns { TradeResponse }
+@auth { roles: [Trader] }
+#[buyer]
+@body MarkPaymentSentRequest
+@returns TradeResponse
+@rest mark_payment_sent {
+  method: POST,
+  path: "/api/v1/trades/:id/mark-payment-sent",
 
   @grpc {
-    service trade.TradeService
-    rpc MarkPaymentSent
+    service: trade.TradeService,
+    rpc: MarkPaymentSent,
   }
 }
 ```
