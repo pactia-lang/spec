@@ -1,6 +1,6 @@
 # Specification documents
 
-Normative and supporting documents for **Pactia 1.0** — an AI-native, model-agnostic intent language: 11 keywords, `@tag { }`, `#[macro]`, graded prose-to-spec precision.
+Normative and supporting documents for **Pactia 1.0** — an AI-native, model-agnostic intent language: nine kernel keywords, `@tag { }`, `#[macro]`, graded prose-to-spec precision.
 
 Eight documents. Read top to bottom for a full picture.
 

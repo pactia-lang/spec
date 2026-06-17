@@ -17,6 +17,7 @@ Full index: [docs/README.md](docs/README.md) (8 documents)
 | [packages.md](docs/packages.md) | Packages, registry authoring, extensibility |
 | [platform.md](docs/platform.md) | Stacks, versions, protocols |
 | [compilation.md](docs/compilation.md) | Compiler pipeline |
+| [editor-support.md](docs/editor-support.md) | VS Code / Cursor syntax highlighting |
 
 ## Tooling
 

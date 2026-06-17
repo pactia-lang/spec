@@ -61,7 +61,7 @@ Pactia **does not** force you to specify everything. It enforces **skeleton**, n
 | Always | Your choice |
 | --- | --- |
 | `pactia 1.0` + `product { }` | `module`, `service`, `data` |
-| Nesting via 11 keywords | `@stack`, entities, APIs, deploy gates |
+| Nesting via nine kernel keywords | `@stack`, entities, APIs, deploy gates |
 | Inside blocks: tag, macro, or prose | How much prose vs `@tag { }` |
 
 **Light** — agent rules only:
@@ -119,10 +119,10 @@ A Pactia program is not executed. It is **compiled to AI-neutral YAML IR**; BSC 
 - An **AI-native intent language** — human-readable; AI is the primary consumer of compiled output, not the author of source
 - **Model and platform agnostic** — same `.pactia` → same YAML IR; BSC adapts to Cursor, Claude Code, Copilot, or custom agents
 - A **shareable product spec** — backend, web, mobile, desktop in one file or [workspace](language-spec.md#workspace-layout)
-- **11 keywords**, `@tag { }`, `#[macro]`, `define`, and **`> prose`** — [language-spec.md](language-spec.md)
+- **Nine kernel keywords**, `@tag { }`, `#[macro]`, `define`, and **`> prose`** — [language-spec.md](language-spec.md)
 - Composable via [packages](packages.md) on pactia.io — **the prompt is the package**
 - Extensible via [define templates and registered blocks](packages.md#extensibility) — not arbitrary user keywords
-- Stack-aware via `@stack { rust-anb ^1.0 }` on `product` ([platform.md](platform.md#stack-versions))
+- Stack-aware via `@stack rust-anb { }` on `product` + semver in `kabol.toml` ([platform.md](platform.md#stack-versions))
 - [Role-based](language-spec.md#authorization) at two layers: application roles and party roles
 
 ## What Pactia is not
@@ -144,7 +144,7 @@ Pactia deliberately describes **less than the full system** when you want it to.
 
 1. **Intent over implementation** — declare what must stay true; never imperative logic scripts.
 2. **Graded precision** — prose-only to fully tagged; the author picks the level.
-3. **Fixed skeleton, open content** — 11 keywords + three line kinds; everything inside is yours.
+3. **Fixed skeleton, open content** — nine kernel keywords + three line kinds; everything inside is yours.
 4. **AI-native artifact** — durable `.pactia`, not disposable chat.
 5. **AI model and platform agnostic** — compile to neutral YAML; BSC renders and optionally LLM-expands per consumer.
 6. **Share through packages** — reuse intent via pactia.io, not copy-paste.
@@ -186,7 +186,7 @@ Pactia is how humans **author**. `pactiac` produces **vendor-neutral IR**. BSC *
 
 ## Language version
 
-**Pactia 1.0** — 11 keywords (`define` for templates and package registry), `@tag { }`, `#[macro]`, multi-surface (`input/surfaces/`), `@observe { }` / `@deploy { }`, workspace layout, `yaml` embed.
+**Pactia 1.0** — nine kernel keywords (`define` for templates and package registry), `@tag { }`, `#[macro]`, multi-surface (`input/surfaces/`), `@observe { }` / `@deploy { }`, workspace layout, `yaml` embed.
 
 Grammar: [language-spec.md](language-spec.md)
 
@@ -196,57 +196,63 @@ Grammar: [language-spec.md](language-spec.md)
 pactia 1.0
 
 use @pactia/kyc-compliance;
+use @pactia/protocol-rest;
+use @pactia/rust-anb;
 
 product P2PExchange {
   > Peer-to-peer crypto/fiat marketplace with escrow
 
-  @stack { rust-anb ^1.0 }
-  @topology { microservices }
+  @stack rust-anb { }
+  @topology { mode: microservices, }
 
   module exchange {
-    @actor {
-      Trader can create offers and take trades
+    @actor traders {
+      role: Trader,
+      capabilities: [create_offers, take_trades],
     }
 
-    @actor {
-      Admin can resolve disputes
+    @actor admins {
+      role: Admin,
+      capabilities: [resolve_disputes],
     }
 
     data {
-      @enum {
-        TradeStatus { PAYMENT_PENDING, PAYMENT_SENT, PAYMENT_CONFIRMED }
+      @enum TradeStatus {
+        values: [PAYMENT_PENDING, PAYMENT_SENT, PAYMENT_CONFIRMED],
       }
 
       @entity Trade {
-        @pk { }
-        id: uuid
-        buyerId: uuid
-        sellerId: uuid
-        status: TradeStatus
+        @pk
+        id: uuid,
+        buyerId: uuid,
+        sellerId: uuid,
+        status: TradeStatus,
       }
 
-      @states {
-        Trade.status
-        PAYMENT_PENDING -> PAYMENT_SENT
-        PAYMENT_SENT -> PAYMENT_CONFIRMED
+      @states trade_payment {
+        entity: Trade.status,
+        transitions: [
+          { from: PAYMENT_PENDING, to: PAYMENT_SENT },
+          { from: PAYMENT_SENT, to: PAYMENT_CONFIRMED },
+        ],
       }
     }
 
     service TradeService {
-      @rest {
-        method POST
-        path /api/v1/trades/:id/mark-payment-sent
-        @auth { Trader }
-        #[buyer]
-        @transition { PAYMENT_PENDING -> PAYMENT_SENT }
-        @body { MarkPaymentSentRequest }
-        @returns { TradeResponse }
+      @auth { roles: [Trader] }
+      #[buyer]
+      @transition { from: PAYMENT_PENDING, to: PAYMENT_SENT }
+      @body MarkPaymentSentRequest
+      @returns TradeResponse
+      @rest mark_payment_sent {
+        method: POST,
+        path: "/api/v1/trades/:id/mark-payment-sent",
       }
     }
 
-    @event {
-      trade.payment_confirmed payload TradePaymentConfirmedPayload
-      handler EscrowService.onPaymentConfirmed
+    @event trade.payment_confirmed {
+      payload: TradePaymentConfirmedPayload,
+      handler: EscrowService.onPaymentConfirmed,
     }
   }
 }
@@ -260,7 +266,7 @@ Full programs: [examples](https://github.com/pactia-lang/examples) repository �
 | ------------------ | ------------------------------------- | ---------------------------------------------------- |
 | No ambiguous APIs  | `@body { }`, `@returns { }`, `#[macro]` on endpoints | Schema validation, OpenAPI render                    |
 | No auth guesswork  | `@actor { }`, `@auth { }`, `#[owner]` / `#[buyer]` | `security.md`, route rules                           |
-| No stack drift     | `@stack { rust-anb ^1.0 }` on `product`            | Stack package merge + [kabol.lock](platform.md#stack-versions) |
+| No stack drift     | `@stack rust-anb { }` on `product` + `kabol.lock` | Stack package merge + [kabol.lock](platform.md#stack-versions) |
 | Reproducible specs | `kabol.lock`, packages                | Deterministic `bsc render`                           |
 | No surface drift   | `@web { }`, `@ios { }`, `@bind { }` in same `.pactia` | Surface IR + linked API specs                      |
 | AI-ready output    | Compiles to IR (services + surfaces)  | Templates + agent rules per surface                  |
@@ -327,9 +333,10 @@ The compiler (`@pactia/pactiac`) tags every lowered fact with a provenance:
 | `INFERRED`      | Derived by a documented deterministic rule             | Above            |
 | `STACK_DEFAULT` | Supplied by the stack package                        | Above            |
 | `GUIDANCE`      | Author wrote `@guide` or best-practice prose           | Below (AI only)  |
+| `GENERATED`     | Optional `bsc expand` (LLM) narrative from IR        | Below (AI only)  |
 | `NOT_DERIVABLE` | The target IR wants it, but Pactia does not contain it | **Below**        |
 
-`NOT_DERIVABLE` is not a defect. It is the line, made measurable. When the fleet contract compiles, the report lists exactly what an implementer (human or AI) must decide below the line — logic steps, error catalogs, indexes, summaries, payload internals. A hand-authored "golden" that fills those in is not a richer contract; it is the contract line leaking, and Law 2 forbids it.
+`NOT_DERIVABLE` is not a defect. It is the line, made measurable. When the fleet contract compiles, the report lists exactly what an implementer (human or AI) must decide below the line — logic steps, error catalogs, indexes, summaries, payload internals. A hand-authored "golden" that fills those in is not a richer contract; it is the contract line leaking — see [rule 2 below](#rules-of-the-line).
 
 ### Rules of the line
 
@@ -339,18 +346,20 @@ The compiler (`@pactia/pactiac`) tags every lowered fact with a provenance:
 4. **The IR is the contract, not the system.** `input/**/*.yaml` and `project-definition.yaml` carry only above-the-line facts. Optional below-the-line hints, if present, are marked and are never enforced.
 5. **The line is crossed only by conformance.** The sole connection between the two halves is the conformance gate: it checks the implementation against the contract and fails the build otherwise (static surface checks today; runtime enforcement planned).
 
-### Worked example (fleet) (fleet)
+### Worked example (fleet)
 
 From [fleet-management-v2.pactia](../fixtures/kernel/fleet-management-v2.pactia):
 
 ```pactia
-@rest {
-  method GET
-  path /api/v1/vehicles
-  @auth { Customer, Admin }
-  #[list] #[paginated] #[owner]
-  @returns { VehicleListResponse }
-  @errors { Forbidden }
+@auth { roles: [Customer, Admin] }
+#[list]
+#[paginated]
+#[owner]
+@returns VehicleListResponse
+@errors { names: [Forbidden] }
+@rest list_vehicles {
+  method: GET,
+  path: "/api/v1/vehicles",
 }
 ```
 
@@ -478,17 +487,21 @@ What compiles out:
 ### Architect declares in Pactia (when needed)
 
 ```pactia
-@observe {
-  slo FleetService latency p99 < 300ms
-  slo FleetService error_rate < 0.5%
-  slo FleetService availability 99.9%
-
-  alert high_error_rate on FleetService
-    when error_rate > 2% for 5m
-    severity critical
-    notify pagerduty
-
-  metric business_vehicles_active type gauge from Vehicle where status ACTIVE
+@observe fleet_slos {
+  slos: [
+    { service: FleetService, metric: latency_p99, target: "< 300ms" },
+    { service: FleetService, metric: error_rate, target: "< 0.5%" },
+    { service: FleetService, metric: availability, target: "99.9%" },
+  ],
+  alerts: [
+    {
+      id: high_error_rate,
+      service: FleetService,
+      when: "error_rate > 2% for 5m",
+      severity: critical,
+      notify: pagerduty,
+    },
+  ],
 }
 ```
 
@@ -497,7 +510,7 @@ What compiles out:
 
 | From                    | Derives                                          |
 | ----------------------- | ------------------------------------------------ |
-| `@emit { vehicle.created }` | `vehicle_created_total` counter                  |
+| `@emit vehicle.created` | `vehicle_created_total` counter                  |
 | Each `service`          | RED metrics scaffolding (rate, errors, duration) |
 | Each `@integration`     | outbound call latency histogram                  |
 | Stack package           | trace propagation on HTTP and Kafka              |
@@ -534,10 +547,10 @@ If omitted: stack package `deploymentBaseline.autoscaling` applies to all servic
 ### Architect declares (1.0)
 
 ```pactia
-@test {
-  "Customer cannot read another customer vehicle"
-  When Customer B is logged in and GET /api/v1/vehicles/:id as non-owner
-  Then status is 403
+@test customer_cannot_read_other_vehicle {
+  name: "Customer cannot read another customer vehicle",
+  when: "Customer B is logged in and GET /api/v1/vehicles/:id as non-owner",
+  then: "status is 403",
 }
 ```
 

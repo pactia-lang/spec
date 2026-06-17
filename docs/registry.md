@@ -157,7 +157,7 @@ Tags attach to the **nearest host scope** and **cascade downward** unless overri
 
 ## Tag scope matrix
 
-Canonical shapes match [fleet-management-v2.pactia](../../examples/single-file/fleet-management-v2.pactia). **Role:** `clause` declares; `modifier` prefixes a host; `macro` expands at compile time. **Body style:** `assignments` (comma fields), `map` (named sub-clauses as keys), `entity-fields` (`name: Type,`), `flag` (no body), `shorthand` (single ref/number).
+Canonical shapes match [fleet-management-v2.pactia](../fixtures/kernel/fleet-management-v2.pactia). **Role:** `clause` declares; `modifier` prefixes a host; `macro` expands at compile time. **Body style:** `assignments` (comma fields), `map` (named sub-clauses as keys), `entity-fields` (`name: Type,`), `flag` (no body), `shorthand` (single ref/number).
 
 | Tag | Role | Allowed hosts | Target | Body style | Lowers to |
 | --- | --- | --- | --- | --- | --- |
@@ -226,7 +226,7 @@ Field modifiers **prefix** the field line (`@pk`, `@fk { entity: Customer }`) �
 
 | Tag | Example | Lowers to |
 | --- | --- | --- |
-| `@stack` | `@stack rust-anb { version: "^1.0", }` | `project.stackId`, version constraint |
+| `@stack` | `@stack rust-anb { }` | `project.stackId` (version from `kabol.toml` / `kabol.lock`) |
 | `@topology` | `@topology { mode: microservices, }` | `project.topology` |
 | `@tenancy` | `@tenancy { mode: single, }` | `project.tenancy` |
 
@@ -251,7 +251,7 @@ Prefer macros `#[database]` `#[cache]` `#[events]` **immediately above** `servic
 | `@status` | `@status 201` | `response.status` |
 | `@emit` | `@emit vehicle.created` | `emits` |
 | `@errors` | `@errors { names: [NotFound, Forbidden] }` on `@rest` | `response.errors` |
-| `@transition` | `@transition { PENDING -> PAID }` | statemachine edge on endpoint |
+| `@transition` | `@transition { from: PENDING, to: PAID }` | statemachine edge on endpoint |
 
 Endpoint **patterns** use macros — not tags: `#[list]` `#[paginated]` `#[owner]` `#[create]` `#[idempotent]` — see #macros.
 
@@ -540,7 +540,7 @@ Default expansions below; stack packages **replace** these in `pactia.package.ya
 When multiple packages register the same macro name, **the first winning layer** applies:
 
 ```
-1. Stack package (@stack { rust-anb })     ← highest
+1. Stack package (`@stack rust-anb { }`)     ← highest
 2. Explicit use @scope/name packages       ← in source order; collision → REGISTRY_COLLISION
 3. @pactia/* standard library packages     ← e.g. @pactia/api-patterns
 4. pactiac built-in default expansions     ← lowest
@@ -610,14 +610,14 @@ Domain and protocol packages may register additional macros the same way. Prefer
 
 These remain **tags** (always `{ }`):
 
-- `@auth { Customer, Admin }` — roles are facts
-- `@returns { VehicleListResponse }` — response DTO is a fact
-- `@body { CreateVehicleRequest }` — request DTO is a fact
-- `@errors { NotFound, Forbidden }` — error list is a fact
-- `@emit { vehicle.created }` — event name is a fact
-- `@public { }` — public route is a fact
-- `@transition { PENDING -> PAID }` — legal edge is a fact
-- `@stack { rust-anb ^1.0 }` — stack selection is a fact
+- `@auth { roles: [Customer, Admin] }` — roles are facts
+- `@returns VehicleListResponse` — response DTO is a fact
+- `@body CreateVehicleRequest` — request DTO is a fact
+- `@errors { names: [NotFound, Forbidden] }` — error list is a fact
+- `@emit vehicle.created` — event name is a fact
+- `@public` — public route is a fact
+- `@transition { from: PENDING, to: PAID }` — legal edge is a fact
+- `@stack rust-anb { }` — stack selection is a fact (version in `kabol.toml`)
 
 ---
 
