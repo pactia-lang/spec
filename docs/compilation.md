@@ -43,7 +43,7 @@ Pactia compiles to **AI-neutral YAML IR** (`input/**/*.yaml`) — not vendor-spe
 14. Lower @web { } / @ios { } → `product.yaml` (`surfaces`); resolve @bind { }
 15. Apply yaml merge embeds: parse → validate → deep-merge (provenance: YAML_EMBED)
 16. Write module-scoped output: `<module>.module.yaml`, `<module>.model.yaml`, `services/<service>.service.yaml`
-17. (optional) bsc compile-workspace → project-definition.yaml + agent briefs from IR
+17. (optional) `bsc render` → agent briefs from module-scoped IR (`input/modules/*/*.yaml`)
 18. (optional) bsc expand --target cursor|claude-code|… → LLM-enriched agent context (provenance GENERATED; cacheable)
 ```
 

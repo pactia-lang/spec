@@ -1257,7 +1257,7 @@ Prefer **`define tag`** in package `index.pactia` (mechanism 2.5). Hand-authored
 extensions:
   - name: compliance
     schema: hipaa-compliance-v1.json
-    lowers_to: [policy, rule, domain.annotations]
+    lowers_to: [policy, rule, model.entities[].fields[].annotations]
 ```
 
 Consumer writes:

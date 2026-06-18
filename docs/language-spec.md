@@ -277,7 +277,7 @@ If a tag takes one value, the body form (`@returns { type: X }`) **does not pars
 | --- | --- | --- | --- |
 | REST / screen / test ids | `snake_case` | `get_vehicle`, `vehicle_list` | `get-vehicle` |
 | Entities / DTOs | `PascalCase` | `Vehicle`, `CreateVehicleRequest` | `vehicle` |
-| Events | `domain.action` reference | `vehicle.created` | `vehicle-created` |
+| Events | `<topic>.<action>` (snake_case segments) | `vehicle.created` | `vehicle-created` |
 | Module clauses | `snake_case` | `fleet_slos`, `gps_devices` | `fleetSlos` |
 | Singleton tags on `product` | **omit target** | `@topology { mode: microservices }` | `@topology product { }` |
 
@@ -398,7 +398,7 @@ product FleetManagement {
 | --- | --- | --- |
 | `@config backend { ... }` | `config.profiles.backend` | env var map |
 | `@integration gps_devices { ... }` | `integrations[].id` | `direction`, `auth`, `maps_to` |
-| `@entity Vehicle { ... }` | `domain.entities.Vehicle` | fields + field modifiers |
+| `@entity Vehicle { ... }` | `<module>.model.yaml` `entities[]` (match by `name`) | fields + field modifiers |
 | `@errors platform { ... }` | `errors.catalog` | error definitions |
 | `@throws { names: [...] }` on `@api` | `endpoint.errors` | catalog refs |
 | `@api get_vehicle { ... }` | `services.*.endpoints[].id` | `method`, `path`, surfaces |

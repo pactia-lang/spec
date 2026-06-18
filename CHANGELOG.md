@@ -12,7 +12,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 ### Changed
 
-- **Error taxonomy:** collapse stack-specific compiler codes into generic `PACKAGE_*` resolution errors; keep `STACK_BINDING_MISMATCH` for `@stack` tag + `pactia.toml [stack].package` agreement; rename `VERSION_IN_STACK` → `VERSION_IN_TAG_BODY`.
+- **Docs:** remove legacy flat IR references (`project.yaml`, `domain.yaml`, `project-definition.yaml`, `domain.entities`); align lowering examples with module-scoped `*.model.yaml` paths. collapse stack-specific compiler codes into generic `PACKAGE_*` resolution errors; keep `STACK_BINDING_MISMATCH` for `@stack` tag + `pactia.toml [stack].package` agreement; rename `VERSION_IN_STACK` → `VERSION_IN_TAG_BODY`.
 - **`@stack` in compiler:** treated as a kernel clause tag — same package resolver as `import`, no dedicated stack compile phase.
 - **Compiler IR layout:** `manifest.yaml` (version, entry, lockfile digest, module file index, `references[]`); `product.yaml` (includes surfaces, security, deployment); module slices `<module>.module.yaml`, `<module>.model.yaml`, `<service>.service.yaml`.
 - **Kernel keyword:** `model` for domain modeling blocks (`model { @entity … }`).
