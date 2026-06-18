@@ -504,9 +504,9 @@ pactia update --stack                # refresh stack pin in kabol.lock
 
 | Correct pattern | Benefit |
 | --- | --- |
-| `use @pactia/protocol-rest` | REST is a library |
+| import @pactia/protocol-rest` | REST is a library |
 | `@api { method GET path /api/v1/vehicles ... }` | Wire format is a tag block |
-| `use @vendor/protocol-odata` | New protocol without a language version bump |
+| import @vendor/protocol-odata` | New protocol without a language version bump |
 
 ---
 
@@ -533,7 +533,7 @@ pactia update --stack                # refresh stack pin in kabol.lock
 ## REST (default)
 
 ```pactia
-use @pactia/protocol-rest;
+import @pactia/protocol-rest;
 
 service FleetService {
   @auth { roles: [Customer, Admin] }
@@ -558,7 +558,7 @@ service FleetService {
 Attach a protocol block to the same logical `@api { }` operation:
 
 ```pactia
-use @pactia/protocol-grpc;
+import @pactia/protocol-grpc;
 
 @auth { roles: [Trader] }
 #[buyer]
@@ -586,7 +586,7 @@ Block names (`@api`, `@grpc`, `@graphql`) come from the package manifest — not
 3. Add `schemas/<name>-v1.json` for each extension schema
 4. `pactia package build` → validate manifest + schemas
 5. `pactia publish` → pactia.io
-6. Consumers: `kabol add @yourorg/protocol-foo@^1.0` then `use @yourorg/protocol-foo;`
+6. Consumers: `kabol add @yourorg/protocol-foo@^1.0` then import @yourorg/protocol-foo;`
 
 See [packages.md](packages.md). New wire formats are **packages**, not kernel keywords.
 

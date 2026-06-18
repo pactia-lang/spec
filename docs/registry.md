@@ -3,7 +3,7 @@
 Version: **1.0**  
 Status: **Specification**
 
-> **If you are not importing packages with `use`, skip this document** — kernel tags and macros are always available with no setup. Return when you add `use @scope/name;` or publish packages.
+> **If you are not importing packages, skip this document** — kernel tags and macros are always available with no setup. Return when you add `import @scope/name;` or publish packages.
 
 Part of: [language-spec.md](language-spec.md) | [packages.md](packages.md) | [compilation.md](compilation.md)
 
@@ -15,14 +15,14 @@ Single reference for **`@tag { }`**, **`#[macro]`**, and policy / security / obs
 
 ## Workspace registry
 
-Tags and macros resolve through a **workspace-effective registry** built at compile time. Nothing from a package enters the workspace until explicitly imported — same discipline as Rust `use` and TypeScript `import { … } from`.
+Tags and macros resolve through a **workspace-effective registry** built at compile time. Nothing from a package enters the workspace until explicitly imported — same discipline as TypeScript `import { … } from` and Python `from … import`.
 
 ### Why workspace scope
 
 | Problem with a flat global registry | Workspace fix |
 | --- | --- |
-| Two packages define `@compliance` | Selective `use` + optional `as` qualifier |
-| Importing KYC pulls 40 unused tags | `use @pkg::{only, needed};` |
+| Two packages define `@compliance` | Selective `import` + optional `as` qualifier |
+| Importing KYC pulls 40 unused tags | `import { only, needed } from @pkg;` |
 | Transitive deps pollute consumer scope | Only **re-exported** registry symbols from dependencies |
 | Core vs custom tags mixed | **Categories** + **tiers** |
 
@@ -30,10 +30,10 @@ Tags and macros resolve through a **workspace-effective registry** built at comp
 
 | Tier | Source | In workspace how | Default category |
 | --- | --- | --- | --- |
-| **kernel** | pactiac builtin catalog | Always — no `use` | `core` |
+| **kernel** | pactiac builtin catalog | Always — no `import` | `core` |
 | **stack** | `@stack { }` on `product` | Always when stack selected | `stack` |
 | **std** | `@pactia/*` implied by stack / `pactia init` | Merged under stack precedence | `protocol`, `surface`, … |
-| **package** | `use @scope/name` | **Only imported names** (or full export with wildcard `use`) | Author-declared on `define tag` / `define macro` |
+| **package** | `import @scope/name` | **Only imported names** (or full export with `import * from`) | Author `export` on `define tag` / `define macro` |
 | **local** | `define template` in product | Templates only — **not** new `@tag` / `#[macro]` names | — |
 
 **Rule:** consumer products never register new global tag or macro names. Custom tags and macros are published in packages, then imported into the workspace.
@@ -73,43 +73,44 @@ Per compile unit (single file or [workspace](language-spec.md#workspace-layout))
 1. Seed kernel tags[] (category core) — always visible
 2. Load stack package from @stack { } → merge tags[] + macros[] (category stack; overrides std macros)
 3. Merge implied @pactia/* std registry per stack profile (lowest macro precedence before builtins)
-4. Walk use statements in scope chain for the current file:
+4. Walk `import` statements in scope chain for the current file:
      product.pactia imports → whole workspace
      module.pactia imports  → that module subtree
      service.pactia imports → that service subtree
-5. For each `use`: look up package in `kabol.lock`; import symbols per Rust path rules
-6. Apply use … as alias → qualified prefix for invocation
+5. For each `import`: look up package in `kabol.lock`; import symbols per Rust path rules
+6. Apply `import … as alias` → qualified prefix for invocation
 7. Reject REGISTRY_COLLISION on duplicate unqualified names in the same scope
 8. Parse and expand source using effectiveRegistry at that file's scope
 ```
 
 Transitive package dependencies (in `pactia.package.yaml` `dependencies:`) do **not** add tags/macros to the consumer workspace unless the direct dependency **re-exports** them in manifest `registry.reexports[]`.
 
-### `use` paths (Rust convention)
+### Import paths
 
-Versions live in **`kabol.toml`** (ranges) and **`kabol.lock`** (pins) — never in `use`. See [packages.md — Dependencies vs use](packages.md#dependencies-vs-use-cargo--rust-model).
+Versions live in **`kabol.toml`** (ranges) and **`kabol.lock`** (pins) — never in `import`. See [packages.md — Dependencies vs import](packages.md#dependencies-vs-import-cargo-model).
 
 ```pactia
-use @pactia/kyc-compliance;
-use @pactia/kyc-compliance::*;
-use @acme/fintech-rules::{sanctions_check, sanctions_screen};
-use @pactia/hipaa::compliance;
-use @acme/fintech-rules as fintech;
-use @pactia/hipaa::{self, compliance, phi_screen};
+import @pactia/kyc-compliance;
+import * from @pactia/kyc-compliance;
+import { sanctions_check, sanctions_screen } from @acme/fintech-rules;
+import compliance from @pactia/hipaa;
+import @acme/fintech-rules as fintech;
+import @pactia/hipaa as hipaa;
+import { compliance, phi_screen } from @pactia/hipaa;
 ```
 
 | Form | Meaning |
 | --- | --- |
-| `use @scope/name;` | Package prelude (default exported registry symbols) |
-| `use @scope/name::*;` | All exported `registry.tags[]` + `registry.macros[]` |
-| `use @scope/name::symbol;` | One tag or macro |
-| `use @scope/name::{a, b};` | Listed symbols only |
-| `use @scope/name as alias;` | Crate qualifier: `@alias::tag`, `#[alias::macro]` |
-| `use @scope/name::symbol as alias;` | Rename one symbol |
+| `import @scope/name;` | Package prelude (default exported registry symbols) |
+| `import * from @scope/name;` | All exported `registry.tags[]` + `registry.macros[]` |
+| `import symbol from @scope/name;` | One tag or macro |
+| `import { a, b } from @scope/name;` | Listed symbols only |
+| `import @scope/name as alias;` | Package qualifier: `@alias::tag`, `#[alias::macro]` |
+| `import symbol as alias from @scope/name;` | Rename one symbol |
 
-`VERSION_IN_USE` if a `use` line contains semver. `DEPENDENCY_NOT_DECLARED` if `kabol.toml` lacks the package.
+`VERSION_IN_IMPORT` if an `import` line contains semver. `DEPENDENCY_NOT_DECLARED` if `kabol.toml` lacks the package.
 
-Selective import does **not** merge package `domain` / `rules` IR unless those sections are exported via manifest `exports` flags — registry `use` and AST export are separate.
+Selective import does **not** merge package `domain` / `rules` IR unless those symbols are marked `export` in package source — registry import and AST export share the same `export` modifier.
 
 ### Invocation rules
 
@@ -125,11 +126,11 @@ Selective import does **not** merge package `domain` / `rules` IR unless those s
 
 | Code | Condition |
 | --- | --- |
-| `TAG_UNKNOWN` | `@name` not in kernel, stack, std, or any `use` in scope chain |
+| `TAG_UNKNOWN` | `@name` not in kernel, stack, std, or any `import` in scope chain |
 | `MACRO_UNKNOWN` | `#[name]` not in effectiveRegistry for this file |
-| `IMPORT_NOT_EXPORTED` | `use @pkg::symbol` names a symbol not in package `registry` |
-| `DEPENDENCY_NOT_DECLARED` | `use @scope/name` without `kabol.toml` entry |
-| `VERSION_IN_USE` | Semver in a `use` statement |
+| `IMPORT_NOT_EXPORTED` | `import symbol from @pkg` names a symbol not marked `export` in package source |
+| `DEPENDENCY_NOT_DECLARED` | `import @scope/name` without `kabol.toml` entry |
+| `VERSION_IN_IMPORT` | Semver in an `import` statement |
 | `REGISTRY_COLLISION` | Two imports expose the same unqualified tag/macro name |
 | `REGISTRY_QUALIFIER_REQUIRED` | Ambiguous name — compiler requires `@alias::name` |
 | `DEFINE_TAG_IN_PRODUCT` | `define tag` in consumer product |
@@ -333,7 +334,7 @@ A line like `> on vehicle.created -> NotificationService.onVehicleCreated` **out
 | `@grpc` | `@pactia/protocol-grpc` | `@grpc { service trade.TradeService rpc MarkPaymentSent }` |
 | `@graphql` | `@pactia/protocol-graphql` | `@graphql { type Query field vehicles }` |
 
-REST endpoints **must** use `@api { }` after `use @pactia/protocol-rest`. The kernel does not parse bare `GET` / `POST` lines.
+REST endpoints **must** use `@api { }` after `import @pactia/protocol-rest`. The kernel does not parse bare `GET` / `POST` lines.
 
 See [platform.md](platform.md#protocol-packages).
 
@@ -400,7 +401,7 @@ At `pactia package build` → `registry.tags[]` + `schemas/compliance-v1.json` i
 Consumers (selective import — recommended):
 
 ```pactia
-use @pactia/hipaa::compliance;
+import compliance from @pactia/hipaa;
 
 @compliance {
   framework: hipaa,
@@ -411,7 +412,7 @@ use @pactia/hipaa::compliance;
 Or with crate alias when combining multiple compliance packages:
 
 ```pactia
-use @pactia/hipaa as hipaa;
+import @pactia/hipaa as hipaa;
 
 @hipaa::compliance {
   framework: hipaa,
@@ -419,7 +420,7 @@ use @pactia/hipaa as hipaa;
 }
 ```
 
-`@compliance` is **unknown** without `use` importing it into the workspace effectiveRegistry. With import, the compiler validates the body and routes per `lowers { }` with provenance `PACKAGE`.
+`@compliance` is **unknown** without `import` bringing it into the workspace effectiveRegistry. With import, the compiler validates the body and routes per `lowers { }` with provenance `PACKAGE`.
 
 Hand-authored `extensions[]` / `tags[]` in manifest remains valid (protocol packages, legacy stacks). **`define tag` is the Pactia-native authoring form**; YAML is the compiled interchange.
 
@@ -478,7 +479,7 @@ Arguments are **scalars only** — identifiers, numbers, strings, simple `key: v
 
 ```
 1. Parse source (tags, macros, facts, prose)
-2. Resolve @stack { } + use packages; load macros[] + tags[] into effectiveRegistry
+2. Resolve `@stack { }` + `import` packages; load macros[] + tags[] into effectiveRegistry
 3. Expand define (templates only) in product source
 4. Expand all #[macro] using effectiveRegistry (deterministic, pure)
 5. Validate @tag { } bodies (kernel + package JSON schemas)
@@ -542,12 +543,12 @@ When multiple packages register the same macro name, **the first winning layer**
 
 ```
 1. Stack package (`@stack rust-anb { }`)     ← highest
-2. Explicit use @scope/name packages       ← in source order; collision → REGISTRY_COLLISION
+2. Explicit `import @scope/name` packages       ← in source order; collision → REGISTRY_COLLISION
 3. @pactia/* standard library packages     ← e.g. @pactia/api-patterns
 4. pactiac built-in default expansions     ← lowest
 ```
 
-Tags: **kernel tags** are always available (`core`). **Package tags** exist in the workspace only after `use` (selective or wildcard). Two imports exposing the same unqualified name → `REGISTRY_COLLISION` unless one is qualified with `as`.
+Tags: **kernel tags** are always available (`core`). **Package tags** exist in the workspace only after `import` (selective or wildcard). Two imports exposing the same unqualified name → `REGISTRY_COLLISION` unless one is qualified with `as`.
 
 See [Workspace registry](#workspace-registry) for selective import and categories.
 
@@ -593,7 +594,7 @@ When `@pactia/rust-anb` changes pagination defaults, products recompile — **no
 
 **Product authors:** use `define template` for local block repetition — not `define macro`. **Package authors:** use `define macro` or manifest `macros[]`. See [language-spec.md](language-spec.md#define-macro--package-registry-not-in-consumer-products).
 
-Domain and protocol packages may register additional macros the same way. Prefer **`use @scope/name as alias`** or selective import when combining multiple packages — see [Workspace registry](registry.md#workspace-registry).
+Domain and protocol packages may register additional macros the same way. Prefer **import @scope/name as alias`** or selective import when combining multiple packages — see [Workspace registry](registry.md#workspace-registry).
 
 ---
 
@@ -658,7 +659,7 @@ product
 
 | Scope | Typical cross-cutting content |
 | --- | --- |
-| `product` | `@stack`, global `@guide`, `use @acme/standards` |
+| `product` | `@stack`, global `@guide`, import @acme/standards` |
 | `module` | `@policy`, `@compliance`, module `>` rules |
 | `service` | `@observe` SLOs, service `@guide`, `@security` rate limits |
 | Endpoint | `#[rate_limit(n, unit)]`, endpoint-specific `@guide { }` prose |
@@ -711,7 +712,7 @@ email: string @pii { } @retain { 7y }
 | Enforced | No |
 | Provenance | `GUIDANCE` |
 
-**Shareable prompts:** org packages like `use @acme/engineering-standards;` inject `@guide` blocks at publish time.
+**Shareable prompts:** org packages like import @acme/engineering-standards;` inject `@guide` blocks at publish time.
 
 Place `@guide` at `product` (global), `module` (domain conventions), or `service` (local patterns).
 
@@ -740,7 +741,7 @@ Place `@guide` at `product` (global), `module` (domain conventions), or `service
 
 ### `@compliance` — vertical/regulatory packs (law)
 
-Used with compliance packages (`use @pactia/gdpr-eu::…`, `use @pactia/hipaa::compliance`).
+Used with compliance packages (`import @pactia/gdpr-eu as gdpr`, `import compliance from @pactia/hipaa`).
 
 ```pactia
 @compliance gdpr {
@@ -853,7 +854,7 @@ Example — MVP constraint as prose (not a keyword):
 | Email is PII | `email: string @pii { }` in `data` |
 | 80% coverage before prod | `@gate production { coverage: ">= 80%" }` inside `@deploy` |
 | p99 latency target | `@observe { slo ... }` |
-| HIPAA PHI tagging | `use @pactia/hipaa` + `@compliance` |
+| HIPAA PHI tagging | import @pactia/hipaa` + `@compliance` |
 | Hexagonal architecture preference | `@guide` prose |
 | Endpoint rate limit | `#[rate_limit(100, rpm)]` inside `@api { }` or `@security { }` |
 | VoiceOver on iOS | `@ios { ... #[a11y(VoiceOver)] ... }` |
@@ -866,9 +867,10 @@ Example — MVP constraint as prose (not a keyword):
 Publish org or community standards as pactia.io packages:
 
 ```pactia
-use @pactia/gdpr-eu::{self, compliance};
-use @pactia/security-baseline::*;
-use @acme/engineering-standards as standards;
+import @pactia/gdpr-eu as gdpr;
+import { compliance } from @pactia/gdpr-eu;
+import * from @pactia/security-baseline;
+import @acme/engineering-standards as standards;
 ```
 
 | Package kind | Injects |
@@ -906,7 +908,7 @@ Consumer `product` inherits package guidance; overrides only where the product d
 | `Pactia` | Author wrote enforceable fact | `@policy`, `@test`, `@auth` |
 | `GUIDANCE` | Author wrote best practice | `@guide`, non-tested prose |
 | `STACK_DEFAULT` | From stack package | Default retention, CI tool |
-| `PACKAGE` | From `use` package | `@compliance gdpr` from `@pactia/gdpr-eu` |
+| `PACKAGE` | From `import` package | `@compliance gdpr` from `@pactia/gdpr-eu` |
 | `INFERRED` | Compiler derived | Metric from `@emit` event name |
 | `NOT_DERIVABLE` | Below the line hint | `implementation_hint` files |
 
@@ -918,7 +920,7 @@ Conformance **never** enforces `GUIDANCE` — only law tiers and linked `@test` 
 
 | Do not | Do instead |
 | --- | --- |
-| Copy stack `codingStandards` into every product | `use @stack` only |
+| Copy stack `codingStandards` into every product | import @stack` only |
 | Put enforceable SLO only in `@guide` | `@observe { slo ... }` |
 | `flow { step 1; step 2 }` for policy | `@must` + `@test` |
 | New keyword `pipeline` | `@gate production { ... }` inside `@deploy` |

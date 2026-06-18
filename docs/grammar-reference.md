@@ -96,9 +96,9 @@ Inside `{ }`: every structured line is a comma-terminated field/assignment **or*
 | --- | --- |
 | `REGISTRY_COLLISION` | Two imports expose the same unqualified tag/macro name |
 | `REGISTRY_QUALIFIER_REQUIRED` | Ambiguous name — compiler requires `@alias::name` |
-| `IMPORT_NOT_EXPORTED` | `use @pkg::symbol` names a symbol not in package `registry` |
-| `DEPENDENCY_NOT_DECLARED` | `use @scope/name` without `kabol.toml` entry |
-| `VERSION_IN_USE` | Semver appears in `use` statement |
+| `IMPORT_NOT_EXPORTED` | `import symbol from @pkg` names a symbol not marked `export` in package source |
+| `DEPENDENCY_NOT_DECLARED` | `import @scope/name` without `kabol.toml` entry |
+| `VERSION_IN_IMPORT` | Semver appears in `import` statement |
 | `DEFINE_TAG_IN_PRODUCT` | `define tag` inside consumer `product { }` |
 | `DEFINE_MACRO_IN_PRODUCT` | `define macro` inside consumer `product { }` |
 | `MACRO_UNKNOWN` | `#[name]` not registered |

@@ -32,7 +32,7 @@ Pactia compiles to **AI-neutral YAML IR** (`input/**/*.yaml`) — not vendor-spe
 1.  Read and validate version declaration (pactia 1.0)
 2.  Lex: strip `//` line comments and `/* */` block comments (never in IR)
 3.  Resolve @stack { }; fetch stack package; load stack macros[] into effectiveRegistry
-4.  Resolve `use` / `import` per file scope; read `kabol.lock` pins for every package in `use`; build workspace effectiveRegistry
+4.  Resolve `import` per file scope; read `kabol.lock` pins for every package in `import`; build workspace effectiveRegistry
 5.  Merge declarations (package AST fragments per exports flags → local imports → main file)
 6.  Expand define (templates only) → kernel constructs
 7.  Expand #[macro] using effectiveRegistry (stack > use > std > defaults)
@@ -154,7 +154,7 @@ Name collisions without alias → `EXPORT_COLLISION` error.
 | `Pactia` | Written directly by the author |
 | `INFERRED` | Derived by a documented deterministic rule |
 | `STACK_DEFAULT` | Supplied by the stack package |
-| `PACKAGE` | Supplied by a `use` import (merged AST or registry) |
+| `PACKAGE` | Supplied by an `import` (merged AST or registry) |
 | `MACRO` | Supplied by `#[macro]` expansion |
 | `DEFINE` | Supplied by `define template` expansion |
 | `YAML_EMBED` | Supplied by a `yaml merge` embed |
