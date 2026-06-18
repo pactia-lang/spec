@@ -80,7 +80,7 @@ At **`pactia package build`**, the compiler scans `export` modifiers on symbols 
 
 | `export` on | Merged into consumer when imported |
 | --- | --- |
-| `@entity`, `@enum`, shapes in `data { }` | `domain.yaml` entities, enums, invariants |
+| `@entity`, `@enum`, shapes in `model { }` | `domain.yaml` entities, enums, invariants |
 | `@rule { }` blocks | `business.yaml` rules |
 | `@integration { }` blocks | `integrations.yaml` |
 | `@actor { }` blocks | `business.yaml` actors |
@@ -221,7 +221,7 @@ Inner scopes inherit outer `import` statements. An `import` in `module.pactia` d
 ```pactia
 import @pactia/kyc-compliance as kyc;
 
-data {
+model {
   @entity Verification {
     status: kyc.KycStatus,
   }
@@ -281,7 +281,7 @@ See [platform.md](platform.md#stack-versions).
 
 | `kind` | Primary source | Build command | Publish artifact |
 | --- | --- | --- | --- |
-| **`domain`** | Pactia `.pactia` (`data`, `service`, roles, …) | `pactia package build` | Compiled IR YAML + manifest |
+| **`domain`** | Pactia `.pactia` (`model`, `service`, roles, …) | `pactia package build` | Compiled IR YAML + manifest |
 | **`stack`** | `yaml package/*` blocks in `index.pactia` | `pactia package build` | Merged `pactia.package.yaml` |
 | **`protocol`** | `yaml package/*` + `schemas/*.json` | `pactia package build` | Manifest + JSON schemas |
 
@@ -313,7 +313,7 @@ Authors may also maintain hand-written `pactia.package.yaml` and raw `.yaml` fil
 pactia 1.0
 // Package: @pactia/kyc-compliance
 
-data {
+model {
   @enum {
     KycStatus { PENDING, VERIFIED, REJECTED, SUSPENDED }
   }
@@ -456,7 +456,7 @@ define macro sanctions_screen {
   }
 }
 
-data {
+model {
   @enum {
     ScreeningLevel { STANDARD, ENHANCED }
   }
@@ -682,7 +682,7 @@ Same import @acme/internal-billing` syntax; pactia.io is the public default.
 | **Product** | `product Identifier { }` | **Forbidden** (`DEFINE_TAG_IN_PRODUCT`, `DEFINE_MACRO_IN_PRODUCT`) | `pactiac compile` |
 | **Package** | No `product` — declarations at file root | **Allowed** | `pactia package build` |
 
-A package file may also contain kernel declarations at file root (`data { }`, `service { }`, `yaml package/*`, prose) when `kind: domain`. Those lower to IR fragments per manifest `exports` — same kernel rules as inside a product module.
+A package file may also contain kernel declarations at file root (`model { }`, `service { }`, `yaml package/*`, prose) when `kind: domain`. Those lower to IR fragments per manifest `exports` — same kernel rules as inside a product module.
 
 Example package source: [../fixtures/packages/fintech-rules-index.pactia](../fixtures/packages/fintech-rules-index.pactia).
 
@@ -727,7 +727,7 @@ DefineTagDecl   ::= "define" "tag" Identifier "{" TagDefBody "}"
 TagDefBody      ::= ScopeDecl BodyDecl LowersDecl
 ScopeDecl       ::= "scope" ScopeList
 ScopeList       ::= Scope { Scope }
-Scope           ::= "product" | "module" | "service" | "endpoint" | "field"
+Scope           ::= "product" | "module" | "service" | "model" | "endpoint" | "field"
 BodyDecl        ::= "body" "{" TagFieldDecl+ "}"
 TagFieldDecl    ::= Identifier ":" ScalarKind FieldTag*
 FieldTag        ::= "@" Identifier "{" "}"          // e.g. @optional { }
@@ -885,12 +885,12 @@ macros:
 
 ---
 
-## Kernel `data` in package files
+## Kernel `model` in package files
 
 Package source may include normal kernel blocks alongside registry definitions:
 
 ```pactia
-data {
+model {
   @enum {
     ScreeningLevel { STANDARD, ENHANCED }
   }
@@ -952,7 +952,7 @@ Distinct from product compile — see [compilation.md](compilation.md#package-bu
 1. Read index.pactia (+ optional hand-authored pactia.package.yaml)
 2. Lower define tag → tags[] + schemas/<name>-v1.json
 3. Lower define macro → macros[]
-4. Compile kernel declarations (data, service, …) → IR fragments
+4. Compile kernel declarations (model, service, …) → IR fragments
 5. Merge yaml package/* heredocs
 6. Merge hand-authored tags[] / macros[] with lowered registry
 7. Validate package.kind + @pactia/schema allowlist
@@ -1022,9 +1022,9 @@ Pactia optimizes for: **one kernel language every agent and tool understands**, 
 
 The Pactia **kernel** has **nine keywords** — see [language-spec.md](language-spec.md):
 
-`pactia`, `product`, `module`, `service`, `data`, `import`, `export`, `define`, `yaml`
+`pactia`, `product`, `module`, `service`, `model`, `import`, `export`, `define`, `yaml`
 
-Plus block nesting inside `data`, `service`, and `module`. Everything else is **`> prose`**, **`@tag { }`**, or **`#[macro]`**. English words such as `on`, `GET`, or `POST` after `>` in a prose line are not syntax.
+Plus block nesting inside `model`, `service`, and `module`. Everything else is **`> prose`**, **`@tag { }`**, or **`#[macro]`**. English words such as `on`, `GET`, or `POST` after `>` in a prose line are not syntax.
 
 New product concepts should map to v2 constructs — or to **approved extension points** below — not invent new top-level keywords ad hoc.
 

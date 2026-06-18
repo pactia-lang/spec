@@ -594,7 +594,7 @@ See [packages.md](packages.md). New wire formats are **packages**, not kernel ke
 
 ## See also
 
-- [language-spec.md](language-spec.md) — strict kernel, `@api { }`, data tags
+- [language-spec.md](language-spec.md) — strict kernel, `@api { }`, model tags
 - [packages.md](packages.md#extensibility)
 - [packages.md](packages.md)
 - [compilation.md](compilation.md)

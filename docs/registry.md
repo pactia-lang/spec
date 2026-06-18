@@ -169,15 +169,15 @@ Canonical shapes match [fleet-management-v2.pactia](../fixtures/kernel/fleet-man
 | `@tenancy` | clause | `product` | omit | assignments | `project.tenancy` |
 | `@guide` | clause | `product`, `module`, `service` | optional | prose | `guidance.yaml` |
 | `@actor` | clause | `module` | required | assignments | `business.actors[]` |
-| `@rule` | clause | `module`, `data` | required | prose or assignments | `rules[]` |
+| `@rule` | clause | `module`, `model` | required | prose or assignments | `rules[]` |
 | `@config` | clause | `module` | required | map | `config.yaml` |
 | `@errors` | clause | `module` | required | map | `errors.catalog` — defines error entries |
 | `@throws` | modifier | `@api` | omit | `{ names: [...] }` | `endpoint.errors` — references catalog |
 | `@event` | clause | `module` | reference | assignments | `communication.yaml` |
-| `@entity` | clause | `data` | PascalCase | entity-fields | `domain.yaml` |
-| `@enum` | clause | `data` | PascalCase | assignments | `domain.yaml` |
-| `@relation` | clause | `data` | snake_case | assignments | `domain.yaml` |
-| `@states` | clause | `data` | snake_case | assignments + `transitions: []` | `domain.yaml` |
+| `@entity` | clause | `model` | PascalCase | entity-fields | `domain.yaml` |
+| `@enum` | clause | `model` | PascalCase | assignments | `domain.yaml` |
+| `@relation` | clause | `model` | snake_case | assignments | `domain.yaml` |
+| `@states` | clause | `model` | snake_case | assignments + `transitions: []` | `domain.yaml` |
 | `@integration` | clause | `module` | snake_case | assignments | `integrations.yaml` |
 | `@observe` | clause | `module` | snake_case | `slos: []` | `observability.yaml` |
 | `@deploy` | clause | `module` | required | nested clauses | `deployment.yaml` |
@@ -207,7 +207,7 @@ JSON Schemas: `spec/schemas/tags/<name>-v1.json` (planned) — IDE completion ke
 
 ## Core tags (compiler built-in)
 
-### Domain modeling (kernel — required in `data { }`)
+### Domain modeling (kernel — required in `model { }`)
 
 | Tag | Example | Lowers to |
 | --- | --- | --- |
@@ -654,7 +654,7 @@ Tags and prose **attach to the nearest scope** and **cascade downward** unless o
 product
   └── module
         └── service
-              └── `@api { }` / data field / `@web` screen
+              └── `@api { }` / model field / `@web` screen
 ```
 
 | Scope | Typical cross-cutting content |
@@ -663,7 +663,7 @@ product
 | `module` | `@policy`, `@compliance`, module `>` rules |
 | `service` | `@observe` SLOs, service `@guide`, `@security` rate limits |
 | Endpoint | `#[rate_limit(n, unit)]`, endpoint-specific `@guide { }` prose |
-| `data` field | `@pii { }`, `@retain { }`, `@encrypt { }` |
+| `model` field | `@pii { }`, `@retain { }`, `@encrypt { }` |
 | Surface block | `#[a11y(WCAG-AA)]`, `@locale { }` |
 
 Child scopes **merge** parent guidance into IR with `inheritedFrom` metadata. Overrides at lower scope win on conflict.
@@ -754,7 +754,7 @@ Used with compliance packages (`import @pactia/gdpr-eu as gdpr`, `import complia
 
 Package registers `@compliance` block schema in `pactia.package.yaml` (same mechanism as protocol `@api`).
 
-| Lowers to | `policies.yaml` + `data` annotations + `rules[]` |
+| Lowers to | `policies.yaml` + `model` annotations + `rules[]` |
 | Enforced | Yes (schema-validated) |
 | Provenance | `PACKAGE` + `Pactia` |
 
@@ -851,7 +851,7 @@ Example — MVP constraint as prose (not a keyword):
 | Handler error mapping style | Stack `codingStandards` or `@guide` |
 | GPS history forever | `@policy { retain GpsPosition forever ... }` |
 | EU residency | `@policy { residency EU }` |
-| Email is PII | `email: string @pii { }` in `data` |
+| Email is PII | `email: string @pii { }` in `model` |
 | 80% coverage before prod | `@gate production { coverage: ">= 80%" }` inside `@deploy` |
 | p99 latency target | `@observe { slo ... }` |
 | HIPAA PHI tagging | import @pactia/hipaa` + `@compliance` |

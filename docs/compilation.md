@@ -39,7 +39,7 @@ Pactia compiles to **AI-neutral YAML IR** (`input/**/*.yaml`) — not vendor-spe
 8.  Validate @tag { } bodies against kernel rules + package JSON schemas
 9.  Validate protocol package @grpc / @api blocks against JSON schemas
 10. Verify protocol packages against stack allowedProtocolPackages
-11. Validate state graphs in data { states ... }
+11. Validate state graphs in model { states ... }
 12. Infer missing response/request shapes; warn on ambiguity
 13. Write kabol.lock if absent or updated
 14. Lower @tags → YAML IR with provenance (MACRO, DEFINE, PACKAGE on expanded fields)
@@ -81,7 +81,7 @@ This is how a minimal Pactia file becomes a **contentful** agent brief without a
 | `product { @stack @topology @tenancy ... }` | `input/project.yaml` |
 | `service { @api { } + nested @tag { } + #[macro] }` | `input/services/<kebab-name>.yaml` |
 | `@actor { }` | `input/business.yaml` |
-| `data { @entity @enum @relation @states }` | `input/domain.yaml` |
+| `model { @entity @enum @relation @states }` | `input/domain.yaml` |
 | `>` rules, constraint prose | `input/business.yaml` (prose / guidance) |
 | `@integration` / integration prose | `input/integrations.yaml` |
 | `@event { }` with `handler` line | `input/communication.yaml` + `eventHandlers[]` |
@@ -174,7 +174,7 @@ Used by **package authors** before `pactia publish` — distinct from product co
 1.  Read package source (index.pactia and/or pactia.package.yaml)
 2.  Lower define macro { expands { } } → macros[] entries
 3.  Lower define tag { scope body lowers } → tags[] + schemas/<name>-v1.json
-4.  Compile kernel declarations (data, service, …) → domain/integrations fragments
+4.  Compile kernel declarations (model, service, …) → domain/integrations fragments
 5.  Merge yaml package/<section> heredocs → pactia.package.yaml
 6.  Merge hand-authored macros[] / tags[] with lowered define macro / define tag
 7.  Validate against schema for package.kind + @pactia/schema IR path allowlist

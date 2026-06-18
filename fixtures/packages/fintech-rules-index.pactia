@@ -24,7 +24,7 @@ export define macro sanctions_screen {
   }
 }
 
-data {
+model {
   @enum {
     > ScreeningLevel { STANDARD, ENHANCED }
   }

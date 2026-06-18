@@ -8,6 +8,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 ### Changed
 
+- **Kernel keyword:** rename `data` to `model` for domain modeling blocks (`model { @entity … }`).
 - **Import & export:** single `import` keyword for registry packages and local files; remove `use`. Add `export` symbol modifier (replaces manifest-only `exports:`). `from` and `as` are import syntax tokens, not keywords.
 - Lead with **three altitudes** (prose-only → light tagging → fully specified) in overview and language-spec.
 - Collapse endpoint tags: **`@api`** is canonical; `@rest` / `@endpoint` deprecated (still parse).

@@ -32,7 +32,7 @@ product MyApp {
 }
 ```
 
-`>` prose in `product { }` with no `module`, `service`, or `data` — the smallest legal program. Include at least one line that says **what the product is**; additional lines are coding standards or agent rules.
+`>` prose in `product { }` with no `module`, `service`, or `model` — the smallest legal program. Include at least one line that says **what the product is**; additional lines are coding standards or agent rules.
 
 ### Altitude 1 — light tagging
 
@@ -105,8 +105,8 @@ You are writing the **permanent, versioned prompt** for your product. Teams publ
 | `product` | Root block — the whole system |
 | `module` | Capability group (bounded context) |
 | `service` | Deployable unit for APIs and server-side logic (one surface of the product) |
-| `data` | Entities, enums, relations, shapes |
-| `import` | Dependency resolution: `import @pactia/kyc-compliance;` or `import "./data/vehicle.pactia"` — path only, no version |
+| `model` | Entities, enums, relations, shapes |
+| `import` | Dependency resolution: `import @pactia/kyc-compliance;` or `import "./entities/vehicle.pactia"` — path only, no version |
 | `export` | Symbol visibility: `export define tag …`, `export @entity …` — marks symbols consumers may import |
 | `define` | Compile-time template or package registry (`define macro` / `define tag`) — expands to kernel constructs before IR emit |
 | `yaml` | Escape hatch — raw YAML merge or package authoring |
@@ -239,7 +239,7 @@ Clause tags work like **NestJS class/method decorators**: `@tagName clauseName {
 | `TagTarget` | **Clause id** (required for multi-instance) | `list_vehicles`, `Vehicle` |
 | `{ ... }` | Structured body | `method: GET, path: "/api/v1/vehicles",` |
 
-**Host blocks:** `product`, `module`, `service`, `data`, `@api { }`, `@web { }`, `@deploy { }`.
+**Host blocks:** `product`, `module`, `service`, `model`, `@api { }`, `@web { }`, `@deploy { }`.
 
 Full BNF: [grammar-reference.md](grammar-reference.md#tag-application-bnf).
 
@@ -346,7 +346,7 @@ product FleetManagement {
       NotFound: { status: 404, code: RESOURCE_NOT_FOUND, message: "..." },
     },
 
-    data {
+    model {
       @entity Vehicle {
         @pk
         id: uuid,
@@ -744,7 +744,7 @@ The first line declares the language version. The compiler rejects unsupported m
 
 ## Program structure
 
-A valid program contains exactly one `product` block. Declarations live inside `product` or nested `module` / `service` / `data` blocks.
+A valid program contains exactly one `product` block. Declarations live inside `product` or nested `module` / `service` / `model` blocks.
 
 Single-file and [workspace](language-spec.md#workspace-layout) layouts compile to the same IR.
 
@@ -759,7 +759,7 @@ LineComment   ::= "//" ...
 BlockComment  ::= "/*" ... "*/"
 ModuleDecl  ::= "module" Identifier "{" ModuleBody "}"
 ServiceDecl ::= "service" Identifier "{" ServiceBody "}"
-DataDecl    ::= "data" "{" DataBody "}"
+ModelDecl   ::= "model" "{" ModelBody "}"
 DefineDecl  ::= "define" DefineBody
 DefineBody  ::= "template" Identifier "(" ParamList ")" "{" TemplateBody "}"
               | "macro" Identifier MacroBody
@@ -928,12 +928,12 @@ The kernel routes `@api { }` to `input/services/*.yaml` using the protocol packa
 
 ---
 
-## `data` block
+## `model` block
 
 One place for entities, enums, relations, state machines, and request/response shapes — **all as kernel tags**:
 
 ```pactia
-data {
+model {
   @enum VehicleStatus {
     values: [ACTIVE, INACTIVE, DECOMMISSIONED],
   }
@@ -1118,7 +1118,7 @@ export define macro sanctions_screen {
   expands { @sanctions_check { level: enhanced, } }
 }
 
-data {
+model {
   export @entity Verification {
     status: KycStatus,
   }
@@ -1396,7 +1396,7 @@ Pactia does not generate code. It generates the **shared spec** every agent impl
 | `surfaces/web.yaml` + `@bind` | Web routes, forms, hooks |
 | `surfaces/ios.yaml` + `@bind` | SwiftUI screens, navigation |
 | `surfaces/android.yaml` + `@bind` | Compose screens, navigation |
-| `data` + field tags | Migrations, DTOs, validation (all surfaces) |
+| `model` + field tags | Migrations, DTOs, validation (all surfaces) |
 | `@test` / `@must` | Acceptance tests per surface |
 
 ---
@@ -1432,7 +1432,7 @@ Each level answers one question. Each level can be its own file — one AI conte
 | **Feature** | What API? What rules? What outcomes? | Engineer | `features/*.pactia` |
 | **Entity** | What data exists? | Engineer | `entities/*.pactia` |
 
-**Feature** files hold `@api { }` API contracts (nested tags + prose). **Entity** files hold `data { }` blocks with `@entity { }`, `@enum { }`, etc.
+**Feature** files hold `@api { }` API contracts (nested tags + prose). **Entity** files hold `model { }` blocks with `@entity { }`, `@enum { }`, etc.
 
 ---
 
@@ -1581,10 +1581,10 @@ See [language-spec.md](language-spec.md) and [registry.md](registry.md#tags).
 
 ### `entities/*.pactia`
 
-Persistent data in `data { }` blocks using kernel domain tags.
+Persistent domain model in `model { }` blocks using kernel domain tags.
 
 ```pactia
-data {
+model {
   @enum OrderStatus {
     values: [PENDING, PAID, SHIPPED, CANCELLED],
   }

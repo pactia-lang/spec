@@ -123,7 +123,7 @@ See [Three altitudes](#three-altitudes) above. In short:
 
 | Always | Your choice |
 | --- | --- |
-| `pactia 1.0` + `product { }` | `module`, `service`, `data` |
+| `pactia 1.0` + `product { }` | `module`, `service`, `model` |
 | Altitude 0 `>` prose in `product` — what it is + agent rules | Altitude 1: same product line + light `@tag` |
 | Inside blocks: tag, macro, or prose | How much structure vs narrative |
 
@@ -228,7 +228,7 @@ Pactia is how humans **author**. `pactiac` produces **vendor-neutral IR**. BSC *
 | Role                         | Writes                                                    |
 | ---------------------------- | --------------------------------------------------------- |
 | Product / domain expert      | Prose, `> rules`, `@actor { }`                          |
-| Senior architect / tech lead | `data`, `service`, `@api { }`, `@tag { }`, `#[macro]`, `@web { }` / `@ios { }`, `@test { }` |
+| Senior architect / tech lead | `model`, `service`, `@api { }`, `@tag { }`, `#[macro]`, `@web { }` / `@ios { }`, `@test { }` |
 | Platform team                | Stack packages on pactia.io — not Pactia                   |
 | Frontend / mobile leads      | `@web { }`, `@ios { }`, `@bind { }` in same `.pactia` file |
 | Community / vendors          | Pactia packages (import @pactia/*` on pactia.io)            |
@@ -268,7 +268,7 @@ product P2PExchange {
       capabilities: [resolve_disputes],
     }
 
-    data {
+    model {
       @enum TradeStatus {
         values: [PAYMENT_PENDING, PAYMENT_SENT, PAYMENT_CONFIRMED],
       }
@@ -447,7 +447,7 @@ The contract guarantees the operation, its roles, its ownership rule, and its re
 
 **Principle: Pactia is comprehensive in output, selective in input.**
 
-The architect writes **decisions**. The stack package provides **defaults**. The compiler **derives** the rest from `service` blocks and `data`.
+The architect writes **decisions**. The stack package provides **defaults**. The compiler **derives** the rest from `service` blocks and `model`.
 
 ```
 ┌────────────────────────────────────────────────────────────────┐
@@ -476,7 +476,7 @@ A senior architect using Pactia should finish in **one session** (~100–200 lin
 | Integrations & events         | **Yes** — `@event { }` (incl. `handler`) + `@integration { }` | Kafka naming, DLQ                     | producers from `@emit`; consumers from `@event` handler |
 | Auth & roles                  | **Yes** — `@actor { }` + `@auth { }` + `#[owner]` | JWT baseline, claims                  | route guard table                  |
 | Config / secrets              | **Yes** — `@config { }`                           | 12-factor startup template            | env manifest, secrets list         |
-| Security / PII / retention    | **Overrides** — `@policy { }`, field `@pii { }` `@retain { }` | OWASP, encryption, default retention  | PII list from data tags            |
+| Security / PII / retention    | **Overrides** — `@policy { }`, field `@pii { }` `@retain { }` | OWASP, encryption, default retention  | PII list from model tags            |
 | Best practices / coding style | `@guide` + stack `codingStandards`            | full patterns                         | `guidance.yaml` for AI             |
 | Observability (SLOs, alerts)  | `@observe` when non-default                   | trace sampling, metric types          | counters from `@emit` events       |
 | Scalability                   | `@deploy` environment replicas                | HPA defaults, replica baselines       | per-service flags from `service`   |
@@ -610,7 +610,7 @@ If omitted: stack package `deploymentBaseline.autoscaling` applies to all servic
 
 ### Compiler derives
 
-- One happy-path scenario per endpoint (from `@auth { }` + `@returns { }` + shapes in `data`)
+- One happy-path scenario per endpoint (from `@auth { }` + `@returns { }` + shapes in `model`)
 - Auth negative cases for `#[owner]` endpoints
 - Kafka emit assertions for `@emit` tags
 
@@ -624,7 +624,7 @@ Even when Pactia is minimal, the specification package must include everything a
 | Output file                            | Primary sources                                      |
 | -------------------------------------- | ---------------------------------------------------- |
 | `project-overview.md`                  | `product`, `@actor { }`, prose rules               |
-| `domain-model.md`                      | `data { @entity @enum @relation @states }`         |
+| `domain-model.md`                      | `model { @entity @enum @relation @states }`         |
 | `api-spec.md`                          | `@api { }` + nested `@tag { }` + `#[macro]`       |
 | `surfaces/*.yaml` / UI intent docs     | `@web { }`, `@ios { }`, `@android { }`, `@bind { }`                  |
 | `module-design.md`                     | services + stack layers                              |
@@ -643,7 +643,7 @@ The architect reads the **generated** deployment and testing docs to verify; the
 
 | Tier         | Audience               | Pactia size | Contents                                      |
 | ------------ | ---------------------- | ----------- | --------------------------------------------- |
-| **Express**  | PM + tech lead         | ~50 lines   | `product`, `data`, `@api { }`, `>` rules, `@auth` |
+| **Express**  | PM + tech lead         | ~50 lines   | `product`, `model`, `@api { }`, `>` rules, `@auth` |
 | **Standard** | Senior architect       | ~150 lines  | + `@event`, `@integration`, `@policy`, key `@test` |
 | **Extended** | Regulated / high-scale | ~250 lines  | + `@observe`, `@deploy`, `@security`, pipeline gates |
 
@@ -665,7 +665,7 @@ CI tool vendor → (1). Metrics per event → (2). SLO targets → (3). Entity r
 
 | Construct | Expression |
 | --- | --- |
-| Product, data, services | `product`, `data { @entity … }`, `@api { }` in `service` |
+| Product, model, services | `product`, `model { @entity … }`, `@api { }` in `service` |
 | State machines, party roles | `@states { }` + `#[buyer]` / `#[owner]` + `@transition { }` |
 | Request/response shapes | `@body { }` `@returns { }` |
 | Packages | `import @scope/name`, `import`, `define template` |
