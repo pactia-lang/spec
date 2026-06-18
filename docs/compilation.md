@@ -29,26 +29,27 @@ Pactia compiles to **AI-neutral YAML IR** (`input/**/*.yaml`) — not vendor-spe
     imported features/*.pactia and entities/*.pactia into single AST
 1.  Read and validate version declaration (pactia 1.0)
 2.  Lex: strip `//` line comments and `/* */` block comments (never in IR)
-3.  Resolve @stack { }; fetch stack package; load stack macros[] into effectiveRegistry
-4.  Resolve `import` per file scope; read `pactia.lock` pins for every package in `import`; build workspace effectiveRegistry
-5.  Merge declarations (package AST fragments per exports flags → local imports → main file)
-6.  Expand define (templates only) → kernel constructs
-7.  Expand #[macro] using effectiveRegistry (stack > import > std > defaults)
-8.  Validate @tag { } bodies against kernel rules + package JSON schemas
-9.  Validate protocol package @grpc / @api blocks against JSON schemas
-10. Verify protocol packages against stack allowedProtocolPackages
-11. Validate state graphs in model { states ... }
-12. Infer missing response/request shapes; warn on ambiguity
-13. Write pactia.lock if absent or updated
-14. Lower @tags → YAML IR with provenance (MACRO, DEFINE, PACKAGE on expanded fields)
-15. Lower @web { } / @ios { } → `product.yaml` (`surfaces`); resolve @bind { }
-16. Apply yaml merge embeds: parse → validate → deep-merge (provenance: YAML_EMBED)
-17. Write module-scoped output: `<module>.module.yaml`, `<module>.model.yaml`, `services/<service>.service.yaml`
-18. (optional) bsc compile-workspace → project-definition.yaml + agent briefs from IR
-19. (optional) bsc expand --target cursor|claude-code|… → LLM-enriched agent context (provenance GENERATED; cacheable)
+3.  Resolve all package coordinates (`import` lines and `@stack` tag targets) via `pactia.toml` / `pactia.lock`; build effectiveRegistry
+4.  Merge declarations (package AST fragments per exports flags → local imports → main file)
+5.  Expand define (templates only) → kernel constructs
+6.  Expand #[macro] using effectiveRegistry (stack-tier package > explicit import > std > defaults)
+7.  Validate @tag { } bodies against kernel rules + package JSON schemas
+8.  Validate @api wire fields (when `import @pactia/protocol-rest`) and protocol-package nested blocks (@grpc, @graphql, …) against JSON schemas
+9.  Verify protocol packages against stack allowedProtocolPackages
+10. Validate state graphs in model { states ... }
+11. Infer missing response/request shapes; warn on ambiguity
+12. Write pactia.lock if absent or updated
+13. Lower @tags → YAML IR with provenance (MACRO, DEFINE, PACKAGE on expanded fields)
+14. Lower @web { } / @ios { } → `product.yaml` (`surfaces`); resolve @bind { }
+15. Apply yaml merge embeds: parse → validate → deep-merge (provenance: YAML_EMBED)
+16. Write module-scoped output: `<module>.module.yaml`, `<module>.model.yaml`, `services/<service>.service.yaml`
+17. (optional) bsc compile-workspace → project-definition.yaml + agent briefs from IR
+18. (optional) bsc expand --target cursor|claude-code|… → LLM-enriched agent context (provenance GENERATED; cacheable)
 ```
 
-See [language-spec.md](language-spec.md) for `yaml merge` rules and [workspace layout](language-spec.md#workspace-layout) for merge order.
+See [language-spec.md](language-spec.md) for `yaml merge` rules and [workspace layout](language-spec.md#workspace-layout) for **workspace file merge order**.
+
+**Two merge pipelines:** [Compile merge order](language-spec.md#compile-merge-order) assembles multi-file workspaces (`product.pactia`, `module.pactia`, `features/*.pactia`, …). [Package merge order](#package-merge-order) below overlays imported domain-package AST. The [language-spec compile pipeline](language-spec.md#compile-pipeline) is an abbreviated author-facing summary; this section is the implementer reference.
 
 ---
 
@@ -202,7 +203,7 @@ Paths are relative to the compile output root (`input/` by convention). `<module
 | `@event { }` with `handler` line | `<module>.module.yaml` (`events[]`, `eventHandlers[]`) |
 | `@observe` on module | `<module>.module.yaml` |
 | `service { @api { } + nested @tag { } + #[macro] }` | `modules/<module>/services/<service>.service.yaml` |
-| `@errors` on `@api` | `response.errors[]` in the service file |
+| `@throws` on `@api` | `endpoint.errors` in the service file |
 | `@test` blocks | `<service>.service.yaml` (`scenarios[]`) |
 | `@must` blocks | `<service>.service.yaml` (`obligations[]`) |
 | Workspace `entities/*.pactia` | `<module>.model.yaml` (aggregated per module) |
@@ -218,7 +219,7 @@ Paths are relative to the compile output root (`input/` by convention). `<module
 
 ---
 
-## Stack resolution
+## `@stack` tag lowering
 
 ```pactia
 product FleetManagement {
@@ -226,10 +227,13 @@ product FleetManagement {
 }
 ```
 
-1. Read `@stack <id> { }` from `product`; expand bare id to `@pactia/<id>`.
-2. Resolve semver from `pactia.toml` — use `pactia.lock` when digest matches.
-3. Otherwise query pactia.io for the highest matching release; write pin to `pactia.lock`.
-4. Download, verify digest, cache locally.
+`@stack` is a kernel clause tag on `product`. The compiler resolves its **target** coordinate through the same [package resolver](packages.md#package-resolution) as `import` — no dedicated stack phase.
+
+1. Expand bare `@stack` target to `@pactia/<id>` when unqualified.
+2. Resolve semver from `pactia.toml`; use `pactia.lock` pin when present.
+3. Verify `pactia.toml [stack].package` matches (`STACK_BINDING_MISMATCH` if not).
+4. Download tarball, verify digest, cache locally.
+5. When `kind: stack`, merge platform law and register package macros.
 
 Output in `input/product.yaml`:
 

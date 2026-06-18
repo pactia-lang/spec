@@ -341,7 +341,7 @@ When you need **enforceable** state edges, add `@transition { from, to }` on `@a
 
 ## The intent line
 
-The **intent line** (also called the contract line in BSC) divides every software product into **formalized intent** vs **free implementation** — across backend, web, mobile, and desktop.
+The **intent line** (also called the contract line in BSC) divides every software product into **formalized intent** vs **free implementation** — across backend, web, mobile, and desktop. The word *contract* also names [cross-cutting contract blocks](registry.md#cross-cutting-contract-blocks) in the tag taxonomy and a single [API contract per feature file](language-spec.md#featurespactia) (one endpoint task in `features/*.pactia`).
 
 ### The line
 
@@ -534,9 +534,7 @@ What compiles out:
 
 **Rule:** if `@deploy` is omitted, stack package CI config is used verbatim. Zero extra Pactia lines for the common case.
 
-### Observability
-
-### Stack package provides
+### Observability — stack defaults
 
 - Prometheus + OpenTelemetry
 - Default trace sample rate, W3C propagation
@@ -595,9 +593,7 @@ If omitted: stack package `deploymentBaseline.autoscaling` applies to all servic
 
 `@topology { microservices }` vs `@topology { monolith }` on `product` affects whether replica blocks apply per service or per deployment unit.
 
-### Testing
-
-### Stack package provides
+### Testing — stack defaults
 
 - Testcontainers for PostgreSQL, Redis, Kafka
 - Default coverage target (e.g. 80%)

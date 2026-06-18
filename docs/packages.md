@@ -160,11 +160,31 @@ packages:
 import @pactia/kyc-compliance;   // resolves 1.0.3 from pactia.lock — not ^1.0 here
 ```
 
-| Error | Condition |
-| --- | --- |
-| `DEPENDENCY_NOT_DECLARED` | `import @scope/name` but package absent from `pactia.toml` |
-| `LOCK_ENTRY_MISSING` | Declared in `pactia.toml` but no pin in `pactia.lock` — run `pactia build` |
-| `VERSION_IN_IMPORT` | Version range or pin appears in an `import` statement — forbidden |
+### Package resolution
+
+All package coordinates — from `import @scope/name` **or** from an `@stack` tag target — use the **same resolver**. The compiler has no stack-specific fetch path; `@stack` is a kernel clause tag whose **target** names a package coordinate (bare id expands to `@pactia/<id>`).
+
+| Code | Severity | Condition |
+| --- | --- | --- |
+| `PACKAGE_NOT_FOUND` | Error | Coordinate not found in registry |
+| `PACKAGE_VERSION_UNSATISFIED` | Error | No release matches semver constraint in `pactia.toml` |
+| `PACKAGE_LOCK_MISMATCH` | Error | `pactia.lock` digest differs from fetched tarball |
+| `PACKAGE_DEPRECATED` | Warning | Resolved version marked deprecated on registry |
+| `DEPENDENCY_NOT_DECLARED` | Error | `import @scope/name` or resolved `@stack` target absent from `pactia.toml` `[dependencies]` |
+| `LOCK_ENTRY_MISSING` | Error | Declared in `pactia.toml` but no pin in `pactia.lock` — run `pactia build` |
+| `VERSION_IN_IMPORT` | Error | Version range or pin appears in an `import` statement — forbidden |
+| `VERSION_IN_TAG_BODY` | Error | Semver or version constraint in a tag body (e.g. `version:` inside `@stack { }`) — version belongs in `pactia.toml` / `pactia.lock` only |
+| `COMPATIBLE_STACKS_UNSATISFIED` | Error | An imported package's `compatibleStacks` is not satisfied by the product's resolved stack-kind package |
+
+### Product stack binding
+
+`pactia.toml` `[stack].package` records which stack-kind package the product uses. That manifest field must agree with the `@stack` tag target on `product` (and with an optional `import` of the same coordinate).
+
+| Code | Severity | Condition |
+| --- | --- | --- |
+| `STACK_BINDING_MISMATCH` | Error | `@stack` tag target, optional matching `import`, and `pactia.toml [stack].package` do not resolve to the same lock entry |
+
+Implementer reference: [grammar-reference.md — Package resolution](grammar-reference.md#package-resolution).
 
 ### Import forms
 
@@ -276,19 +296,19 @@ Domain types: `alias.TypeName`. Registry tags: `@alias::tag`. Macros: `#[alias::
 
 `REGISTRY_COLLISION` → selective `import { only, needed } from @pkg;` or `import @pkg as alias;`.
 
-### `@stack` vs `import` for stack packages (e.g. rust-anb)
+### `@stack` vs `import` for stack-kind packages (e.g. rust-anb)
 
-Stack packages play **two roles** — both reference the same coordinate `@pactia/rust-anb`, version only in `pactia.toml` / `pactia.lock`:
+`@stack` is a **kernel clause tag** on `product` — same parser and tag validation as `@topology` or `@deploy`. Its **target** names a stack-kind package coordinate; resolution uses the [package resolver](#package-resolution) above, not a separate compiler path.
 
 | Mechanism | Purpose | Example |
 | --- | --- | --- |
 | **`pactia.toml`** | Declare dependency + semver range; `pactia.lock` pins digest | `"@pactia/rust-anb" = "^1.0"` and `[stack] package = "@pactia/rust-anb"` |
-| **`import @pactia/rust-anb;`** | Import stack **registry** into authoring scope — `#[database]`, `#[cache]`, stack macros | Top of `product.pactia` |
-| **`@stack rust-anb { }` on `product`** | Product **fact** — lowers to `product.stackId`; triggers `platformLaw` / `technologyPolicy` merge | Inside `product { }` — **no version field** |
+| **`@stack rust-anb { }` on `product`** | Product **fact** in source — lowers to `product.stackId`; when the resolved package has `kind: stack`, merges `platformLaw` / `technologyPolicy` and registry `tags[]` / `macros[]` at stack-tier precedence | Inside `product { }` — **no version field** in the tag body |
+| **`import @pactia/rust-anb;`** (optional) | Explicit dependency declaration; when present, coordinate must match `@stack` and lock — does **not** load registry beyond what the `@stack` tag already resolved | Top of `product.pactia` |
 
 ```pactia
 import @pactia/protocol-rest;
-import @pactia/rust-anb;
+// import @pactia/rust-anb;   // optional — same coordinate as @stack below
 
 product FleetManagement {
   @stack rust-anb { }
@@ -310,11 +330,11 @@ package = "@pactia/rust-anb"
 
 | Authority | What it records |
 | --- | --- |
-| `pactia.toml [stack].package` | Which package is the stack dependency |
+| `pactia.toml [stack].package` | Which stack-kind package the product binds to |
 | `pactia.toml [dependencies]` | Semver range for that coordinate (must be present) |
-| `@stack <id> { }` on `product` | Product fact — bare id expands to `@pactia/<id>` unless fully qualified |
+| `@stack <id> { }` on `product` | Source fact — bare id expands to `@pactia/<id>` unless fully qualified |
 
-Version and digest always come from `pactia.lock` — never from `@stack { }` or `import`. Mismatch → `STACK_COORDINATE_MISMATCH`. `version:` inside `@stack { }` → `VERSION_IN_STACK`.
+Version and digest always come from `pactia.lock` — never from `@stack { }` or `import`. Mismatch across these three → `STACK_BINDING_MISMATCH`. Semver in `@stack { }` body → `VERSION_IN_TAG_BODY`.
 
 See [platform.md](platform.md#stack-versions).
 
@@ -572,12 +592,12 @@ The **Pactia standard library** is a curated set of packages on pactia.io — no
 
 | Package | Provides |
 | --- | --- |
-| `@pactia/protocol-rest` | REST wire validation, `@api { }` (category `protocol`) |
+| `@pactia/protocol-rest` | REST wire validation for kernel `@api { }` fields (`method`, `path`, …) (category `protocol`) |
 | `@pactia/api-patterns` | Default `#[list]`, `#[paginated]`, `#[owner]`, … (overridable by stack) |
 | `@pactia/surface-react` | `@web { }`, `#[form]`, `#[a11y(...)]` (category `surface`) |
 | `@pactia/surface-swiftui` | `@ios { }`, mobile macros (category `surface`) |
 
-`pactia init` adds default selective `import` lines (protocol + api-patterns). Stack package (`@stack rust-anb { }`) **overrides** std macro definitions. See [registry.md — Workspace registry](registry.md#workspace-registry).
+`pactia init` adds default selective `import` lines (protocol + api-patterns). Stack profile **`allowedProtocolPackages`** declares which std packages a product may use — activation still requires explicit `import` (or the `pactia init` defaults). Registry macros from the package bound by `@stack` take precedence over std when both define the same name. See [registry.md — Workspace registry](registry.md#workspace-registry).
 
 ---
 
@@ -613,7 +633,7 @@ Environment: `Pactia_REGISTRY_URL`, `Pactia_REGISTRY_TOKEN` (see below).
 
 ## pactia.io registry (planned)
 
-Public registry at **https://pactia.io** (product vision; not yet built).
+Public registry at **https://pactia.io** (product site and package browser; not yet built). The CLI resolves packages via **`https://registry.pactia.io/v1`** by default (`Pactia_REGISTRY_URL`).
 
 ### User flows
 
@@ -1008,6 +1028,8 @@ Distinct from product compile — see [compilation.md](compilation.md#package-bu
 
 ## Errors
 
+Package resolution codes: [Package resolution](#package-resolution). Registry and tag validation:
+
 | Code | Condition |
 | --- | --- |
 | `DEFINE_TAG_IN_PRODUCT` | `define tag` inside consumer `product { }` |
@@ -1041,7 +1063,7 @@ Distinct from product compile — see [compilation.md](compilation.md#package-bu
 | Arbitrary user-defined **syntax/keywords**    | **No** — breaks parser, reconciler, AI, pactia.io                                             |
 | **`define` for repeated spec structure**      | **Yes** — `define template` and package `define macro` / `define tag` over the fixed kernel   |
 | **Packages** (`import @scope/name`)              | **Yes** — primary modularity mechanism (already specified)                                    |
-| **Compile-time macros** (expand to kernel)    | **Yes, v2** — for repeated patterns, fully validated after expansion                          |
+| **Compile-time macros** (expand to kernel)    | **Yes** — extension mechanism 5; repeated patterns, fully validated after expansion                          |
 | **Extension blocks** from registered packages | **Yes** — e.g. `@compliance` from `@pactia/hipaa` with package schema |
 | **`yaml` embed** | **Yes** — raw YAML for product IR merge or package authoring (stacks, manifests); schema-validated |
 
@@ -1071,7 +1093,7 @@ The Pactia **kernel** has **nine keywords** — see [language-spec.md](language-
 
 Plus block nesting inside `model`, `service`, and `module`. Everything else is **`> prose`**, **`@tag { }`**, or **`#[macro]`**. English words such as `on`, `GET`, or `POST` after `>` in a prose line are not syntax.
 
-New product concepts should map to v2 constructs — or to **approved extension points** below — not invent new top-level keywords ad hoc.
+New product concepts should map to [extension mechanisms](#extension-mechanism-1--packages-primary) below — not invent new top-level keywords ad hoc.
 
 ## Extension mechanism 1 — Packages (primary)
 
@@ -1093,7 +1115,7 @@ import { escrow_hold, custody_integration } from @pactia/escrow-custody;
 
 Packages are **not** new keywords — they are **bundles of kernel constructs** with a name.
 
-## Extension mechanism 2 — `define` (v2)
+## Extension mechanism 2 — `define`
 
 **Use case:** Project-local or package-local **repeated kernel blocks** (`define template`) and **package registry authoring** (`define macro` / `define tag`).
 
@@ -1275,12 +1297,14 @@ Stack authors publish `@pactia/rust-anb` by writing `yaml package/*` blocks — 
 **Allowed:** schema-validated embeds with provenance `YAML_EMBED`.  
 **Not allowed:** unvalidated arbitrary YAML in products (bypasses schema).
 
-## Extension mechanism 5 — `#[macro]` (v2)
+## Extension mechanism 5 — `#[macro]`
 
 **Use case:** Stack- and package-owned patterns — pagination, ownership filters, rate limits — that expand to tags before IR emit.
 
 ```pactia
-// Stack macros from @stack rust-anb { } — resolved via pactia.lock, not `import`
+import @pactia/protocol-rest;
+// #[list] / #[paginated] from import @pactia/api-patterns or registry precedence
+// #[database] / #[cache] from package bound by @stack rust-anb { } on product
 
 #[database]
 #[cache]
@@ -1318,7 +1342,7 @@ Macros register in stack or domain packages — see [registry.md](registry.md#ma
 
 | Change type                         | Process                                           |
 | ----------------------------------- | ------------------------------------------------- |
-| New kernel keyword                  | Pactia RFC, spec update, major version bump — **strongly discouraged in v2** |
+| New kernel keyword                  | Pactia RFC, spec update, major version bump — **strongly discouraged** |
 | New `@tag` in core registry         | Pactia RFC + [registry.md](registry.md#tags) update |
 | New package on pactia.io            | Publish manifest + schema + lowering docs         |
 | New `define template` in project    | Local only; must expand to existing kernel        |

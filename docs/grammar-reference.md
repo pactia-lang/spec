@@ -135,3 +135,24 @@ Modifiers (`@auth`, `@returns`, `@body`, …) use **prefix** placement on lines 
 | `PROSE_PREFIX_REQUIRED` | Non-empty line looks like prose but does not start with `>` |
 
 Author-facing subset: [language-spec.md — Author errors](language-spec.md#author-errors).
+
+---
+
+## Package resolution
+
+All package coordinates use one resolver — whether the coordinate comes from `import @scope/name` or from an `@stack` tag **target** on `product`. `@stack` is a kernel clause tag; the compiler does not treat it as a former keyword or a separate compile phase.
+
+| Code | Severity | Condition |
+| --- | --- | --- |
+| `PACKAGE_NOT_FOUND` | Error | Coordinate not found in registry |
+| `PACKAGE_VERSION_UNSATISFIED` | Error | No release matches semver constraint in `pactia.toml` |
+| `PACKAGE_LOCK_MISMATCH` | Error | `pactia.lock` digest differs from fetched tarball |
+| `PACKAGE_DEPRECATED` | Warning | Resolved version marked deprecated on registry |
+| `DEPENDENCY_NOT_DECLARED` | Error | `import @scope/name` or resolved `@stack` target absent from `pactia.toml` `[dependencies]` |
+| `LOCK_ENTRY_MISSING` | Error | Declared in `pactia.toml` but no pin in `pactia.lock` |
+| `VERSION_IN_IMPORT` | Error | Semver appears in an `import` statement |
+| `VERSION_IN_TAG_BODY` | Error | Semver or version constraint in a tag body (e.g. `version:` in `@stack { }`) |
+| `COMPATIBLE_STACKS_UNSATISFIED` | Error | Imported package's `compatibleStacks` not satisfied by the product's resolved stack-kind package |
+| `STACK_BINDING_MISMATCH` | Error | `@stack` tag target, optional matching `import`, and `pactia.toml [stack].package` resolve to different lock entries |
+
+See [packages.md — Package resolution](packages.md#package-resolution).

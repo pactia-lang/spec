@@ -91,7 +91,7 @@ You are writing the **permanent, versioned prompt** for your product. Teams publ
 
 ## Design laws
 
-1. **Small fixed keyword set** — structure, imports, and local template expansion (`define template`). Nothing else is reserved.
+1. **Small fixed keyword set** — [nine reserved words](#kernel-keywords-nine-reserved-words) for structure, imports, exports, `yaml` embeds, and `define` (templates in products; tags/macros in packages). No ad-hoc kernel keywords.
 2. **Tags + macros + prose only** — every structured fact is `@tag { }`; every pattern is `#[macro]`; narrative context is **`> prose`**. **No kernel pattern matching** for HTTP verbs, roles, or relations.
 3. **Still compilable** — tags lower verbatim; macros expand deterministically before IR emit.
 4. **Multi-surface** — same file drives APIs and `@web { }` / `@ios { }` / `@android { }` / `@desktop { }` blocks.
@@ -358,6 +358,8 @@ gRPC and GraphQL use `@grpc` / `@graphql` from their protocol packages — same 
 See full file: [fleet-management-v2.pactia](../fixtures/kernel/fleet-management-v2.pactia).
 
 ```pactia
+import @pactia/protocol-rest;
+
 product FleetManagement {
   @topology { mode: microservices, }
 
@@ -813,7 +815,7 @@ product FleetManagement {
 }
 ```
 
-First `> prose` line after `{` is the product description. Stack semver is declared in `pactia.toml` / `pactia.lock` — not inside `@stack { }`. See [registry.md](registry.md#tags) and [platform.md](platform.md#stack-versions).
+First `> prose` line after `{` is the product description. Stack semver is declared in `pactia.toml` / `pactia.lock` — not inside `@stack { }`. `import @pactia/rust-anb` is optional when `@stack` selects the same coordinate — see [packages.md — @stack vs import](packages.md#stack-vs-import-for-stack-kind-packages-eg-rust-anb). See [registry.md](registry.md#tags) and [platform.md](platform.md#stack-versions).
 
 ---
 
@@ -1177,9 +1179,10 @@ Products do **not** use `export` — they consume packages. See [packages.md —
 
 ### Stack vs domain packages
 
-| | Stack package | Domain / protocol package |
+| | Stack-kind package | Domain / protocol package |
 | --- | --- | --- |
-| Selected via | `@stack { }` on `product` | `import @scope/name` |
+| Declared in source | `@stack` tag on `product` | `import @scope/name` |
+| Resolved via | Generic [package resolver](packages.md#package-resolution) + `pactia.toml [stack].package` binding | Generic package resolver |
 | Contains | Platform defaults, CI, observability | Domain patterns, wire formats, rules |
 
 See [platform.md](platform.md#stack-packages).
@@ -1415,7 +1418,7 @@ Every IR field is tagged with one of:
 ```
 1. Parse: nine reserved kernel words + three line kinds (tag, macro, prose)
 2. Assemble workspace (if multi-file) — see [language-spec.md#workspace-layout](language-spec.md#workspace-layout)
-3. Resolve `@stack { }` + `import`; build effectiveRegistry (kernel + package tags[] + macros[])
+3. Resolve all package coordinates (`import` + `@stack` tag targets); build effectiveRegistry (kernel + package tags[] + macros[])
 4. Expand define (templates only) → kernel tags
 5. Expand #[macro] using effectiveRegistry (includes #[templateName(...)])
 6. Validate @tag { } bodies (kernel + package JSON schemas)

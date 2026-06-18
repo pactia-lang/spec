@@ -5,7 +5,7 @@ Status: **Specification**
 
 Part of: [packages.md](packages.md) | [language-spec.md](language-spec.md) | [compilation.md](compilation.md)
 
-Stack packages (`@stack`), semver locking, and wire-format protocol packages (`@api`, `@grpc`, `@graphql`).
+Stack packages (`@stack`), semver locking, and wire-format protocol packages (`@pactia/protocol-rest`, `@pactia/protocol-grpc`, …). **`@api` is a kernel clause tag** — protocol packages add wire validation and nested blocks such as `@grpc { }`.
 
 ---
 
@@ -35,7 +35,7 @@ product OrderPlatform {
 | `@stack rust-anb { }` | `@pactia/rust-anb` — version from `pactia.toml` / `pactia.lock` |
 | `@stack @acme/node-bff { }` | Private package at configured registry |
 
-**Do not** put semver inside `@stack { }`. Constraints live in `pactia.toml`; pins in `pactia.lock`. `VERSION_IN_STACK` if `version:` appears in the tag body. See [packages.md — @stack vs import](packages.md#stack-vs-import-for-stack-packages-eg-rust-anb).
+**Do not** put semver inside `@stack { }`. Constraints live in `pactia.toml`; pins in `pactia.lock`. `VERSION_IN_TAG_BODY` if `version:` appears in the tag body. See [packages.md — @stack vs import](packages.md#stack-vs-import-for-stack-kind-packages-eg-rust-anb).
 
 ---
 
@@ -246,16 +246,18 @@ product FleetManagement {
 }
 ```
 
-The compiler fetches the published bundle, verifies the digest from `pactia.lock`, and merges `profile` + `platformLaw` + `technologyPolicy` into workspace IR. No local `stacks/` directory is needed.
+The compiler resolves the package named by the `@stack` tag target through the same [package resolver](packages.md#package-resolution) as `import`. When the tarball has `kind: stack`, it merges `profile` + `platformLaw` + `technologyPolicy` into workspace IR and registers stack-tier macros (e.g. `#[database]`). Std packages such as `@pactia/protocol-rest` still require explicit `import` — add `import @pactia/protocol-rest;` before using REST wire fields on `@api`. No local `stacks/` directory is needed.
 
-## Compiler behavior
+## `@stack` tag lowering
 
-1. Parse `@stack <id> { }` from `product`; expand bare id to `@pactia/<id>`.
-2. Resolve semver from `pactia.toml` against pactia.io (or read pinned digest from `pactia.lock`).
-3. Download and verify package digest.
-4. Merge `profile` + `platformLaw` + `technologyPolicy` into workspace IR.
+`@stack` is validated and lowered like any other kernel clause tag on `product`. Package fetch, semver, and lock checks use generic `PACKAGE_*` codes — not stack-specific errors.
+
+1. Parse `@stack <target> { }` from `product`; expand bare target id to `@pactia/<id>`.
+2. Resolve coordinate via `pactia.toml` / `pactia.lock` (same path as `import @scope/name`).
+3. Verify `pactia.toml [stack].package` matches the resolved coordinate (`STACK_BINDING_MISMATCH` if not).
+4. When `kind: stack`, merge platform law into workspace IR and register package `tags[]` / `macros[]`.
 5. Emit `input/product.yaml` with `stackId`, `stackVersion`, `stackDigest`.
-6. Emit module-scoped IR under `input/modules/<module>/` (`<module>.module.yaml`, `<module>.model.yaml`, `services/*.service.yaml`).
+6. Emit module-scoped IR under `input/modules/<module>/`.
 7. Conformance (planned): flag generated code that imports forbidden crates.
 
 ---
@@ -422,7 +424,7 @@ package:
       version: "^1.0"
 ```
 
-Compiler error `STACK_INCOMPATIBLE` if the product's stack does not satisfy a package's `compatibleStacks`.
+Compiler error `COMPATIBLE_STACKS_UNSATISFIED` if the product's resolved stack-kind package does not satisfy an imported package's `compatibleStacks`.
 
 ---
 
@@ -455,15 +457,9 @@ Planned:
 
 ## Compile errors
 
-| Code | Severity | Condition |
-| --- | --- | --- |
-| `STACK_NOT_FOUND` | Error | Stack package coordinate not found in registry |
-| `STACK_VERSION_UNSATISFIED` | Error | No release matches semver constraint |
-| `STACK_LOCK_MISMATCH` | Error | `pactia.lock` digest differs from fetched package |
-| `STACK_INCOMPATIBLE` | Error | An imported package's `compatibleStacks` is not satisfied |
-| `STACK_COORDINATE_MISMATCH` | Error | `@stack` id, `import`, and `pactia.toml [stack].package` do not resolve to the same lock entry |
-| `VERSION_IN_STACK` | Error | `version:` appears inside `@stack { }` body |
-| `STACK_DEPRECATED` | Warning | Resolved version marked deprecated on registry |
+`@stack` uses the same [package resolution](packages.md#package-resolution) errors as `import`. The only stack-specific code is **`STACK_BINDING_MISMATCH`** — when the `@stack` tag target, optional matching `import`, and `pactia.toml [stack].package` disagree.
+
+Full implementer list: [grammar-reference.md — Package resolution](grammar-reference.md#package-resolution).
 
 ---
 
@@ -483,7 +479,7 @@ pactia update --stack                 # refresh stack pin in pactia.lock
 - #stack-packages — stack package anatomy, use/forbid policy
 - [packages.md](packages.md) — all package types and pactia.lock
 - [language-spec.md](language-spec.md) — `@stack` on `product`
-- [compilation.md](compilation.md) — stack resolution phase
+- [compilation.md](compilation.md) — package resolution during compile
 
 ---
 
@@ -491,7 +487,7 @@ pactia update --stack                 # refresh stack pin in pactia.lock
 
 ## One sentence
 
-**Declare each API inside `@api { }` (or `@grpc { }` / `@graphql { }` from protocol packages); attach `@auth { }`, `#[macro]`, and surface blocks inside the protocol tag; the compiler lowers to YAML.**
+**Declare each API with the kernel clause `@api { }`; prefix `@auth { }`, `#[macro]`, `@returns`, and `@throws` on lines above it. Nest protocol-specific blocks (`@grpc { }`, `@graphql { }`) inside `@api { }` when needed. Import `@pactia/protocol-rest` for REST wire validation (`method`, `path`). The compiler lowers to YAML.**
 
 ---
 
@@ -521,7 +517,7 @@ pactia update --stack                 # refresh stack pin in pactia.lock
                             │
 ┌───────────────────────────▼─────────────────────────────┐
 │  PROTOCOL PACKAGES (pactia.io)                          │
-│  @pactia/protocol-rest   → @api { } + schema + YAML   │
+│  @pactia/protocol-rest   → wire schema for @api fields  │
 │  @pactia/protocol-grpc   → @grpc { } + schema + YAML   │
 └───────────────────────────┬─────────────────────────────┘
                             │ compile
@@ -577,7 +573,7 @@ import @pactia/protocol-grpc;
 }
 ```
 
-Block names (`@api`, `@grpc`, `@graphql`) come from the package manifest — not from the kernel.
+`@api` is always a **kernel clause tag**. Nested block names such as `@grpc { }` and `@graphql { }` come from the protocol package manifest — not from the kernel.
 
 ---
 
