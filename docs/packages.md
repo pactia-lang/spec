@@ -1,6 +1,6 @@
 # Pactia Packages & pactia.io
 
-Pactia programs compose from **packages** — published to **pactia.io** and resolved the same way regardless of kind. Everything is a package: domain patterns, protocol wire formats, and tech stacks.
+Pactia programs compose from **packages** — published to **pactia.io** and resolved the same way regardless of kind. Everything is a package: vertical patterns, protocol wire formats, and tech stacks.
 
 Part of the intent-first ecosystem: BSC vision | [language-spec.md](language-spec.md)
 
@@ -23,19 +23,19 @@ Architects write product-specific Pactia; community/vendor packages supply commo
 | `kind` | Coordinate example | Selected via | Typical exports |
 | --- | --- | --- | --- |
 | **`stack`** | `@pactia/rust-anb` | `@stack { }` on `product` | Platform law — language, framework, CI, platformLaw |
-| **`domain`** | `@pactia/kyc-compliance` | `import @scope/name` | Entities, rules, integrations, optional services |
+| **`vertical`** | `@pactia/kyc-compliance` | `import @scope/name` | Entities, rules, integrations, optional services |
 | **`protocol`** | `@pactia/protocol-rest` | `import @scope/name` | Expose block name + schema + YAML lowering |
-| **`domain`** (financial) | `@pactia/escrow-custody` | `import @scope/name` | EscrowHold entity, custody integration template |
-| **`domain`** (vertical) | `@pactia/marketplace-core` | `import @scope/name` | Offer, Order, listing services |
-| **`domain`** (vendor) | `@sumsub/pactia-webhooks` | `import @scope/name` | Official Sumsub → Pactia integration |
-| **`domain`** (org-private) | `@acme/internal-auth` | `import @scope/name` | Company-specific roles (private registry) |
+| **`vertical`** (financial) | `@pactia/escrow-custody` | `import @scope/name` | EscrowHold entity, custody integration template |
+| **`vertical`** (marketplace) | `@pactia/marketplace-core` | `import @scope/name` | Offer, Order, listing services |
+| **`vertical`** (vendor) | `@sumsub/pactia-webhooks` | `import @scope/name` | Official Sumsub → Pactia integration |
+| **`vertical`** (org-private) | `@acme/internal-auth` | `import @scope/name` | Company-specific roles (private registry) |
 
 All kinds use the same registry, manifest format, semver, and `pactia.lock`. The `kind` field drives how the compiler processes the package:
 - `stack` — merged as platform law; selected once per `product`
-- `domain` — declarations merged into compilation unit
+- `vertical` — declarations merged into compilation unit
 - `protocol` — registers expose block names; see [platform.md](platform.md#protocol-packages)
 
-Domain packages **cannot** override stack baselines (`platformLaw`, `technologyPolicy`). They export **intent**, not platform law.
+Vertical packages **cannot** override stack baselines (`platformLaw`, `technologyPolicy`). They export **intent**, not platform law.
 
 ---
 
@@ -49,7 +49,7 @@ package:
   version: 1.0.0
   description: Reusable KYC status model and verification webhook
   license: MIT
-  kind: domain
+  kind: vertical
   pactiaVersion: "1.0"
   compatibleStacks:
     - name: "@pactia/rust-anb"
@@ -59,14 +59,16 @@ package:
   registry:
     tags:
       - name: sanctions_check
-        category: compliance
+        category: service
+        kind: compliance
         version: 1
       - name: kyc_status_field
-        category: domain
+        category: model
         version: 1
     macros:
       - name: sanctions_screen
-        category: compliance
+        category: service
+        kind: compliance
         version: 1
     reexports: []
   dependencies:
@@ -348,7 +350,7 @@ See [platform.md](platform.md#stack-versions).
 
 | `kind` | Primary source | Build command | Publish artifact |
 | --- | --- | --- | --- |
-| **`domain`** | Pactia `.pactia` (`model`, `service`, roles, …) | `pactia package build` | Compiled IR YAML + manifest |
+| **`vertical`** | Pactia `.pactia` (`model`, `service`, roles, …) | `pactia package build` | Compiled IR YAML + manifest |
 | **`stack`** | `yaml package/*` blocks in `index.pactia` | `pactia package build` | Merged `pactia.package.yaml` |
 | **`protocol`** | `yaml package/*` + `schemas/*.json` | `pactia package build` | Manifest + JSON schemas |
 
@@ -504,7 +506,8 @@ pactia 1.0
 // Package: @acme/fintech-rules
 
 define tag sanctions_check {
-  category compliance
+  category service
+  kind compliance
   scope endpoint
   body {
     level: string
@@ -517,7 +520,8 @@ define tag sanctions_check {
 }
 
 define macro sanctions_screen {
-  category compliance
+  category service
+  kind compliance
   expands {
     @sanctions_check { level: enhanced, }
   }
@@ -539,7 +543,7 @@ model {
 package:
   name: "@acme/fintech-rules"
   version: 1.0.0
-  kind: domain
+  kind: vertical
   pactiaVersion: "1.0"
 
 registry:
@@ -594,8 +598,8 @@ The **Pactia standard library** is a curated set of packages on pactia.io — no
 | --- | --- |
 | `@pactia/protocol-rest` | REST wire validation for kernel `@api { }` fields (`method`, `path`, …) (category `protocol`) |
 | `@pactia/api-patterns` | Default `#[list]`, `#[paginated]`, `#[owner]`, … (overridable by stack) |
-| `@pactia/surface-react` | `@web { }`, `#[form]`, `#[a11y(...)]` (category `surface`) |
-| `@pactia/surface-swiftui` | `@ios { }`, mobile macros (category `surface`) |
+| `@pactia/surface-react` | `#[form]`, `#[a11y(...)]`, web layout macros inside `@surface { platform: web, … }` (package `kind: surface`) |
+| `@pactia/surface-swiftui` | mobile layout macros inside `@surface { platform: ios, … }` (package `kind: surface`) |
 
 `pactia init` adds default selective `import` lines (protocol + api-patterns). Stack profile **`allowedProtocolPackages`** declares which std packages a product may use — activation still requires explicit `import` (or the `pactia init` defaults). Registry macros from the package bound by `@stack` take precedence over std when both define the same name. See [registry.md — Workspace registry](registry.md#workspace-registry).
 
@@ -625,7 +629,7 @@ Environment: `Pactia_REGISTRY_URL`, `Pactia_REGISTRY_TOKEN` (see below).
 1. Passes `pactia package check` on all source files.
 2. Valid `pactia.package.yaml` with semver and correct `kind`.
 3. Stack packages: `profile`, `platformLaw`, `technologyPolicy` validated against stack schema.
-4. Domain packages: cannot export `platformLaw` or `technologyPolicy` (stack-closed law).
+4. Vertical packages: cannot export `platformLaw` or `technologyPolicy` (stack-closed law).
 5. No secrets in source; automated scan on upload.
 6. Digest pinned in consumer `pactia.lock` after first resolve.
 
@@ -688,7 +692,7 @@ pactia build                               # resolve pins, write pactia.lock
 pactia update                              # refresh dependency pins
 pactia update --stack                      # refresh stack pin only
 pactia init                                # new product workspace
-pactia package init @scope/name --kind domain   # scaffold package
+pactia package init @scope/name --kind vertical   # scaffold package
 pactia package build                       # build publishable package bundle
 pactia package check                       # validate package without publishing
 pactia publish                             # publish to pactia.io (authenticated)
@@ -722,7 +726,7 @@ Same `import @acme/internal-billing;` syntax; pactia.io is the public default.
 | Location | Role |
 | --- | --- |
 | `examples/packages/rust-anb/` | Reference **stack package** (`yaml package/*` authoring) |
-| `examples/packages/kyc-compliance/` | Reference **domain package** (`.pactia`) |
+| `examples/packages/kyc-compliance/` | Reference **vertical package** (`.pactia`) |
 | `examples/packages/protocol-rest/` | Reference **protocol package** |
 | pactia.io | External **package** registry (community) |
 
@@ -754,7 +758,7 @@ Same `import @acme/internal-billing;` syntax; pactia.io is the public default.
 | **Product** | `product Identifier { }` | **Forbidden** (`DEFINE_TAG_IN_PRODUCT`, `DEFINE_MACRO_IN_PRODUCT`) | `pactiac compile` |
 | **Package** | No `product` — declarations at file root | **Allowed** | `pactia package build` |
 
-A package file may also contain kernel declarations at file root (`model { }`, `service { }`, `yaml package/*`, prose) when `kind: domain`. Those lower to IR fragments per manifest `exports` — same kernel rules as inside a product module.
+A package file may also contain kernel declarations at file root (`model { }`, `service { }`, `yaml package/*`, prose) when `kind: vertical`. Those lower to IR fragments per manifest `exports` — same kernel rules as inside a product module.
 
 Example package source: [../fixtures/packages/fintech-rules-index.pactia](../fixtures/packages/fintech-rules-index.pactia).
 
@@ -772,18 +776,18 @@ Pactia reserves **nine kernel keywords** — see [language-spec.md — Kernel ke
 
 | Header | Parent block | Purpose |
 | --- | --- | --- |
-| `category` | `define tag`, `define macro` | Registry category: `compliance`, `domain`, `extension`, … (default `extension`) |
+| `category` | `define tag`, `define macro` | Registry category: `product`, `module`, `model`, `service`, `field` (default `service`) |
 | `scope` | `define tag` | Where consumers may place `@name { }` |
 | `body` | `define tag` | Field schema for the tag body → JSON Schema |
 | `lowers` | `define tag` | IR file + JSON path targets when the tag is used |
 | `expands` | `define macro` | Lines that replace `#[name]` at consumer compile time |
 
-**Do not confuse** registry `body { }` with kernel `@body { DtoName }` on `@api { }`. They share a name but live in different grammars:
+**Do not confuse** registry `body { }` with kernel `@input { DtoName }` on `@api { }`. They share a name but live in different grammars:
 
 | Syntax | Context | Meaning |
 | --- | --- | --- |
 | `body { level: string }` | Inside `define tag` | Package tag field schema |
-| `@body CreateVehicleRequest` | Inside `@api { }` | Request DTO reference (kernel tag) |
+| `@input CreateVehicleRequest` | Inside `@api { }` | Request DTO reference (kernel tag) |
 
 ---
 
@@ -1225,7 +1229,7 @@ Product file                          Package manifest (@pactia/rust-anb)
 define template fleet_list(...) {       - name: list
   @auth { roles: [Customer, Admin] }      expands_to: ["@cursor { ... }", "#[paginated]"]
   #[list] #[paginated]    ──invoke──▶   - name: owner
-  @returns Dto                            expands_to: ["@filter { ... }"]
+  @output Dto                            expands_to: ["@filter { ... }"]
   @api fleet_list {
     method: GET,
     path: path,
@@ -1314,7 +1318,7 @@ service OrderService {
   #[list]
   #[paginated]
   #[owner]
-  @returns OrderListResponse
+  @output OrderListResponse
   @api list_orders {
     method: GET,
     path: "/api/v1/orders",
@@ -1323,7 +1327,7 @@ service OrderService {
 }
 ```
 
-Macros register in stack or domain packages — see [registry.md](registry.md#macros). Expansion is **pure** (same input → same output); conformance checks the expanded form.
+Macros register in stack or vertical packages — see [registry.md](registry.md#macros). Expansion is **pure** (same input → same output); conformance checks the expanded form.
 
 **Not allowed:** macros that call external APIs, read files, or use conditionals on runtime values.
 

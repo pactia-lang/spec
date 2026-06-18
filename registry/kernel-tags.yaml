@@ -1,0 +1,431 @@
+# Pactia 1.0 — kernel tag catalog (normative)
+# Tier is always `kernel`. Category aligns with keyword scope: product | module | model | service | field.
+# Protocol wire fields, platform UI detail, and vertical facts are package-tier only — see packages.md.
+
+pactiaVersion: "1.0"
+
+categories:
+  - product
+  - module
+  - model
+  - service
+  - field
+
+tags:
+  # --- product ---
+  - name: stack
+    category: product
+    role: clause
+    scope: product
+    schema: schemas/tags/stack-v1.json
+    lowers_to:
+      - file: product.yaml
+        path: product.stackId
+
+  - name: topology
+    category: product
+    role: clause
+    scope: product
+    schema: schemas/tags/topology-v1.json
+    lowers_to:
+      - file: product.yaml
+        path: product.topology
+
+  - name: tenancy
+    category: product
+    role: clause
+    scope: product
+    schema: schemas/tags/tenancy-v1.json
+    lowers_to:
+      - file: product.yaml
+        path: product.tenancy
+
+  - name: guide
+    category: product
+    role: clause
+    scope: product
+    schema: schemas/tags/guide-v1.json
+    lowers_to:
+      - file: product.yaml
+        path: product.guide
+
+  - name: surface
+    category: product
+    role: clause
+    scope: api
+    schema: schemas/tags/surface-v1.json
+    lowers_to:
+      - file: product.yaml
+        path: product.surfaces[]
+
+  - name: bind
+    category: product
+    role: modifier
+    scope: surface
+    schema: schemas/tags/bind-v1.json
+    lowers_to:
+      - file: product.yaml
+        path: product.surfaces[].bind
+
+  # --- module ---
+  - name: actor
+    category: module
+    role: clause
+    scope: module
+    schema: schemas/tags/actor-v1.json
+    lowers_to:
+      - file: modules/{moduleKebab}/{moduleKebab}.module.yaml
+        path: module.actors[]
+
+  - name: rule
+    category: module
+    role: clause
+    scope: module
+    schema: schemas/tags/rule-v1.json
+    lowers_to:
+      - file: modules/{moduleKebab}/{moduleKebab}.module.yaml
+        path: module.rules[]
+
+  - name: config
+    category: module
+    role: clause
+    scope: module
+    schema: schemas/tags/config-v1.json
+    lowers_to:
+      - file: modules/{moduleKebab}/{moduleKebab}.module.yaml
+        path: module.config
+
+  - name: errors
+    category: module
+    role: clause
+    scope: module
+    schema: schemas/tags/errors-v1.json
+    lowers_to:
+      - file: modules/{moduleKebab}/{moduleKebab}.module.yaml
+        path: module.errors.catalog
+
+  - name: event
+    category: module
+    role: clause
+    scope: module
+    schema: schemas/tags/event-v1.json
+    lowers_to:
+      - file: modules/{moduleKebab}/{moduleKebab}.module.yaml
+        path: module.events[]
+
+  - name: integration
+    category: module
+    role: clause
+    scope: module
+    schema: schemas/tags/integration-v1.json
+    lowers_to:
+      - file: modules/{moduleKebab}/{moduleKebab}.module.yaml
+        path: module.integrations[]
+
+  - name: observe
+    category: module
+    role: clause
+    scope: module
+    schema: schemas/tags/observe-v1.json
+    lowers_to:
+      - file: modules/{moduleKebab}/{moduleKebab}.module.yaml
+        path: module.observe
+
+  - name: security
+    category: module
+    role: clause
+    scope: module
+    schema: schemas/tags/security-v1.json
+    lowers_to:
+      - file: product.yaml
+        path: product.security
+
+  - name: policy
+    category: module
+    role: clause
+    scope: module
+    schema: schemas/tags/policy-v1.json
+    lowers_to:
+      - file: product.yaml
+        path: product.security
+
+  - name: compliance
+    category: module
+    role: clause
+    scope: module
+    schema: schemas/tags/compliance-v1.json
+    lowers_to:
+      - file: product.yaml
+        path: product.security
+
+  - name: deploy
+    category: module
+    role: clause
+    scope: module
+    schema: schemas/tags/deploy-v1.json
+    lowers_to:
+      - file: product.yaml
+        path: product.deployment
+
+  - name: environment
+    category: module
+    role: clause
+    scope: deploy
+    schema: schemas/tags/environment-v1.json
+    lowers_to:
+      - file: product.yaml
+        path: product.deployment.environments[]
+
+  - name: gate
+    category: module
+    role: clause
+    scope: deploy
+    schema: schemas/tags/gate-v1.json
+    lowers_to:
+      - file: product.yaml
+        path: product.deployment.gates[]
+
+  - name: guide
+    category: module
+    role: clause
+    scope: module
+    schema: schemas/tags/guide-v1.json
+    lowers_to:
+      - file: modules/{moduleKebab}/{moduleKebab}.module.yaml
+        path: module.guide
+
+  # --- model ---
+  - name: entity
+    category: model
+    role: clause
+    scope: model
+    schema: schemas/tags/entity-v1.json
+    lowers_to:
+      - file: modules/{moduleKebab}/{moduleKebab}.model.yaml
+        path: model.entities[]
+
+  - name: enum
+    category: model
+    role: clause
+    scope: model
+    schema: schemas/tags/enum-v1.json
+    lowers_to:
+      - file: modules/{moduleKebab}/{moduleKebab}.model.yaml
+        path: model.enums[]
+
+  - name: relation
+    category: model
+    role: clause
+    scope: model
+    schema: schemas/tags/relation-v1.json
+    lowers_to:
+      - file: modules/{moduleKebab}/{moduleKebab}.model.yaml
+        path: model.relations[]
+
+  - name: states
+    category: model
+    role: clause
+    scope: model
+    schema: schemas/tags/states-v1.json
+    lowers_to:
+      - file: modules/{moduleKebab}/{moduleKebab}.model.yaml
+        path: model.stateMachines[]
+
+  - name: rule
+    category: model
+    role: clause
+    scope: model
+    schema: schemas/tags/rule-v1.json
+    lowers_to:
+      - file: modules/{moduleKebab}/{moduleKebab}.model.yaml
+        path: model.rules[]
+
+  - name: pk
+    category: field
+    role: modifier
+    scope: field
+    schema: schemas/tags/pk-v1.json
+    lowers_to:
+      - file: modules/{moduleKebab}/{moduleKebab}.model.yaml
+        path: model.entities[].fields[].annotations.primary
+
+  - name: fk
+    category: field
+    role: modifier
+    scope: field
+    schema: schemas/tags/fk-v1.json
+    lowers_to:
+      - file: modules/{moduleKebab}/{moduleKebab}.model.yaml
+        path: model.entities[].fields[].annotations.references
+
+  - name: unique
+    category: field
+    role: modifier
+    scope: field
+    schema: schemas/tags/unique-v1.json
+    lowers_to:
+      - file: modules/{moduleKebab}/{moduleKebab}.model.yaml
+        path: model.entities[].fields[].annotations.unique
+
+  - name: nullable
+    category: field
+    role: modifier
+    scope: field
+    schema: schemas/tags/nullable-v1.json
+    lowers_to:
+      - file: modules/{moduleKebab}/{moduleKebab}.model.yaml
+        path: model.entities[].fields[].optional
+
+  - name: pii
+    category: field
+    role: modifier
+    scope: field
+    schema: schemas/tags/pii-v1.json
+    lowers_to:
+      - file: modules/{moduleKebab}/{moduleKebab}.model.yaml
+        path: model.entities[].fields[].annotations.pii
+
+  - name: index
+    category: field
+    role: modifier
+    scope: field
+    schema: schemas/tags/index-v1.json
+    lowers_to:
+      - file: modules/{moduleKebab}/{moduleKebab}.model.yaml
+        path: model.entities[].fields[].annotations.index
+
+  - name: retain
+    category: field
+    role: modifier
+    scope: field
+    schema: schemas/tags/retain-v1.json
+    lowers_to:
+      - file: product.yaml
+        path: product.security
+
+  - name: encrypt
+    category: field
+    role: modifier
+    scope: field
+    schema: schemas/tags/encrypt-v1.json
+    lowers_to:
+      - file: modules/{moduleKebab}/{moduleKebab}.model.yaml
+        path: model.entities[].fields[].annotations.encryption
+
+  # --- service ---
+  - name: api
+    category: service
+    role: clause
+    scope: api
+    schema: schemas/tags/api-v1.json
+    lowers_to:
+      - file: modules/{moduleKebab}/services/{serviceKebab}.service.yaml
+        path: service.endpoints[]
+
+  - name: auth
+    category: service
+    role: modifier
+    scope: api
+    schema: schemas/tags/auth-v1.json
+    lowers_to:
+      - file: modules/{moduleKebab}/services/{serviceKebab}.service.yaml
+        path: service.endpoints[].authorization
+
+  - name: public
+    category: service
+    role: modifier
+    scope: api
+    schema: schemas/tags/public-v1.json
+    lowers_to:
+      - file: modules/{moduleKebab}/services/{serviceKebab}.service.yaml
+        path: service.endpoints[].authorization.type
+
+  - name: input
+    category: service
+    role: modifier
+    scope: api
+    schema: schemas/tags/input-v1.json
+    lowers_to:
+      - file: modules/{moduleKebab}/services/{serviceKebab}.service.yaml
+        path: service.endpoints[].request
+
+  - name: output
+    category: service
+    role: modifier
+    scope: api
+    schema: schemas/tags/output-v1.json
+    lowers_to:
+      - file: modules/{moduleKebab}/services/{serviceKebab}.service.yaml
+        path: service.endpoints[].response
+
+  - name: status
+    category: service
+    role: modifier
+    scope: api
+    schema: schemas/tags/status-v1.json
+    lowers_to:
+      - file: modules/{moduleKebab}/services/{serviceKebab}.service.yaml
+        path: service.endpoints[].response.status
+
+  - name: emit
+    category: service
+    role: modifier
+    scope: api
+    schema: schemas/tags/emit-v1.json
+    lowers_to:
+      - file: modules/{moduleKebab}/services/{serviceKebab}.service.yaml
+        path: service.endpoints[].emits[]
+
+  - name: throws
+    category: service
+    role: modifier
+    scope: api
+    schema: schemas/tags/throws-v1.json
+    lowers_to:
+      - file: modules/{moduleKebab}/services/{serviceKebab}.service.yaml
+        path: service.endpoints[].errors[]
+
+  - name: test
+    category: service
+    role: clause
+    scope: service
+    schema: schemas/tags/test-v1.json
+    lowers_to:
+      - file: modules/{moduleKebab}/services/{serviceKebab}.service.yaml
+        path: service.scenarios[]
+
+  - name: must
+    category: service
+    role: clause
+    scope: service
+    schema: schemas/tags/must-v1.json
+    lowers_to:
+      - file: modules/{moduleKebab}/services/{serviceKebab}.service.yaml
+        path: service.obligations[]
+
+  - name: guide
+    category: service
+    role: clause
+    scope: service
+    schema: schemas/tags/guide-v1.json
+    lowers_to:
+      - file: modules/{moduleKebab}/services/{serviceKebab}.service.yaml
+        path: service.guide
+
+macros:
+  # Service flags — macros only (no @database / @cache / @events kernel tags)
+  - name: database
+    category: service
+    scope: service
+    expands_to:
+      - "service.flags.database: true"
+  - name: cache
+    category: service
+    scope: service
+    expands_to:
+      - "service.flags.cache: true"
+  - name: events
+    category: service
+    scope: service
+    expands_to:
+      - "service.flags.events: true"

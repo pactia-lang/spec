@@ -360,7 +360,7 @@ packages:
     digest: sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
     resolvedAt: 2026-06-10T12:00:00Z
   - name: "@pactia/kyc-compliance"
-    kind: domain
+    kind: vertical
     version: 1.0.3
     digest: sha256:...
     resolvedAt: 2026-06-10T12:00:00Z
@@ -418,7 +418,7 @@ Domain and protocol packages declare compatible stacks:
 ```yaml
 package:
   name: "@pactia/kyc-compliance"
-  kind: domain
+  kind: vertical
   compatibleStacks:
     - name: "@pactia/rust-anb"
       version: "^1.0"
@@ -487,7 +487,7 @@ pactia update --stack                 # refresh stack pin in pactia.lock
 
 ## One sentence
 
-**Declare each API with the kernel clause `@api { }`; prefix `@auth { }`, `#[macro]`, `@returns`, and `@throws` on lines above it. Nest protocol-specific blocks (`@grpc { }`, `@graphql { }`) inside `@api { }` when needed. Import `@pactia/protocol-rest` for REST wire validation (`method`, `path`). The compiler lowers to YAML.**
+**Declare each API with the kernel clause `@api { }`; prefix `@auth { }`, `#[macro]`, `@output`, and `@throws` on lines above it. Nest protocol-specific blocks (`@grpc { }`, `@graphql { }`) inside `@api { }` when needed. Import `@pactia/protocol-rest` for REST wire validation (`method`, `path`). The compiler lowers to YAML.**
 
 ---
 
@@ -538,7 +538,7 @@ service FleetService {
   #[list]
   #[paginated]
   #[owner]
-  @returns VehicleListResponse
+  @output VehicleListResponse
   @throws { names: [Forbidden] }
   @api list_vehicles {
     method: GET,
@@ -560,8 +560,8 @@ import @pactia/protocol-grpc;
 
 @auth { roles: [Trader] }
 #[buyer]
-@body MarkPaymentSentRequest
-@returns TradeResponse
+@input MarkPaymentSentRequest
+@output TradeResponse
 @api mark_payment_sent {
   method: POST,
   path: "/api/v1/trades/:id/mark-payment-sent",

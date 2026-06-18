@@ -9,9 +9,16 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 ### Added
 
 - **IR JSON Schema:** normative machine-readable schemas for module-scoped compiler output under `schemas/ir/` (`manifest`, `product`, module/model/service slices, full workspace bundle).
+- **Kernel tag catalog:** normative `registry/kernel-tags.yaml` with keyword-aligned categories (`product`, `module`, `model`, `service`, `field`).
+- **Tag body schemas:** stub JSON Schema files under `schemas/tags/*-v1.json` referenced by the kernel catalog.
 
 ### Changed
 
+- **Kernel registry model:** single `@surface` + `@bind` for multi-platform UI; no kernel `@web`, `@ios`, `@grpc`, or protocol/platform tags.
+- **Service DTO tags:** kernel `@input` / `@output` replace `@body` / `@returns` (REST package may register aliases).
+- **Service flags:** `#[database]`, `#[cache]`, `#[events]` macros only — no `@database` / `@cache` / `@events` kernel tags.
+- **Package kind:** `domain` renamed to `vertical` for reusable model/service packages.
+- **Registry categories:** aligned with keyword scope (`product` \| `module` \| `model` \| `service` \| `field`); `protocol` / `surface` / `compliance` are optional package `kind` metadata for IDE grouping only.
 - **Docs:** remove legacy flat IR references (`project.yaml`, `domain.yaml`, `project-definition.yaml`, `domain.entities`); align lowering examples with module-scoped `*.model.yaml` paths.
 - **Error taxonomy:** collapse stack-specific compiler codes into generic `PACKAGE_*` resolution errors; keep `STACK_BINDING_MISMATCH` for `@stack` tag + `pactia.toml [stack].package` agreement; rename `VERSION_IN_STACK` → `VERSION_IN_TAG_BODY`.
 - **`@stack` in compiler:** treated as a kernel clause tag — same package resolver as `import`, no dedicated stack compile phase.

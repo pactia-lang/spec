@@ -39,7 +39,7 @@ product MyApp {
   module fitness {
     service WorkoutService {
       @auth Customer
-      @returns WorkoutListResponse
+      @output WorkoutListResponse
       @api list_workouts {
         > Customers browse their workout history, paginated.
       }
@@ -58,7 +58,7 @@ Full enforcement surface — same file shape as [fleet-management-v2.pactia](../
 service FleetService {
   @auth { roles: [Customer, Admin] }
   #[list] #[paginated] #[owner]
-  @returns VehicleListResponse
+  @output VehicleListResponse
   @throws { names: [Forbidden] }
   @api list_vehicles {
     method: GET,
@@ -231,9 +231,9 @@ Pactia is how humans **author**. `pactiac` produces **vendor-neutral IR**. BSC *
 | Role                         | Writes                                                    |
 | ---------------------------- | --------------------------------------------------------- |
 | Product / domain expert      | Prose, `> rules`, `@actor { }`                          |
-| Senior architect / tech lead | `model`, `service`, `@api { }`, `@tag { }`, `#[macro]`, `@web { }` / `@ios { }`, `@test { }` |
+| Senior architect / tech lead | `model`, `service`, `@api { }`, `@tag { }`, `#[macro]`, `@surface { }`, `@test { }` |
 | Platform team                | Stack packages on pactia.io — not Pactia                   |
-| Frontend / mobile leads      | `@web { }`, `@ios { }`, `@bind { }` in same `.pactia` file |
+| Frontend / mobile leads      | `@surface { }`, `@bind { }` in same `.pactia` file |
 | Community / vendors          | Pactia packages (`import @pactia/*` on pactia.io)            |
 | AI coding agent              | **Never** edits Pactia — implements from IR (`*.module.yaml`, `*.model.yaml`, `*.service.yaml`) |
 
@@ -296,8 +296,8 @@ product P2PExchange {
     service TradeService {
       @auth { roles: [Trader] }
       #[buyer]
-      @body MarkPaymentSentRequest
-      @returns TradeResponse
+      @input MarkPaymentSentRequest
+      @output TradeResponse
       @api mark_payment_sent {
         method: POST,
         path: "/api/v1/trades/:id/mark-payment-sent",
@@ -321,11 +321,11 @@ When you need **enforceable** state edges, add `@transition { from, to }` on `@a
 
 | Goal               | Pactia contribution                   | BSC contribution                                     |
 | ------------------ | ------------------------------------- | ---------------------------------------------------- |
-| No ambiguous APIs  | `@body`, `@returns`, `#[macro]` on endpoints | Schema validation, OpenAPI render                    |
+| No ambiguous APIs  | `@input`, `@output`, `#[macro]` on endpoints | Schema validation, OpenAPI render                    |
 | No auth guesswork  | `@actor { }`, `@auth { }`, `#[owner]` / `#[buyer]` | `security.md`, route rules                           |
 | No stack drift     | `@stack rust-anb { }` on `product` + `pactia.lock` | Stack package merge + [pactia.lock](platform.md#stack-versions) |
 | Reproducible specs | `pactia.lock`, packages                | Deterministic `bsc render`                           |
-| No surface drift   | `@web { }`, `@ios { }`, `@bind { }` in same `.pactia` | Surface IR + linked API specs                      |
+| No surface drift   | `@surface { }`, `@bind { }` in same `.pactia` | Surface IR + linked API specs                      |
 | AI-ready output    | Compiles to IR (services + surfaces)  | Templates + agent rules per surface                  |
 
 ## Next steps (implementation)
@@ -412,7 +412,7 @@ From [fleet-management-v2.pactia](../fixtures/kernel/fleet-management-v2.pactia)
 #[list]
 #[paginated]
 #[owner]
-@returns VehicleListResponse
+@output VehicleListResponse
 @throws { names: [Forbidden] }
 @api list_vehicles {
   method: GET,
@@ -425,7 +425,7 @@ From [fleet-management-v2.pactia](../fixtures/kernel/fleet-management-v2.pactia)
 | Operation exists at `GET /api/v1/vehicles`         | Pactia (`@api { }`)    | Above |
 | Roles `Customer`, `Admin`                          | Pactia (`@auth { }`)    | Above |
 | Ownership scope `OWN_ROWS` on `Vehicle.customerId` | MACRO (`#[owner]`)      | Above |
-| Response shape `VehicleListResponse`               | Pactia (`@returns`) | Above |
+| Response shape `VehicleListResponse`               | Pactia (`@output`) | Above |
 | Cursor pagination defaults (20/100)                | STACK_DEFAULT           | Above |
 | Error catalog (when `@errors { }` declared)          | Pactia                  | Above |
 | The SQL query, the index it uses, the handler code | —                       | Below |
@@ -472,7 +472,7 @@ A senior architect using Pactia should finish in **one session** (~100–200 lin
 
 | Concern                       | Architect writes in Pactia?                       | Stack package                         | Compiler derives                   |
 | ----------------------------- | ------------------------------------------------- | ------------------------------------- | ---------------------------------- |
-| Web / mobile / desktop UI     | **Yes** — `@web { }`, `@ios { }`, `@android { }`, `@bind { }` | surface package defaults              | `@bind { }` cross-links to APIs        |
+| Web / mobile / desktop UI     | **Yes** — `@surface { platform: … }`, `@bind { }` | surface std packages              | `@bind` cross-links to `@api`        |
 | Product & domain              | **Yes** — core                                    | —                                     | —                                  |
 | Services & APIs               | **Yes** — core                                    | pagination defaults                   | DTOs, OpenAPI, route rules         |
 | Error catalog                 | **Yes** — `@errors { }`                           | fallback `[401, 403]`                 | endpoint error list from `@errors` |
@@ -609,7 +609,7 @@ If omitted: stack package `deploymentBaseline.autoscaling` applies to all servic
 
 ### Compiler derives
 
-- One happy-path scenario per endpoint (from `@auth` + `@returns` + shapes in `model`)
+- One happy-path scenario per endpoint (from `@auth` + `@output` + shapes in `model`)
 - Auth negative cases for `#[owner]` endpoints
 - Kafka emit assertions for `@emit` tags
 
@@ -625,7 +625,7 @@ Even when Pactia is minimal, the specification package must include everything a
 | `project-overview.md`                  | `product`, `@actor { }`, prose rules               |
 | `model.md`                             | `model { @entity @enum @relation @states }`         |
 | `api-spec.md`                          | `@api { }` + nested `@tag { }` + `#[macro]`       |
-| `surfaces/*.yaml` / UI intent docs     | `@web { }`, `@ios { }`, `@android { }`, `@bind { }`                  |
+| `surfaces/*.yaml` / UI intent docs     | `@surface { }`, `@bind { }`                  |
 | `module-design.md`                     | services + stack layers                              |
 | `integrations.md`                      | `@integration { }` / integration prose                   |
 | `security.md`                          | stack policy + `@policy { }` + `@auth { }`                   |
@@ -666,12 +666,12 @@ CI tool vendor → (1). Metrics per event → (2). SLO targets → (3). Entity r
 | --- | --- |
 | Product, model, services | `product`, `model { @entity … }`, `@api { }` in `service` |
 | State machines, party roles | `@states { }` + `#[buyer]` / `#[owner]` + `@transition { }` |
-| Request/response shapes | `@body` `@returns` |
+| Request/response shapes | `@input` `@output` |
 | Packages | `import @scope/name`, `import`, `define template` |
 | Integration, events, policy | `@event { }`, `@policy { }`, `@integration { }`, prose |
 | Observability, deploy gates | `@observe { }`, `@deploy { }` |
 | Acceptance tests | `@test { }` + When/Then |
-| Multi-surface UI | `@web { }` `@ios { }` + `@bind { }` |
+| Multi-surface UI | `@surface { }` + `@bind { }` |
 
 Platform overrides (`@observe { }`, `@deploy { }`) use tagged blocks — see [registry.md](registry.md#cross-cutting-concerns).
 

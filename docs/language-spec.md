@@ -47,7 +47,7 @@ product MyApp {
   module fitness {
     service WorkoutService {
       @auth Customer
-      @returns WorkoutListResponse
+      @output WorkoutListResponse
       @api list_workouts {
         > Customers browse their workout history, paginated.
       }
@@ -65,7 +65,7 @@ Keep **what the product is** in `product { }` prose. Add `module`, `service`, an
 ```pactia
 @auth { roles: [Customer, Admin] }
 #[list] #[paginated] #[owner]
-@returns VehicleListResponse
+@output VehicleListResponse
 @throws { names: [Forbidden] }
 @api list_vehicles {
   method: GET,
@@ -94,7 +94,7 @@ You are writing the **permanent, versioned prompt** for your product. Teams publ
 1. **Small fixed keyword set** — [nine reserved words](#kernel-keywords-nine-reserved-words) for structure, imports, exports, `yaml` embeds, and `define` (templates in products; tags/macros in packages). No ad-hoc kernel keywords.
 2. **Tags + macros + prose only** — every structured fact is `@tag { }`; every pattern is `#[macro]`; narrative context is **`> prose`**. **No kernel pattern matching** for HTTP verbs, roles, or relations.
 3. **Still compilable** — tags lower verbatim; macros expand deterministically before IR emit.
-4. **Multi-surface** — same file drives APIs and `@web { }` / `@ios { }` / `@android { }` / `@desktop { }` blocks.
+4. **Multi-surface** — same file drives APIs and generic `@surface { platform: … }` blocks (no per-platform kernel tags).
 5. **Shareable** — one file in git, one digest in `pactia.lock`, same context in every AI session.
 6. **No behavior scripts** — no numbered flows; use `@must { }` for outcomes, `@test { }` for acceptance.
 7. **Protocol-agnostic kernel** — REST, gRPC, GraphQL are **packages**. The kernel endpoint tag is **`@api`** — not protocol-flavored. Wire-format macros come from protocol packages.
@@ -177,8 +177,9 @@ product FleetManagement {
       @api list_vehicles {
         method: GET,
         path: "/api/v1/vehicles",
-        @web {
-          @screen { vehicle-list }
+        @surface vehicle_list {
+          platform: web,
+          screen: { id: vehicle_list },
           > Customer browses their vehicles in a paginated table
         }
       }
@@ -191,7 +192,7 @@ product FleetManagement {
 | --- | --- |
 | **Prefix** | `>` required on every prose line — no bare sentences |
 | **Multiline** | One `>` per line; same block scope accumulates all lines |
-| Scope | Prose attaches to the nearest `{ }` block (`product`, `module`, `service`, `@api { }`, `@web { }`, …) |
+| Scope | Prose attaches to the nearest `{ }` block (`product`, `module`, `service`, `@api { }`, `@surface { }`, …) |
 | IR | Lowered to `prose[]` / `guidance.yaml` with provenance `GUIDANCE` — not conformance-enforced alone |
 | Inside tag bodies | Schema lines do not use `>`; narrative uses `> sentence` — see [Unified tag body grammar](language-spec.md#unified-tag-body-grammar) |
 
@@ -236,7 +237,7 @@ Tags are the primary authoring surface in Pactia. Every structured fact uses `@t
 | Role | Placement | Declares or decorates? | Example |
 | --- | --- | --- | --- |
 | **Clause tag** | Standalone line in host body | **Declares** a named clause | `@entity Vehicle { }`, `@api get_vehicle { }` |
-| **Modifier tag** | Line **above** host (prefix) | **Decorates** next line | `@auth { }`, `@pk`, `@returns VehicleDetailResponse` |
+| **Modifier tag** | Line **above** host (prefix) | **Decorates** next line | `@auth { }`, `@pk`, `@output VehicleDetailResponse` |
 | **Macro** | Line **above** host, or template invoke | **Expands** to tags before IR | `#[database]`, `#[list]` |
 
 **Why tags vs macros:** tags map to **schema slots** in IR (validated JSON Schema per tag). Macros are **compile-time patterns** registered by stack/protocol packages — they expand to tags/macros deterministically.
@@ -255,7 +256,7 @@ Clause tags work like **NestJS class/method decorators**: `@tagName clauseName {
 | `TagTarget` | **Clause id** (required for multi-instance) | `list_vehicles`, `Vehicle` |
 | `{ ... }` | Structured body | `method: GET, path: "/api/v1/vehicles",` |
 
-**Host blocks:** `product`, `module`, `service`, `model`, `@api { }`, `@web { }`, `@deploy { }`.
+**Host blocks:** `product`, `module`, `service`, `model`, `@api { }`, `@surface { }`, `@deploy { }`.
 
 Full BNF: [grammar-reference.md](grammar-reference.md#tag-application-bnf).
 
@@ -266,10 +267,10 @@ Every modifier tag has exactly one canonical form:
 | Arity | Form | Examples |
 | --- | --- | --- |
 | Zero | Flag | `@pk`, `@public`, `@unique` |
-| One | Shorthand | `@returns VehicleListResponse`, `@status 201`, `@emit vehicle.created`, `@auth Customer` |
+| One | Shorthand | `@output VehicleListResponse`, `@status 201`, `@emit vehicle.created`, `@auth Customer` |
 | Multiple | Body | `@auth { roles: [Customer, Admin] }`, `@fk { entity: Customer }` |
 
-If a tag takes one value, the body form (`@returns { type: X }`) **does not parse**. There is no alternate spelling.
+If a tag takes one value, the body form (`@output { type: X }`) **does not parse**. There is no alternate spelling.
 
 ### Target naming conventions
 
@@ -328,30 +329,31 @@ Verb distance makes define vs reference obvious — `errors` declares, `throws` 
 
 ### `@bind` inheritance
 
-`@web` / `@ios` clauses **inside** `@api` inherit `service`, `method`, and `path` from the parent `@api` when `@bind` is omitted:
+`@surface` clauses **inside** `@api` inherit service and operation identity from the parent `@api` when `@bind` is omitted:
 
 ```pactia
 @api get_vehicle {
   method: GET,
   path: "/api/v1/vehicles/:id",
 
-  @web vehicle_detail {
-    @screen { id: vehicle_detail }
-    @route { path: "/fleet/vehicles/:id" }
+  @surface vehicle_detail {
+    platform: web,
+    screen: { id: vehicle_detail },
+    route: { path: "/fleet/vehicles/:id" },
     > Customer opens vehicle detail
   }
 }
 ```
 
-Explicit `@bind { }` overrides inheritance for cross-service or alternate paths.
+Explicit `@bind { }` overrides inheritance for cross-service or alternate operations.
 
-### `@api` — kernel clause and protocol validation
+### `@api` — kernel clause and protocol packages
 
-`@api` is a **kernel clause tag** — the parser always accepts `@api name { … }` inside `service` blocks. Prefix decorators (`@auth`, `@returns`, `#[list]`, …) sit on lines above the clause body.
+`@api` is a **kernel clause tag** (category `service`) — the parser always accepts `@api name { … }` inside `service` blocks. Prefix decorators (`@auth`, `@output`, `#[list]`, …) sit on lines above the clause body.
 
-**Wire validation** (`method`, `path`, REST-specific nested tags) comes from **`import @pactia/protocol-rest`**. Without that import, `@api` still lowers endpoint identity and decorators to IR; adding `method` / `path` without the protocol package is a compile error (`TAG_BODY_UNKNOWN_FIELD` or `DEPENDENCY_NOT_DECLARED`). Altitude 1 examples may omit wire fields; altitude 2 REST endpoints require `import @pactia/protocol-rest`.
+**Wire validation** (`method`, `path`) comes from **`import @pactia/protocol-rest`**. Without that import, wire fields in `@api` are compile errors. gRPC and GraphQL wire blocks are **package tags only** — not kernel.
 
-gRPC and GraphQL use `@grpc` / `@graphql` from their protocol packages — same pattern.
+Kernel type references use **`@input` / `@output`**. `@pactia/protocol-rest` may register `@body` / `@returns` as ergonomic aliases for REST profiles.
 
 ### Canonical example (excerpt)
 
@@ -379,7 +381,7 @@ product FleetManagement {
 
     service FleetService {
       @auth { roles: [Customer, Admin] }
-      @returns VehicleDetailResponse
+      @output VehicleDetailResponse
       @throws { names: [NotFound, Forbidden] }
       @api get_vehicle {
         method: GET,
@@ -443,8 +445,8 @@ Pactia follows **NestJS decorators** and **Rust attributes**: decorations sit **
 | --- | --- |
 | `service Name { }` | `#[database]` `#[cache]` `#[events]` |
 | Field line in `@entity { }` | `@pk`, `@fk { entity: Customer }`, `@pii` |
-| `@api id { }` | `@auth { }`, `#[list]`, `@returns VehicleDto`, `@body CreateRequest`, `@status 201` |
-| `@web id { }` / `@ios id { }` | `#[form]`, `#[a11y(WCAG_AA)]` |
+| `@api id { }` | `@auth { }`, `#[list]`, `@output VehicleDto`, `@input CreateRequest`, `@status 201` |
+| `@surface id { }` | `#[form]`, `#[a11y(WCAG_AA)]` (from surface std packages) |
 
 Placement rules and implementer errors: [grammar-reference.md](grammar-reference.md#tag-application-bnf).
 
@@ -455,14 +457,15 @@ Placement rules and implementer errors: [grammar-reference.md](grammar-reference
 service FleetService {
   @auth { roles: [Customer, Admin] }
   #[list] #[paginated] #[owner]
-  @returns VehicleListResponse
+  @output VehicleListResponse
   @throws { names: [Forbidden] }
   @api list {
     method: GET,
     path: "/api/v1/vehicles",
-    @web vehicle_list {
-      @screen { id: vehicle_list }
-      @route { path: "/fleet/vehicles" }
+    @surface vehicle_list {
+      platform: web,
+      screen: { id: vehicle_list },
+      route: { path: "/fleet/vehicles" },
       > Customer browses their vehicles in a paginated table
     },
   },
@@ -730,7 +733,7 @@ integrations:
 | `direction: inbound` | `direction: INBOUND` | `Pactia` |
 | `auth: { type: api_key env: ... }` | `auth.type`, `auth.envVar` | `Pactia` |
 | `maps_to: POST /path` | `mapsToEndpoint` | `Pactia` |
-| `requestBody` / `responseBody` | Inferred from `maps_to` endpoint `@body` / `@returns` | `INFERRED` |
+| `requestBody` / `responseBody` | Inferred from `maps_to` endpoint `@input` / `@output` | `INFERRED` |
 
 **Anti-patterns:**
 
@@ -924,7 +927,7 @@ service FleetService {
   #[list]
   #[paginated]
   #[owner]
-  @returns VehicleListResponse
+  @output VehicleListResponse
   @throws { names: [Forbidden] }
   @api list_vehicles {
     method: GET,
@@ -934,8 +937,8 @@ service FleetService {
   @auth { roles: [Admin] }
   #[create]
   #[idempotent]
-  @body CreateVehicleRequest
-  @returns CreateVehicleResponse
+  @input CreateVehicleRequest
+  @output CreateVehicleResponse
   @status 201
   @emit vehicle.created
   @throws { names: [ValidationFailed, Conflict] }
@@ -946,7 +949,7 @@ service FleetService {
 }
 ```
 
-The kernel routes `@api { }` to `modules/<module>/services/*.service.yaml` using the protocol package schema. gRPC and GraphQL attach `@grpc { }` / `@graphql { }` alongside the same logical `@api { }` operation — see [platform.md](platform.md#protocol-packages).
+The kernel routes `@api { }` to `modules/<module>/services/*.service.yaml`. gRPC and GraphQL wire blocks are **package tags** nested in `@api { }` — see [platform.md](platform.md#protocol-packages).
 
 ---
 
@@ -1015,23 +1018,23 @@ Types: `uuid`, `string`, `int`, `decimal`, `boolean`, `datetime`, `json`. Array 
 ```pactia
 @auth { roles: [Customer, Admin] }
 #[list] #[paginated] #[owner]
-@returns VehicleListResponse
+@output VehicleListResponse
 @api list_vehicles {
   method: GET,
   path: "/api/v1/vehicles",
 
-  @web {
-    @screen { vehicle-list }
-    @route { /fleet/vehicles }
+  @surface vehicle_list {
+    platform: web,
+    screen: { id: vehicle_list },
+    route: { path: "/fleet/vehicles" },
     #[a11y(WCAG-AA)]
-    @bind { service: FleetService, method: GET, path: "/api/v1/vehicles" }
     > Customer browses their vehicles in a paginated table
   }
 
-  @ios {
-    @screen { vehicle-list }
-    @nav { FleetTab }
-    @bind { service: FleetService, method: GET, path: "/api/v1/vehicles" }
+  @surface vehicle_list {
+    platform: ios,
+    screen: { id: vehicle_list },
+    nav: { tab: FleetTab },
     > Customer scrolls fleet on phone with pull-to-refresh
   }
 }
@@ -1207,15 +1210,16 @@ Products **invoke** package macros and tags via `#[name]` and `@name { }` after 
 define template fleet_list(path, ListDto) {
   @auth { roles: [Customer, Admin] }
   #[list] #[paginated] #[owner]
-  @returns ListDto
+  @output ListDto
   @throws { names: [Forbidden] }
   @api fleet_list {
     method: GET,
     path: path,
 
-    @web {
-      @screen { vehicle-list }
-      @route { /fleet/vehicles }
+    @surface vehicle_list {
+      platform: web,
+      screen: { id: vehicle_list },
+      route: { path: "/fleet/vehicles" },
       #[a11y(WCAG-AA)]
       @bind { service: FleetService, method: GET, path: path }
     }
@@ -1300,7 +1304,8 @@ pactia 1.0
 // Package: @acme/fintech-rules
 
 define tag sanctions_check {
-  category compliance
+  category service
+  kind compliance
   scope endpoint
 
   body {
@@ -1425,7 +1430,7 @@ Every IR field is tagged with one of:
 7. Lower @tags → structured IR fields
 8. Lower prose → scoped strings
 9. Lower @api / @entity / @relation / … → `modules/<module>/<module>.model.yaml`, `modules/<module>/services/*.service.yaml`
-10. Lower @web/@ios/... → `product.yaml` (`surfaces`); resolve @bind
+10. Lower `@surface` → `product.yaml` (`surfaces`); resolve `@bind`
 11. Apply yaml merge embeds (schema-validated)
 12. Validate @pactia/schema
 13. (optional) bsc compile-workspace → agent briefs from IR
@@ -1461,7 +1466,7 @@ Pactia does not generate code. It generates the **shared spec** every agent impl
 | Bare `GET /path` or `POST /path` | `@api { method: GET, path: "/path", ... }` |
 | `@auth Customer` (one role) | Valid shorthand at altitude 1 — or `@auth { roles: [Customer] }` for multiple |
 | Bare sentence without `>` | `> sentence` on its own line |
-| `@auth` / `@returns` inside `@api { }` body | Prefix decorators above `@api` |
+| `@auth` / `@output` inside `@api { }` body | Prefix decorators above `@api` |
 | `define template` for a single endpoint | Write `@api { }` explicitly |
 
 ---
@@ -1606,14 +1611,15 @@ One file = one API contract = one AI task. Modifier tags and macros prefix `@api
 #[list]
 #[paginated]
 #[owner]
-@returns VehicleListResponse
+@output VehicleListResponse
 @api list_vehicles {
   method: GET,
   path: "/api/v1/vehicles",
 
-  @web vehicle_list {
-    @screen { id: vehicle_list }
-    @route { path: "/fleet/vehicles" }
+  @surface vehicle_list {
+    platform: web,
+    screen: { id: vehicle_list },
+    route: { path: "/fleet/vehicles" },
     @bind { service: FleetService, method: GET, path: "/api/v1/vehicles" }
     > Customer browses their vehicles in a paginated table
   }

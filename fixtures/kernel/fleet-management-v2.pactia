@@ -280,22 +280,23 @@ product FleetManagement {
       #[list]
       #[paginated]
       #[owner]
-      @returns VehicleListResponse
+      @output VehicleListResponse
       @throws { names: [Forbidden] }
       @api list_vehicles {
         method: GET,
         path: "/api/v1/vehicles",
 
-        #[a11y(WCAG_AA)]
-        @web vehicle_list {
-          @screen { id: vehicle_list }
-          @route { path: "/fleet/vehicles" }
+        @surface vehicle_list {
+          platform: web,
+          screen: { id: vehicle_list },
+          route: { path: "/fleet/vehicles" },
           > Customer browses their vehicles in a paginated table
         }
 
-        @ios vehicle_list {
-          @screen { id: vehicle_list }
-          @nav { tab: FleetTab }
+        @surface vehicle_list {
+          platform: ios,
+          screen: { id: vehicle_list },
+          nav: { tab: FleetTab },
           > Customer scrolls fleet on phone with pull-to-refresh
         }
       }
@@ -303,15 +304,16 @@ product FleetManagement {
       @auth { roles: [Customer, Admin] }
       #[detail]
       #[owner]
-      @returns VehicleDetailResponse
+      @output VehicleDetailResponse
       @throws { names: [NotFound, Forbidden] }
       @api get_vehicle {
         method: GET,
         path: "/api/v1/vehicles/:id",
 
-        @web vehicle_detail {
-          @screen { id: vehicle_detail }
-          @route { path: "/fleet/vehicles/:id" }
+        @surface vehicle_detail {
+          platform: web,
+          screen: { id: vehicle_detail },
+          route: { path: "/fleet/vehicles/:id" },
           > Customer opens vehicle detail with latest GPS position
         }
       }
@@ -319,8 +321,8 @@ product FleetManagement {
       @auth { roles: [Admin] }
       #[create]
       #[idempotent]
-      @body CreateVehicleRequest
-      @returns CreateVehicleResponse
+      @input CreateVehicleRequest
+      @output CreateVehicleResponse
       @status 201
       @emit vehicle.created
       @throws { names: [ValidationFailed, Conflict] }
@@ -328,9 +330,9 @@ product FleetManagement {
         method: POST,
         path: "/api/v1/vehicles",
 
-        #[form]
-        @web vehicle_create {
-          @screen { id: vehicle_create }
+        @surface vehicle_create {
+          platform: web,
+          screen: { id: vehicle_create },
           > Admin registers a vehicle from the fleet console
         },
       }
@@ -339,8 +341,8 @@ product FleetManagement {
       #[create]
       #[idempotent]
       #[rate_limit(1000, rpm)]
-      @body GpsIngestRequest
-      @returns GpsIngestResponse
+      @input GpsIngestRequest
+      @output GpsIngestResponse
       @status 201
       @emit position.received
       @throws { names: [ValidationFailed, DeviceUnknown] }
