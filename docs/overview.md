@@ -213,13 +213,11 @@ Pactia deliberately describes **less than the full system** when you want it to.
 ┌─────────────────────────────────────────────────────────────┐
 │  Pactia (.pactia) + packages       ← humans author intent       │
 ├─────────────────────────────────────────────────────────────┤
-│  input/modules/*/ (AI-neutral IR) ← pactiac compile            │
+│  input/manifest.yaml, product.yaml, modules/*/*.yaml          │
+│  (AI-neutral IR)              ← pactiac compile               │
 ├─────────────────────────────────────────────────────────────┤
 │  Stack package (pactia.io)      ← platform law (read-only)   │
 ├─────────────────────────────────────────────────────────────┤
-│  project-definition.yaml       ← canonical structured AST     │
-├─────────────────────────────────────────────────────────────┤
-│  input/modules/*/*.module.yaml, *.model.yaml, *.service.yaml  │
 │  bsc render + optional LLM expand (per target)                │
 ├─────────────────────────────────────────────────────────────┤
 │  Implementation                ← any model / any coding agent   │
@@ -341,7 +339,7 @@ When you need **enforceable** state edges, add `@transition { from, to }` on `@a
 
 ## The intent line
 
-The **intent line** (also called the contract line in BSC) divides every software product into **formalized intent** vs **free implementation** — across backend, web, mobile, and desktop.
+The **intent line** (also called the contract line in BSC) divides every software product into **formalized intent** vs **free implementation** — across backend, web, mobile, and desktop. The word *contract* also names [cross-cutting contract blocks](registry.md#cross-cutting-contract-blocks) in the tag taxonomy and a single [API contract per feature file](language-spec.md#featurespactia) (one endpoint task in `features/*.pactia`).
 
 ### The line
 
@@ -402,7 +400,7 @@ The compiler (`@pactia/pactiac`) tags every lowered fact with a provenance:
 1. **Above the line is deterministic.** No LLM decides anything above the line. Same Pactia, same contract, byte for byte.
 2. **Below the line is free.** AI and humans choose logic, topology, and structure however they like.
 3. **The contract never describes behavior.** No numbered `flow {}` blocks. Use `@must` for enforceable outcomes; use `@guide` or `implementation_hint` for suggested patterns (below the line).
-4. **The IR is the contract, not the system.** `input/modules/*/` (`*.module.yaml`, `*.model.yaml`, `*.service.yaml`) and `project-definition.yaml` carry only above-the-line facts. Optional below-the-line hints, if present, are marked and are never enforced.
+4. **The IR is the contract, not the system.** `input/manifest.yaml`, `input/product.yaml`, and `input/modules/*/` (`*.module.yaml`, `*.model.yaml`, `*.service.yaml`) carry only above-the-line facts. Optional below-the-line hints, if present, are marked and are never enforced.
 5. **The line is crossed only by conformance.** The sole connection between the two halves is the conformance gate: it checks the implementation against the contract and fails the build otherwise (static surface checks today; runtime enforcement planned).
 
 ### Worked example (fleet)
@@ -534,9 +532,7 @@ What compiles out:
 
 **Rule:** if `@deploy` is omitted, stack package CI config is used verbatim. Zero extra Pactia lines for the common case.
 
-### Observability
-
-### Stack package provides
+### Observability — stack defaults
 
 - Prometheus + OpenTelemetry
 - Default trace sample rate, W3C propagation
@@ -595,9 +591,7 @@ If omitted: stack package `deploymentBaseline.autoscaling` applies to all servic
 
 `@topology { microservices }` vs `@topology { monolith }` on `product` affects whether replica blocks apply per service or per deployment unit.
 
-### Testing
-
-### Stack package provides
+### Testing — stack defaults
 
 - Testcontainers for PostgreSQL, Redis, Kafka
 - Default coverage target (e.g. 80%)
@@ -629,7 +623,7 @@ Even when Pactia is minimal, the specification package must include everything a
 | Output file                            | Primary sources                                      |
 | -------------------------------------- | ---------------------------------------------------- |
 | `project-overview.md`                  | `product`, `@actor { }`, prose rules               |
-| `domain-model.md`                      | `model { @entity @enum @relation @states }`         |
+| `model.md`                             | `model { @entity @enum @relation @states }`         |
 | `api-spec.md`                          | `@api { }` + nested `@tag { }` + `#[macro]`       |
 | `surfaces/*.yaml` / UI intent docs     | `@web { }`, `@ios { }`, `@android { }`, `@bind { }`                  |
 | `module-design.md`                     | services + stack layers                              |

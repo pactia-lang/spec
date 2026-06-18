@@ -31,8 +31,8 @@ Tags and macros resolve through a **workspace-effective registry** built at comp
 | Tier | Source | In workspace how | Default category |
 | --- | --- | --- | --- |
 | **kernel** | pactiac builtin catalog | Always — no `import` | `core` |
-| **stack** | `@stack { }` on `product` | Always when stack selected | `stack` |
-| **std** | `@pactia/*` implied by stack / `pactia init` | Merged under stack precedence | `protocol`, `surface`, … |
+| **stack** | Package bound by `@stack` tag on `product` | When `@stack` tag resolves a stack-kind package | `stack` |
+| **std** | `@pactia/*` declared by stack profile; activated by `pactia init` or explicit `import` | Merged when imported — not auto-loaded by `@stack` alone | `protocol`, `surface`, … |
 | **package** | `import @scope/name` | **Only imported names** (or full export with `import * from`) | Author `export` on `define tag` / `define macro` |
 | **local** | `define template` in product | Templates only — **not** new `@tag` / `#[macro]` names | — |
 
@@ -46,7 +46,7 @@ Every tag and macro in a package manifest carries a **category** for tooling, do
 | --- | --- |
 | `core` | Kernel tags: `@entity`, `@api`, `@auth`, `@guide`, … |
 | `stack` | Stack macros: `#[database]`, platform defaults |
-| `protocol` | `@api`, REST/GraphQL/gRPC wire tags and macros |
+| `protocol` | REST/GraphQL/gRPC wire field schemas and nested blocks (`@grpc`, `@graphql`, …) |
 | `surface` | `@web`, `@ios`, `#[form]`, `#[a11y]` |
 | `compliance` | HIPAA, GDPR, sanctions tags |
 | `domain` | Vertical domain tags (`@escrow`, `@listing`, …) |
@@ -71,13 +71,13 @@ Per compile unit (single file or [workspace](language-spec.md#workspace-layout))
 
 ```
 1. Seed kernel tags[] (category core) — always visible
-2. Load stack package from @stack { } → merge tags[] + macros[] (category stack; overrides std macros)
-3. Merge implied @pactia/* std registry per stack profile (lowest macro precedence before builtins)
-4. Walk `import` statements in scope chain for the current file:
+2. Resolve package bound by `@stack` tag target on `product` (if present); merge its tags[] + macros[] at stack-tier precedence
+3. Walk `import` statements in scope chain for the current file:
      product.pactia imports → whole workspace
      module.pactia imports  → that module subtree
      service.pactia imports → that service subtree
-5. For each `import`: look up package in `pactia.lock`; import symbols per Rust path rules
+4. For each `import`: look up package in `pactia.lock`; merge registry symbols per Rust path rules (std `@pactia/*` packages activate only when explicitly imported or added by `pactia init`)
+5. Apply macro precedence: stack-tier package > explicit import > std > builtins
 6. Apply `import … as alias` → qualified prefix for invocation
 7. Reject REGISTRY_COLLISION on duplicate unqualified names in the same scope
 8. Parse and expand source using effectiveRegistry at that file's scope
@@ -102,7 +102,7 @@ import { compliance, phi_screen } from @pactia/hipaa;
 | Form | Meaning |
 | --- | --- |
 | `import @scope/name;` | Package prelude — [packages.md — Prelude export semantics](packages.md#prelude-export-semantics) |
-| `import * from @scope/name;` | All exported `registry.tags[]` + `registry.macros[]` |
+| `import * from @scope/name;` | All exported registry tags, macros, and AST symbols |
 | `import symbol from @scope/name;` | One tag or macro |
 | `import { a, b } from @scope/name;` | Listed symbols only |
 | `import @scope/name as alias;` | Package qualifier: `@alias::tag`, `#[alias::macro]` |
@@ -183,7 +183,7 @@ Canonical shapes match [fleet-management-v2.pactia](../fixtures/kernel/fleet-man
 | `@deploy` | clause | `module` | required | nested clauses | `product.yaml` (`deployment`) |
 | `@environment` | clause | `@deploy` | required | assignments | `product.yaml` `deployment.environments[]` |
 | `@gate` | clause | `@deploy` | required | assignments | `product.yaml` `deployment.gates[]` |
-| `@security` | clause | `module` | required | prose / assignments | `product.yaml` (`security`) |
+| `@security` | clause | `module` | required | prose / assignments | `product.yaml` (`security`) — declared at module scope, aggregated to product IR |
 | `@policy` | clause | `module` | required | assignments | `product.yaml` (`security`) |
 | `@api` | clause | `service`, template | snake_case | assignments | `modules/<module>/services/*.service.yaml` |
 | `@web` / `@ios` | clause | `@api` | snake_case | assignments | `product.yaml` (`surfaces`) |
@@ -252,7 +252,7 @@ Prefer macros `#[database]` `#[cache]` `#[events]` **immediately above** `servic
 | `@returns` | `@returns VehicleListResponse` | `response.dto` |
 | `@status` | `@status 201` | `response.status` |
 | `@emit` | `@emit vehicle.created` | `emits` |
-| `@throws` | `@throws { names: [NotFound, Forbidden] }` on `@api` | `response.errors` |
+| `@throws` | `@throws { names: [NotFound, Forbidden] }` on `@api` | `endpoint.errors` |
 | `@transition` | `@transition { from: PENDING, to: PAID }` | statemachine edge on endpoint |
 
 Endpoint **patterns** use macros — not tags: `#[list]` `#[paginated]` `#[owner]` `#[create]` `#[idempotent]` — see #macros.
@@ -273,7 +273,9 @@ Prefix modifier tags on the line **above** the field declaration:
 | `@retain` | `@retain { 7y }` on field | `policies.retention` |
 | `@encrypt` | `@encrypt { at_rest }` | `policies.encryption` |
 
-### Contract blocks
+### Cross-cutting contract blocks
+
+Tag taxonomy for module- and product-level blocks that lower to IR contract slices. Not to be confused with [the intent line (contract line)](../overview.md#the-intent-line) or a per-endpoint [API contract](../language-spec.md#workspace-layout) in `features/*.pactia`.
 
 | Tag | Example | Lowers to |
 | --- | --- | --- |
@@ -481,7 +483,7 @@ Arguments are **scalars only** — identifiers, numbers, strings, simple `key: v
 
 ```
 1. Parse source (tags, macros, facts, prose)
-2. Resolve `@stack { }` + `import` packages; load macros[] + tags[] into effectiveRegistry
+2. Resolve all package coordinates (`@stack` tag targets + `import` lines); load macros[] + tags[] into effectiveRegistry
 3. Expand define (templates only) in product source
 4. Expand all #[macro] using effectiveRegistry (deterministic, pure)
 5. Validate @tag { } bodies (kernel + package JSON schemas)
@@ -544,7 +546,7 @@ Default expansions below; stack packages **replace** these in `pactia.package.ya
 When multiple packages register the same macro name, **the first winning layer** applies:
 
 ```
-1. Stack package (`@stack rust-anb { }`)     ← highest
+1. Package bound by `@stack` tag on product     ← highest (stack-tier registry)
 2. Explicit `import @scope/name` packages       ← in source order; collision → REGISTRY_COLLISION
 3. @pactia/* standard library packages     ← e.g. @pactia/api-patterns
 4. pactiac built-in default expansions     ← lowest
@@ -621,7 +623,7 @@ These remain **tags** (always `{ }`):
 - `@emit vehicle.created` — event name is a fact
 - `@public` — public route is a fact
 - `@transition { from: PENDING, to: PAID }` — legal edge is a fact
-- `@stack rust-anb { }` — stack selection is a fact (version in `pactia.toml`)
+- `@stack rust-anb { }` — platform choice as a clause tag on `product` (version in `pactia.toml` / `pactia.lock`, not in the tag body)
 
 ---
 
@@ -640,7 +642,7 @@ These remain **tags** (always `{ }`):
 
 | Tier | Mechanism | Provenance | Enforced by conform? |
 | --- | --- | --- | --- |
-| **Platform law** | `@stack` + stack package | `STACK_DEFAULT` | Yes (tech policy) |
+| **Platform law** | `@stack` tag + resolved stack-kind package | `STACK_DEFAULT` | Yes (tech policy) |
 | **Product law** | `@policy { }`, `@must { }`, `@test { }`, field `@pii { }`, `@security { }` facts | `Pactia` | Yes |
 | **Guidance** | `@guide`, `>`, free prose | `GUIDANCE` | No — AI + human review |
 
@@ -756,7 +758,7 @@ Used with compliance packages (`import @pactia/gdpr-eu as gdpr`, `import complia
 }
 ```
 
-Package registers `@compliance` block schema in `pactia.package.yaml` (same mechanism as protocol `@api`).
+Package registers `@compliance` block schema in `pactia.package.yaml` (same mechanism as protocol nested blocks such as `@grpc { }`).
 
 | Lowers to | `product.yaml` (`security`) + `<module>.model.yaml` field annotations + `<module>.module.yaml` `rules[]` |
 | Enforced | Yes (schema-validated) |
@@ -927,7 +929,7 @@ Conformance **never** enforces `GUIDANCE` — only law tiers and linked `@test` 
 
 | Do not | Do instead |
 | --- | --- |
-| Copy stack `codingStandards` into every product | `import @pactia/rust-anb` via `@stack` only |
+| Copy stack `codingStandards` into every product | Rely on `@stack { }` — stack macros and platform law merge automatically |
 | Put enforceable SLO only in `@guide` | `@observe { slos: [...] }` |
 | `flow { step 1; step 2 }` for policy | `@must` + `@test` |
 | New keyword `pipeline` | `@gate production { ... }` inside `@deploy` |
