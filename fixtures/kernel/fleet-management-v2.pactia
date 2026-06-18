@@ -144,7 +144,7 @@ product FleetManagement {
       > Fired when a GPS device pushes a valid position update
     }
 
-    data {
+    model {
       @enum VehicleStatus {
         values: [ACTIVE, INACTIVE, DECOMMISSIONED],
       }

@@ -26,7 +26,7 @@ cd vscode-pactia && npm install && npm run test:grammar
 
 | Highlight as | Examples |
 | --- | --- |
-| **Kernel keywords (9)** | `pactia`, `product`, `module`, `service`, `data`, `import`, `export`, `define`, `yaml` |
+| **Kernel keywords (9)** | `pactia`, `product`, `module`, `service`, `model`, `import`, `export`, `define`, `yaml` |
 | **Registry headers** | `scope endpoint`, `body { }`, `lowers { }`, `expands { }`, `category compliance` |
 | **Clause tags (teal)** | `@entity Vehicle { }`, `@api list { }`, `@actor customers { }` |
 | **Macros (purple, bold)** | `#[list]`, `#[database]`, `#[alias::macro]` — above `service` / `@api` |
