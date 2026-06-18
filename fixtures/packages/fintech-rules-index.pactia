@@ -13,8 +13,8 @@ export define tag sanctions_check {
   }
 
   lowers {
-    > input/security-policy.yaml sanctions_checks[]
-    > input/services/{serviceKebab}.yaml endpoints[].sanctions
+    > product.yaml security.sanctionsChecks[]
+    > modules/{moduleKebab}/services/{serviceKebab}.service.yaml endpoints[].sanctions
   }
 }
 

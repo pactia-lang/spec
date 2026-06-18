@@ -79,7 +79,7 @@ Canonical reference: [fleet-management-v2.pactia](../fixtures/kernel/fleet-manag
 
 - Humans read it like a product spec.
 - Any AI toolchain can consume compiled output — Pactia does not target a single model or IDE.
-- `pactiac` lowers source to **AI-neutral YAML IR**; BSC renders per-consumer `specification/`.
+- `pactiac` lowers source to **module-scoped YAML IR** (`*.module.yaml`, `*.model.yaml`, `*.service.yaml`); BSC may render agent briefs from IR.
 
 You are writing the **permanent, versioned prompt** for your product. Teams publish `.pactia` files to pactia.io the same way they publish OpenAPI — except the spec covers **roles, data, APIs, rules, tests, UI intent, and stack** in one place.
 
@@ -686,7 +686,7 @@ Full BNF and schema line styles: [grammar-reference.md](grammar-reference.md#uni
 | `maps_to` | yes when `direction: inbound` | string `METHOD /path` — must match an `@api` endpoint |
 | `> ...` | no | prose — lowers to `integrations[].purpose` |
 
-**Lowering → `input/integrations.yaml`:**
+**Lowering → `modules/<module>/<module>.module.yaml` (`integrations[]`):**
 
 ```yaml
 integrations:
@@ -924,7 +924,7 @@ service FleetService {
 }
 ```
 
-The kernel routes `@api { }` to `input/services/*.yaml` using the protocol package schema. gRPC and GraphQL attach `@grpc { }` / `@graphql { }` alongside the same logical `@api { }` operation — see [platform.md](platform.md#protocol-packages).
+The kernel routes `@api { }` to `modules/<module>/services/*.service.yaml` using the protocol package schema. gRPC and GraphQL attach `@grpc { }` / `@graphql { }` alongside the same logical `@api { }` operation — see [platform.md](platform.md#protocol-packages).
 
 ---
 
@@ -1017,8 +1017,8 @@ Types: `uuid`, `string`, `int`, `decimal`, `bool`, `datetime`, `json`. Array typ
 
 Compiler emits:
 
-- `input/services/*.yaml` — `@api { }` blocks and nested API tags
-- `input/surfaces/web.yaml`, `input/surfaces/ios.yaml`, … — surface tags nested under `@api { }`
+- `modules/<module>/services/*.service.yaml` — `@api { }` blocks and nested API tags
+- `product.yaml` — `@api` surface tags nest under `surfaces`; `@security`, `@deploy` under `security` / `deployment`
 
 Surface packages (`@pactia/surface-react`, `@pactia/surface-swiftui`) register extra tags — not new kernel words.
 
@@ -1111,7 +1111,7 @@ Package authors mark individual entities, enums, services, tags, macros, and oth
 export define tag sanctions_check {
   scope endpoint
   body { level: string, provider: string @optional { }, }
-  lowers { > input/security-policy.yaml sanctions_checks[] }
+  lowers { > product.yaml security.sanctionsChecks[] }
 }
 
 export define macro sanctions_screen {
@@ -1260,8 +1260,8 @@ define tag sanctions_check {
   }
 
   lowers {
-    input/security-policy.yaml sanctions_checks[]
-    input/services/{serviceKebab}.yaml endpoints[].sanctions
+    product.yaml security.sanctionsChecks[]
+    modules/{moduleKebab}/services/{serviceKebab}.service.yaml endpoints[].sanctions
   }
 }
 ```
@@ -1315,7 +1315,7 @@ Declare events and their consumers inside **`@event { }`** — not as bare `on .
 
 | Field in `@event` | Meaning |
 | --- | --- |
-| `payload:` | Payload type in `communication.yaml` |
+| `payload:` | Payload type in `<module>.module.yaml` `events[]` |
 | `handler:` | Consumer — lowers to `eventHandlers[]` on the target service |
 | `> sentence` | Description for AI and generated docs |
 
@@ -1334,7 +1334,9 @@ The `yaml` keyword embeds **raw YAML** inside a `.pactia` file. Content inside t
 | **Product merge** | `yaml merge <target> """..."""` | Extend contract IR when compiling a product |
 | **Package authoring** | `yaml package/<section> """..."""` | Define publishable stack or protocol package fragments |
 
-Allowed merge targets: `project.yaml`, `business.yaml`, `domain.yaml`, `integrations.yaml`, `communication.yaml`, `policies.yaml`, `config.yaml`, `scenarios.yaml`, `services/<kebab-name>.yaml`.
+Allowed merge targets: `product.yaml`, `modules/<module>/<module>.module.yaml`, `modules/<module>/<module>.model.yaml`, `modules/<module>/services/<service>.service.yaml`.
+
+`manifest.yaml` is compiler-emitted only — not a valid `yaml merge` target.
 
 Prefer kernel syntax for product intent. Use `yaml` when the kernel has no construct (stack `platformLaw`) or for package authoring. YAML anchors and aliases are forbidden in embeds.
 
@@ -1373,11 +1375,11 @@ Every IR field is tagged with one of:
 6. Validate @tag { } bodies (kernel + package JSON schemas)
 7. Lower @tags → structured IR fields
 8. Lower prose → scoped strings
-9. Lower @api / @entity / @relation / … → services/*.yaml, domain.yaml
-10. Lower @web/@ios/... → surfaces/*.yaml; resolve @bind
+9. Lower @api / @entity / @relation / … → `modules/<module>/<module>.model.yaml`, `modules/<module>/services/*.service.yaml`
+10. Lower @web/@ios/... → `product.yaml` (`surfaces`); resolve @bind
 11. Apply yaml merge embeds (schema-validated)
 12. Validate @pactia/schema
-13. (optional) bsc compile-workspace → specification/*.md
+13. (optional) bsc compile-workspace → agent briefs from IR
 ```
 
 Package authors: `pactia package build` lowers `define macro` / `define tag` → manifest before publish — [packages.md](packages.md#package-registry-define-macro--define-tag).
@@ -1392,12 +1394,12 @@ Pactia does not generate code. It generates the **shared spec** every agent impl
 
 | IR slice | AI task |
 | --- | --- |
-| `services/*.yaml` + prose | Server handlers, integration tests |
-| `surfaces/web.yaml` + `@bind` | Web routes, forms, hooks |
-| `surfaces/ios.yaml` + `@bind` | SwiftUI screens, navigation |
-| `surfaces/android.yaml` + `@bind` | Compose screens, navigation |
-| `model` + field tags | Migrations, DTOs, validation (all surfaces) |
-| `@test` / `@must` | Acceptance tests per surface |
+| `modules/<module>/services/<service>.service.yaml` + prose | Server handlers, integration tests |
+| `product.yaml` + `@bind` | Web routes, forms, hooks |
+| `product.yaml` (`surfaces.ios`) + `@bind` | SwiftUI screens, navigation |
+| `product.yaml` (`surfaces.android`) + `@bind` | Compose screens, navigation |
+| `modules/<module>/<module>.model.yaml` + field tags | Migrations, DTOs, validation (all surfaces) |
+| `@test` / `@must` in service YAML | Acceptance tests per surface |
 
 ---
 
@@ -1649,12 +1651,12 @@ Single-file programs skip steps 3–4.
 
 ### AI context separation
 
-| AI task | Read these files | Generate (below the line) |
-| --- | --- | --- |
-| Implement one endpoint | One `features/*.pactia` + related `entities/*.pactia` | Handler, unit tests |
-| Data migration | One `entities/*.pactia` | SQL migration, ORM model |
-| Service wiring | `service.pactia` + module `@config` | Middleware setup |
-| Platform / deploy | Stack package + `product.pactia` | Dockerfile, Helm (from stack templates) |
+| AI task | Read these files (source) | Compiled IR slice | Generate (below the line) |
+| --- | --- | --- | --- |
+| Implement one endpoint | One `features/*.pactia` + related `entities/*.pactia` | `<module>.module.yaml`, `<module>.model.yaml`, `<service>.service.yaml` | Handler, unit tests |
+| Data migration | One `entities/*.pactia` | `<module>.model.yaml` | SQL migration, ORM model |
+| Service wiring | `service.pactia` + module `@config` | `<module>.module.yaml`, `<service>.service.yaml` | Middleware setup |
+| Platform / deploy | Stack package + `product.pactia` | `product.yaml` | Dockerfile, Helm (from stack templates) |
 
 Pactia defines **what must stay true**. AI owns **how** — checked by `bsc conform`.
 

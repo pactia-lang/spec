@@ -59,7 +59,7 @@ define tag sanctions_check {
   category compliance
   scope endpoint
   body { level: string, provider: string, }
-  lowers { input/security-policy.yaml sanctions_checks[] }
+  lowers { product.yaml security.sanctionsChecks[] }
 }
 ```
 
@@ -164,31 +164,31 @@ Canonical shapes match [fleet-management-v2.pactia](../fixtures/kernel/fleet-man
 
 | Tag | Role | Allowed hosts | Target | Body style | Lowers to |
 | --- | --- | --- | --- | --- | --- |
-| `@stack` | clause | `product` | required | assignments | `project.stackId` |
-| `@topology` | clause | `product` | omit | assignments | `project.topology` |
-| `@tenancy` | clause | `product` | omit | assignments | `project.tenancy` |
-| `@guide` | clause | `product`, `module`, `service` | optional | prose | `guidance.yaml` |
-| `@actor` | clause | `module` | required | assignments | `business.actors[]` |
-| `@rule` | clause | `module`, `model` | required | prose or assignments | `rules[]` |
-| `@config` | clause | `module` | required | map | `config.yaml` |
-| `@errors` | clause | `module` | required | map | `errors.catalog` — defines error entries |
+| `@stack` | clause | `product` | required | assignments | `product.stackId` |
+| `@topology` | clause | `product` | omit | assignments | `product.topology` |
+| `@tenancy` | clause | `product` | omit | assignments | `product.tenancy` |
+| `@guide` | clause | `product`, `module`, `service` | optional | prose | product / module / service YAML |
+| `@actor` | clause | `module` | required | assignments | `modules/<module>/<module>.module.yaml` `actors[]` |
+| `@rule` | clause | `module`, `model` | required | prose or assignments | `<module>.module.yaml` or `<module>.model.yaml` `rules[]` |
+| `@config` | clause | `module` | required | map | `modules/<module>/<module>.module.yaml` `config` |
+| `@errors` | clause | `module` | required | map | `modules/<module>/<module>.module.yaml` `errors.catalog` |
 | `@throws` | modifier | `@api` | omit | `{ names: [...] }` | `endpoint.errors` — references catalog |
-| `@event` | clause | `module` | reference | assignments | `communication.yaml` |
-| `@entity` | clause | `model` | PascalCase | entity-fields | `domain.yaml` |
-| `@enum` | clause | `model` | PascalCase | assignments | `domain.yaml` |
-| `@relation` | clause | `model` | snake_case | assignments | `domain.yaml` |
-| `@states` | clause | `model` | snake_case | assignments + `transitions: []` | `domain.yaml` |
-| `@integration` | clause | `module` | snake_case | assignments | `integrations.yaml` |
-| `@observe` | clause | `module` | snake_case | `slos: []` | `observability.yaml` |
-| `@deploy` | clause | `module` | required | nested clauses | `deployment.yaml` |
-| `@environment` | clause | `@deploy` | required | assignments | `deployment.environments[]` |
-| `@gate` | clause | `@deploy` | required | assignments | `deployment.gates[]` |
-| `@security` | clause | `module` | required | prose / assignments | `security-policy.yaml` |
-| `@policy` | clause | `module` | required | assignments | `policies.yaml` |
-| `@api` | clause | `service`, template | snake_case | assignments | `services/*.yaml` |
-| `@web` / `@ios` | clause | `@api` | snake_case | assignments | `surfaces/*.yaml` |
-| `@test` | clause | `service` | snake_case | assignments | `scenarios.yaml` |
-| `@must` | clause | `service` | snake_case | assignments + prose | `obligations.yaml` |
+| `@event` | clause | `module` | reference | assignments | `modules/<module>/<module>.module.yaml` `events[]` |
+| `@entity` | clause | `model` | PascalCase | entity-fields | `modules/<module>/<module>.model.yaml` |
+| `@enum` | clause | `model` | PascalCase | assignments | `modules/<module>/<module>.model.yaml` |
+| `@relation` | clause | `model` | snake_case | assignments | `modules/<module>/<module>.model.yaml` |
+| `@states` | clause | `model` | snake_case | assignments + `transitions: []` | `modules/<module>/<module>.model.yaml` |
+| `@integration` | clause | `module` | snake_case | assignments | `modules/<module>/<module>.module.yaml` `integrations[]` |
+| `@observe` | clause | `module` | snake_case | `slos: []` | `<module>.module.yaml` |
+| `@deploy` | clause | `module` | required | nested clauses | `product.yaml` (`deployment`) |
+| `@environment` | clause | `@deploy` | required | assignments | `product.yaml` `deployment.environments[]` |
+| `@gate` | clause | `@deploy` | required | assignments | `product.yaml` `deployment.gates[]` |
+| `@security` | clause | `module` | required | prose / assignments | `product.yaml` (`security`) |
+| `@policy` | clause | `module` | required | assignments | `product.yaml` (`security`) |
+| `@api` | clause | `service`, template | snake_case | assignments | `modules/<module>/services/*.service.yaml` |
+| `@web` / `@ios` | clause | `@api` | snake_case | assignments | `product.yaml` (`surfaces`) |
+| `@test` | clause | `service` | snake_case | assignments | service YAML `scenarios[]` |
+| `@must` | clause | `service` | snake_case | assignments + prose | service YAML `obligations[]` |
 | `@auth` | modifier | `@api` | omit | assignments | `authorization` |
 | `@public` | modifier flag | `@api` | omit | flag | `authorization.type: PUBLIC` |
 | `@body` | modifier shorthand | `@api` | omit | type ref | `request.dto` |
@@ -211,10 +211,10 @@ JSON Schemas: `spec/schemas/tags/<name>-v1.json` (planned) — IDE completion ke
 
 | Tag | Example | Lowers to |
 | --- | --- | --- |
-| `@entity` | `@entity Vehicle { @pk id: uuid, ... }` | `domain.yaml` entities + fields |
-| `@enum` | `@enum VehicleStatus { values: [ACTIVE, INACTIVE], }` | `domain.yaml` enums |
-| `@relation` | `@relation customer_owns { from: Customer, to: Vehicle, verb: owns, cardinality: many, }` | `domain.yaml` relations |
-| `@states` | `@states vehicle_lifecycle { entity: Vehicle.status, transitions: [{ from: ACTIVE, to: INACTIVE }], }` | `domain.yaml` state machines |
+| `@entity` | `@entity Vehicle { @pk id: uuid, ... }` | `modules/<module>/<module>.model.yaml` entities + fields |
+| `@enum` | `@enum VehicleStatus { values: [ACTIVE, INACTIVE], }` | `<module>.model.yaml` enums |
+| `@relation` | `@relation customer_owns { from: Customer, to: Vehicle, verb: owns, cardinality: many, }` | `<module>.model.yaml` relations |
+| `@states` | `@states vehicle_lifecycle { entity: Vehicle.status, transitions: [{ from: ACTIVE, to: INACTIVE }], }` | `<module>.model.yaml` state machines |
 
 Field modifiers **prefix** the field line (`@pk`, `@fk { entity: Customer }`) — not inline after the type.
 
@@ -222,15 +222,15 @@ Field modifiers **prefix** the field line (`@pk`, `@fk { entity: Customer }`) �
 
 | Tag | Example | Lowers to |
 | --- | --- | --- |
-| `@actor` | `@actor customers { role: Customer, capabilities: [place_orders, view_orders], }` | `business.actors[]` |
+| `@actor` | `@actor customers { role: Customer, capabilities: [place_orders, view_orders], }` | `<module>.module.yaml` `actors[]` |
 
 ### Product / platform
 
 | Tag | Example | Lowers to |
 | --- | --- | --- |
-| `@stack` | `@stack rust-anb { }` | `project.stackId` (version from `kabol.toml` / `kabol.lock`) |
-| `@topology` | `@topology { mode: microservices, }` | `project.topology` |
-| `@tenancy` | `@tenancy { mode: single, }` | `project.tenancy` |
+| `@stack` | `@stack rust-anb { }` | `product.stackId` (version from `kabol.toml` / `kabol.lock`) |
+| `@topology` | `@topology { mode: microservices, }` | `product.topology` |
+| `@tenancy` | `@tenancy { mode: single, }` | `product.tenancy` |
 
 ### Service options (tags, not macros)
 
@@ -277,17 +277,17 @@ Prefix modifier tags on the line **above** the field declaration:
 
 | Tag | Example | Lowers to |
 | --- | --- | --- |
-| `@config` | `@config backend { DATABASE_URL: { required: true, ... }, }` | `config.yaml` |
-| `@errors` | `@errors platform { NotFound: { status: 404, code: RESOURCE_NOT_FOUND, message: "..." }, }` | error catalog |
-| `@policy` | `@policy { retain Entity forever because "..." }` | `policies.yaml` |
-| `@guide` | `@guide { Handlers use error envelope }` | `guidance.yaml` (not enforced) |
-| `@security` | `@security { ... }` | `security-policy.yaml` |
-| `@compliance` | `@compliance { gdpr ... }` | `policies.yaml` + annotations |
-| `@observe` | `@observe fleet_slos { slos: [{ service: FleetService, metric: error_rate, target: "< 1%" }], }` | `observability.yaml` |
-| `@deploy` | `@deploy fleet { @environment staging { replicas: 2 }, @gate production { scenarios: pass } }` | `deployment.yaml` |
-| `@event` | `@event { vehicle.created payload X handler Service.method "desc" }` | `communication.yaml` + `eventHandlers[]` |
-| `@test` | `@test { "name" When ... Then ... }` | `scenarios.yaml` |
-| `@must` | `@must { on trigger outcome lines }` | `obligations.yaml` |
+| `@config` | `@config backend { DATABASE_URL: { required: true, ... }, }` | `<module>.module.yaml` `config` |
+| `@errors` | `@errors platform { NotFound: { status: 404, code: RESOURCE_NOT_FOUND, message: "..." }, }` | `<module>.module.yaml` error catalog |
+| `@policy` | `@policy { retain Entity forever because "..." }` | `product.yaml` (`security`) |
+| `@guide` | `@guide { Handlers use error envelope }` | module / service / product YAML (not enforced) |
+| `@security` | `@security { ... }` | `product.yaml` (`security`) |
+| `@compliance` | `@compliance { gdpr ... }` | `product.yaml` (`security`) + model field annotations |
+| `@observe` | `@observe fleet_slos { slos: [...] }` | `<module>.module.yaml` |
+| `@deploy` | `@deploy fleet { @environment staging { replicas: 2 }, ... }` | `product.yaml` (`deployment`) |
+| `@event` | `@event { vehicle.created payload X handler Service.method "desc" }` | `<module>.module.yaml` `events[]`, `eventHandlers[]` |
+| `@test` | `@test { "name" When ... Then ... }` | service YAML `scenarios[]` |
+| `@must` | `@must { on trigger outcome lines }` | service YAML `obligations[]` |
 | `@rule` | `@rule single_customer { > Vehicles belong to exactly one customer. }` | `rules[]` (enforced) |
 
 See [Cross-cutting concerns](#cross-cutting-concerns) for cascade rules.
@@ -296,9 +296,9 @@ See [Cross-cutting concerns](#cross-cutting-concerns) for cascade rules.
 
 | Tag | Example | Lowers to |
 | --- | --- | --- |
-| `@bind` | `@bind { service: FleetService, method: GET, path: "/api/v1/vehicles" }` | cross-link in `surfaces/*.yaml` |
+| `@bind` | `@bind { service: FleetService, method: GET, path: "/api/v1/vehicles" }` | cross-link in `product.yaml` (`surfaces`) |
 | `@bind` | `@bind { data: VehicleListResponse }` | data binding for UI |
-| `@integration` | `@integration gps_devices { direction: inbound, maps_to: "POST /path", ... }` | `integrations.yaml` |
+| `@integration` | `@integration gps_devices { direction: inbound, maps_to: "POST /path", ... }` | `<module>.module.yaml` `integrations[]` |
 
 `@integration` — target names the integration; body holds properties:
 
@@ -391,7 +391,7 @@ define tag compliance {
     baa_required: boolean,
   }
   lowers {
-    input/policies.yaml compliance[]
+    product.yaml security.sanctionsChecks[]
   }
 }
 ```
@@ -685,7 +685,7 @@ Block tags use `@name { ... }`. Body is **`> prose` lines** (where narrative) an
 }
 ```
 
-| Lowers to | `input/policies.yaml` |
+| Lowers to | `product.yaml` (`security`) |
 | Enforced | Yes |
 | Provenance | `Pactia` |
 
@@ -708,7 +708,7 @@ email: string @pii { } @retain { 7y }
 }
 ```
 
-| Lowers to | `input/guidance.yaml` + `specification/guidelines.md` |
+| Lowers to | Respective `.module.yaml` / `.service.yaml` (BSC may render agent briefs) |
 | Enforced | No |
 | Provenance | `GUIDANCE` |
 
@@ -734,7 +734,7 @@ Place `@guide` at `product` (global), `module` (domain conventions), or `service
 | Prose sentence | `security.rules[]` — checked via `@test` when linked |
 | `@rate_limit`, `@require_mfa`, `@headers` | Structured `security.controls[]` (tags) or macro expansion for `#[rate_limit(...)]` |
 
-| Lowers to | `input/security-policy.yaml` |
+| Lowers to | `product.yaml` (`security`) |
 | Enforced | Partial — structured tags yes; prose via linked `@test` |
 
 ---
@@ -754,7 +754,7 @@ Used with compliance packages (`import @pactia/gdpr-eu as gdpr`, `import complia
 
 Package registers `@compliance` block schema in `pactia.package.yaml` (same mechanism as protocol `@api`).
 
-| Lowers to | `policies.yaml` + `model` annotations + `rules[]` |
+| Lowers to | `product.yaml` (`security`) + `<module>.model.yaml` field annotations + `<module>.module.yaml` `rules[]` |
 | Enforced | Yes (schema-validated) |
 | Provenance | `PACKAGE` + `Pactia` |
 
@@ -779,7 +779,7 @@ Package registers `@compliance` block schema in `pactia.package.yaml` (same mech
 
 Stack package supplies defaults (trace sampling, `/metrics` path). `@observe` only declares **product-specific overrides**.
 
-| Lowers to | `input/observability.yaml` |
+| Lowers to | `<module>.module.yaml` |
 | Enforced | Yes (when observability conform is enabled) |
 | Provenance | `Pactia` or `STACK_DEFAULT` for derived metrics from `@emit` |
 
@@ -807,7 +807,7 @@ Stack package supplies defaults (trace sampling, `/metrics` path). `@observe` on
 
 CI/CD **tool choice** (GitHub Actions, ArgoCD) stays in the **stack package**. `@deploy` only declares **product overrides** — environments, replica counts, promotion gates.
 
-| Lowers to | `input/deployment.yaml` |
+| Lowers to | `product.yaml` (`deployment`) |
 | Enforced | Yes (infra / pipeline conform) |
 | Provenance | `Pactia` |
 
@@ -819,7 +819,7 @@ CI/CD **tool choice** (GitHub Actions, ArgoCD) stays in the **stack package**. `
 | --- | --- | --- |
 | `#[rate_limit(n, unit)]` | `#[rate_limit(100, rpm)]` inside `@api { }` or `@security { }` | `endpoint.rateLimit` |
 | `@require_mfa { }` | `@require_mfa { Admin }` | `security.mfa.roles` |
-| `#[a11y(...)]` | `#[a11y(WCAG-AA)]` inside `@web { }` | `surfaces/*.yaml` |
+| `#[a11y(...)]` | `#[a11y(WCAG-AA)]` inside `@web { }` | `product.yaml` (`surfaces`) |
 | `@retain { }` | `@retain { 7y }` on field | `policies.retention` |
 | `@encrypt { }` | `@encrypt { at_rest }` on field | `policies.encryption` |
 | `@audit { }` | `@audit { }` on `@api { }` POST | `security.auditRequired` |
@@ -833,7 +833,7 @@ CI/CD **tool choice** (GitHub Actions, ArgoCD) stays in the **stack package**. `
 | `> sentence` | Business rule or narrative (guidance) | `prose[]` |
 | Plain sentence in module | Constraint / MVP scope | **Invalid** — use `> sentence` |
 | `@actor { role: capabilities: }` | Capabilities | `actors[]` |
-| `@test { name: when: then: }` | Acceptance / policy checks | `scenarios.yaml` |
+| `@test { name: when: then: }` | Acceptance / policy checks | service YAML `scenarios[]` |
 
 Example — MVP constraint as prose (not a keyword):
 
@@ -884,20 +884,20 @@ Consumer `product` inherits package guidance; overrides only where the product d
 
 ---
 
-## IR output files (v2 cross-cutting)
+## IR output files (module-scoped)
 
 | Source | Output file |
 | --- | --- |
-| `@policy`, `@retain` on fields | `input/policies.yaml` |
-| `@guide`, `>` rules (guidance only) | `input/guidance.yaml` |
-| `@security` | `input/security-policy.yaml` |
-| `@compliance` | `policies.yaml` + domain annotations |
-| `@observe` | `input/observability.yaml` |
-| `@deploy` | `input/deployment.yaml` |
-| `@must`, `@test` | `obligations.yaml`, `scenarios.yaml` |
+| `@policy`, `@retain` on fields | `product.yaml` (`security`) |
+| `@guide`, `>` rules (guidance only) | module / service / product YAML |
+| `@security` | `product.yaml` (`security`) |
+| `@compliance` | `product.yaml` (`security`) + `<module>.model.yaml` annotations |
+| `@observe` | `<module>.module.yaml` |
+| `@deploy` | `product.yaml` (`deployment`) |
+| `@must`, `@test` | `modules/<module>/services/<service>.service.yaml` |
 | Stack package | Merged at compile — not re-authored |
 
-`bsc compile-workspace` assembles `specification/security.md`, `specification/guidelines.md`, `specification/observability.md` from these slices for AI tools.
+`bsc compile-workspace` assembles agent briefs from these IR slices for AI tools.
 
 ---
 

@@ -95,15 +95,15 @@ Pactia does **not** replace Rust, React, or Swift. It sits above them as a durab
 
 That is why `pactiac` lowers Pactia to **AI-neutral YAML IR** (`input/**/*.yaml`) — structured facts with provenance, not vendor prompt templates. **BSC** then:
 
-1. **Renders** that IR into each target’s file conventions (`.cursor/rules`, `CLAUDE.md`, Copilot instructions, `specification/*.md`, …).
+1. **Renders** that IR into each target’s file conventions (`.cursor/rules`, `CLAUDE.md`, Copilot instructions, …).
 2. **Optionally expands** it with an LLM — grounded in the YAML, not free-form — to produce richer, more contentful context for that specific AI coding target.
 
 The LLM step does **not** re-parse `.pactia` or change enforceable facts. It elaborates **guidance**: module overviews, happy-path scenarios, stack-aligned coding notes, gaps marked `NOT_DERIVABLE`. Formal tags in YAML remain the source of truth for conformance.
 
 ```
-.pactia  ──pactiac──▶  input/**/*.yaml     (deterministic, model-neutral)
+.pactia  ──pactiac──▶  input/modules/*/     (*.module.yaml, *.model.yaml, *.service.yaml)
                               │
-                              └── bsc render ──▶  specification/     (target profile)
+                              └── bsc render ──▶  agent briefs (target profile)
                                         │
                                         └── bsc expand (LLM, optional) ──▶  richer agent context
                                               grounded in YAML · provenance: GENERATED
@@ -160,7 +160,7 @@ Pactia is an **intent language**, not a replacement for code. Authors declare wh
 | 4GL / config (SQL, Terraform) | Desired state | Reconciler converges actual to desired |
 | **Pactia + BSC** | **Product intent** | **Conformance flags violations of facts you chose to formalize** |
 
-A Pactia program is not executed. It is **compiled to AI-neutral YAML IR**; BSC then **renders** and may **LLM-expand** `specification/` for your chosen toolchain — richer agent context without re-authoring `.pactia`. Conformance checks only the formalized facts in IR.
+A Pactia program is not executed. It is **compiled to module-scoped YAML IR** (`*.module.yaml`, `*.model.yaml`, `*.service.yaml`); BSC then **renders** and may **LLM-expand** agent briefs for your chosen toolchain — richer agent context without re-authoring `.pactia`. Conformance checks only the formalized facts in IR.
 
 **Above [the intent line](overview.md#the-intent-line), formalized facts are deterministic and enforceable. Below it, implementation is free.** See BSC vision.
 
@@ -209,13 +209,14 @@ Pactia deliberately describes **less than the full system** when you want it to.
 ┌─────────────────────────────────────────────────────────────┐
 │  Pactia (.pactia) + packages       ← humans author intent       │
 ├─────────────────────────────────────────────────────────────┤
-│  input/**/*.yaml (AI-neutral IR) ← pactiac compile             │
+│  input/modules/*/ (AI-neutral IR) ← pactiac compile            │
 ├─────────────────────────────────────────────────────────────┤
 │  Stack package (pactia.io)      ← platform law (read-only)   │
 ├─────────────────────────────────────────────────────────────┤
 │  project-definition.yaml       ← canonical structured AST     │
 ├─────────────────────────────────────────────────────────────┤
-│  specification/*.md            ← BSC render + optional LLM expand (per target) │
+│  input/modules/*/*.module.yaml, *.model.yaml, *.service.yaml  │
+│  bsc render + optional LLM expand (per target)                │
 ├─────────────────────────────────────────────────────────────┤
 │  Implementation                ← any model / any coding agent   │
 └─────────────────────────────────────────────────────────────┘
@@ -232,7 +233,7 @@ Pactia is how humans **author**. `pactiac` produces **vendor-neutral IR**. BSC *
 | Platform team                | Stack packages on pactia.io — not Pactia                   |
 | Frontend / mobile leads      | `@web { }`, `@ios { }`, `@bind { }` in same `.pactia` file |
 | Community / vendors          | Pactia packages (import @pactia/*` on pactia.io)            |
-| AI coding agent              | **Never** edits Pactia — implements from `specification/` |
+| AI coding agent              | **Never** edits Pactia — implements from IR (`*.module.yaml`, `*.model.yaml`, `*.service.yaml`) |
 
 ## Language version
 
@@ -328,7 +329,7 @@ When you need **enforceable** state edges, add `@transition { from, to }` on `@a
 ## Next steps (implementation)
 
 1. `pactiac compile` → BSC `input/` ([compilation.md](compilation.md))
-2. `bsc compile-workspace` → `specification/` (BSC IR)
+2. `bsc compile-workspace` → agent briefs from IR (BSC render)
 3. pactia.io package registry ([packages.md](packages.md))
 4. Web UI: Pactia editor at pactia.io / local
 
@@ -397,7 +398,7 @@ The compiler (`@pactia/pactiac`) tags every lowered fact with a provenance:
 1. **Above the line is deterministic.** No LLM decides anything above the line. Same Pactia, same contract, byte for byte.
 2. **Below the line is free.** AI and humans choose logic, topology, and structure however they like.
 3. **The contract never describes behavior.** No numbered `flow {}` blocks. Use `@must` for enforceable outcomes; use `@guide` or `implementation_hint` for suggested patterns (below the line).
-4. **The IR is the contract, not the system.** `input/**/*.yaml` and `project-definition.yaml` carry only above-the-line facts. Optional below-the-line hints, if present, are marked and are never enforced.
+4. **The IR is the contract, not the system.** `input/modules/*/` (`*.module.yaml`, `*.model.yaml`, `*.service.yaml`) and `project-definition.yaml` carry only above-the-line facts. Optional below-the-line hints, if present, are marked and are never enforced.
 5. **The line is crossed only by conformance.** The sole connection between the two halves is the conformance gate: it checks the implementation against the contract and fails the build otherwise (static surface checks today; runtime enforcement planned).
 
 ### Worked example (fleet)
@@ -477,7 +478,7 @@ A senior architect using Pactia should finish in **one session** (~100–200 lin
 | Auth & roles                  | **Yes** — `@actor { }` + `@auth { }` + `#[owner]` | JWT baseline, claims                  | route guard table                  |
 | Config / secrets              | **Yes** — `@config { }`                           | 12-factor startup template            | env manifest, secrets list         |
 | Security / PII / retention    | **Overrides** — `@policy { }`, field `@pii { }` `@retain { }` | OWASP, encryption, default retention  | PII list from model tags            |
-| Best practices / coding style | `@guide` + stack `codingStandards`            | full patterns                         | `guidance.yaml` for AI             |
+| Best practices / coding style | `@guide` + stack `codingStandards`            | full patterns                         | module / service YAML for AI       |
 | Observability (SLOs, alerts)  | `@observe` when non-default                   | trace sampling, metric types          | counters from `@emit` events       |
 | Scalability                   | `@deploy` environment replicas                | HPA defaults, replica baselines       | per-service flags from `service`   |
 | Deployment / environments     | `@deploy` when non-default                    | K8s, Helm, ports, health paths        | namespaces from env names          |

@@ -8,6 +8,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 ### Changed
 
+- **Compiler IR layout:** `manifest.yaml` (version, entry, lockfile digest, module file index, `references[]`); `product.yaml` (includes surfaces, security, deployment); module slices `<module>.module.yaml`, `<module>.model.yaml`, `<service>.service.yaml`.
 - **Kernel keyword:** rename `data` to `model` for domain modeling blocks (`model { @entity … }`).
 - **Import & export:** single `import` keyword for registry packages and local files; remove `use`. Add `export` symbol modifier (replaces manifest-only `exports:`). `from` and `as` are import syntax tokens, not keywords.
 - Lead with **three altitudes** (prose-only → light tagging → fully specified) in overview and language-spec.

@@ -254,8 +254,8 @@ The compiler fetches the published bundle, verifies the digest from `kabol.lock`
 2. Resolve semver from `kabol.toml` against pactia.io (or read pinned digest from `kabol.lock`).
 3. Download and verify package digest.
 4. Merge `profile` + `platformLaw` + `technologyPolicy` into workspace IR.
-5. Emit `input/project.yaml` with `stackId`, `stackVersion`, `stackDigest`.
-6. Emit `specification/implementation-constraints.md` from `technologyPolicy` + `codingStandards` (via `bsc compile-workspace`).
+5. Emit `input/product.yaml` with `stackId`, `stackVersion`, `stackDigest`.
+6. Emit module-scoped IR under `input/modules/<module>/` (`<module>.module.yaml`, `<module>.model.yaml`, `services/*.service.yaml`).
 7. Conformance (planned): flag generated code that imports forbidden crates.
 
 ---
@@ -336,8 +336,8 @@ package = "@pactia/rust-anb"
 ### Compilation output
 
 ```yaml
-# input/project.yaml
-project:
+# input/product.yaml
+product:
   stackId: "@pactia/rust-anb"
   stackVersion: 1.0.0
   stackDigest: sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
@@ -446,7 +446,7 @@ Planned:
 1. Read the package changelog on pactia.io.
 2. Update `kabol.toml` constraint (e.g. `"@pactia/rust-anb" = "^1.1"`).
 3. Run `pactia update --stack` or delete `kabol.lock` and recompile.
-4. Review diff in `specification/implementation-constraints.md` and `platformLaw` sections.
+4. Review diff in IR slices and `platformLaw` sections.
 5. Run conformance tests against forbidden crate list if enabled.
 
 **Cross-major migration** (`^1.0` → `^2.0`) may require product `policy` or endpoint changes — treat as a platform project, not a silent dependency bump.
@@ -524,7 +524,7 @@ pactia update --stack                # refresh stack pin in kabol.lock
 └───────────────────────────┬─────────────────────────────┘
                             │ compile
 ┌───────────────────────────▼─────────────────────────────┐
-│  BSC YAML IR (input/services/*.yaml, …)                 │
+│  BSC YAML IR (input/modules/*/*.module.yaml, *.model.yaml, *.service.yaml) │
 └─────────────────────────────────────────────────────────┘
 ```
 
