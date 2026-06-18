@@ -633,6 +633,32 @@ Environment: `Pactia_REGISTRY_URL`, `Pactia_REGISTRY_TOKEN` (see below).
 5. No secrets in source; automated scan on upload.
 6. Digest pinned in consumer `pactia.lock` after first resolve.
 
+### Offline / vendored packages (CI and local dev)
+
+Before **pactia.io** is available, `pactiac` resolves lock pins from **local directories** — no network fetch.
+
+| Location | Purpose |
+| --- | --- |
+| `<workspace>/.pactia/packages/` | Default vendor root inside the product repo |
+| `PACTIA_VENDOR_ROOT` | Optional override (absolute path to a shared vendor cache) |
+
+Each vendored package is an unpacked directory named from the lock entry:
+
+```text
+@pactia--protocol-rest@1.0.0/
+  pactia.package.yaml
+  .digest                 # optional; must match pactia.lock digest when present
+```
+
+Rules:
+
+- Directory name: `<coordinate with / replaced by -->@<exact lock version>` (example: `@pactia/rust-anb` → `@pactia--rust-anb@1.0.0`).
+- `pactia.package.yaml` is the package manifest (`kind`, registry exports, schemas).
+- When `.digest` is present, it must equal the matching `pactia.lock` entry or compile fails with `PACKAGE_LOCK_MISMATCH`.
+- `pactiac compile -w` still requires `pactia.toml` + `pactia.lock`; vendoring satisfies `PACKAGE_NOT_FOUND` without registry access.
+
+Examples: `pactiac` fleet workspace test fixture; monorepo `examples/pactia-lang-website`.
+
 ---
 
 ## pactia.io registry (planned)
