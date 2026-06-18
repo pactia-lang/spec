@@ -1,0 +1,55 @@
+pactia 1.0
+
+import @pactia/protocol-rest;
+import @pactia/rust-anb;
+
+product FleetManagement {
+  > Track vehicles and fleets. Customers see only their own vehicles.
+  > Map API errors to the platform envelope.
+  > Cursor pagination on every list — never offset.
+
+  @stack rust-anb { }
+  @topology { mode: microservices, }
+
+  module fleet {
+
+    > Admins manage fleets and register vehicles.
+    > Customers track their own vehicles only.
+    > Only admins may register or decommission vehicles.
+    > All admin mutations must be audit-logged.
+
+    model {
+      @entity Customer {
+        @pk id: uuid,
+        name: string,
+        @pii email: string,
+      }
+
+      @entity Vehicle {
+        @pk id: uuid,
+        @fk { entity: Customer } customerId: uuid,
+        @unique vin: string,
+        label: string,
+        status: string,
+      }
+    }
+
+    #[database]
+    service FleetService {
+
+      > Customers and admins list vehicles — owner-scoped, cursor-paginated.
+
+      @api list_vehicles { method: GET, path: "/api/v1/vehicles", }
+
+      > Only admins create vehicles. Emit vehicle.created on success.
+
+      @api create_vehicle { method: POST, path: "/api/v1/vehicles", }
+
+      @test admin_registers_vehicle {
+        name: "Admin registers a vehicle",
+        when: "Admin is logged in and POST /api/v1/vehicles with valid body",
+        then: "status is 201 and vehicle.created is emitted",
+      }
+    }
+  }
+}
