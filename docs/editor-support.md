@@ -27,11 +27,11 @@ cd vscode-pactia && npm install && npm run test:grammar
 | Highlight as | Examples |
 | --- | --- |
 | **Kernel keywords (9)** | Product (7): `pactia`, `product`, `module`, `service`, `model`, `import`, `define` (template). Package forms: `export`, `define tag` / `define macro`, `yaml` |
-| **Registry headers** | `scope endpoint`, `body { }`, `lowers { }`, `expands { }`, `category compliance` |
+| **Registry headers** | `scope endpoint`, `body { }`, `lowers { }`, `expands { }`, `category service` |
 | **Clause tags (teal)** | `@entity Vehicle { }`, `@api list { }`, `@actor customers { }` |
 | **Macros (purple, bold)** | `#[list]`, `#[database]`, `#[alias::macro]` — above `service` / `@api` |
 | **Modifier flags** | `@pk`, `@public`, `@pii`, `@optional` — no `{ }` when empty |
-| **Modifier shorthand** | `@returns VehicleDto`, `@status 201`, `@emit vehicle.created` |
+| **Modifier shorthand** | `@output VehicleDto`, `@status 201`, `@emit vehicle.created` |
 | **Imports** | `import @scope/name;`, `import { a, b } from @pkg;`, `import @pkg as alias;` |
 | **Qualified tags** | `@alias::sanctions_check { }` |
 | **Prose (purple, italic)** | `> sentence` |
@@ -41,7 +41,7 @@ cd vscode-pactia && npm install && npm run test:grammar
 ## Grammar rules (v1.0.0)
 
 1. **Multiline blocks** open only when `{` is the **last character on the line** (`@entity Vehicle {`, `product X {`).
-2. **Single-line modifiers** — `@auth { roles: [...] }`, `@screen { id: x }` matched before multiline rules.
+2. **Single-line modifiers** — `@auth { roles: [...] }`, inline `screen: { id: x }` inside `@surface { }` matched before multiline rules.
 3. **Indent-aware close** — `}` at the same indent as the opening line closes the block.
 4. **Inline objects** — `{ service: FleetService, metric: error_rate }` inside arrays.
 5. **Package authoring** — `define tag` / `define macro` with nested `body { }`, `lowers { }`, `expands { }` registry blocks.

@@ -40,7 +40,7 @@ Pactia compiles to **AI-neutral YAML IR** (`input/**/*.yaml`) — not vendor-spe
 11. Infer missing response/request shapes; warn on ambiguity
 12. Write pactia.lock if absent or updated
 13. Lower @tags → YAML IR with provenance (MACRO, DEFINE, PACKAGE on expanded fields)
-14. Lower @web { } / @ios { } → `product.yaml` (`surfaces`); resolve @bind { }
+14. Lower `@surface { }` → `product.yaml` (`surfaces[]`); resolve `@bind { }`
 15. Apply yaml merge embeds: parse → validate → deep-merge (provenance: YAML_EMBED)
 16. Write module-scoped output: `<module>.module.yaml`, `<module>.model.yaml`, `services/<service>.service.yaml`
 17. (optional) `bsc render` → agent briefs from module-scoped IR (`input/modules/*/*.yaml`)
@@ -209,7 +209,7 @@ Paths are relative to the compile output root (`input/` by convention). `<module
 | Workspace `entities/*.pactia` | `<module>.model.yaml` (aggregated per module) |
 | Workspace `features/*.pactia` | `<service>.service.yaml` |
 | `define template` (expands in place) | Same targets as expanded kernel — provenance `DEFINE` |
-| `@web { }` / `@ios { }` surface blocks | `product.yaml` (`surfaces`) |
+| `@surface { }` blocks | `product.yaml` (`surfaces[]`) |
 | `@guide` on product | `product.yaml` |
 | `@guide` on module / service | Respective `.module.yaml` or `.service.yaml` |
 | `@security`, `@policy`, `@compliance` | `product.yaml` (`security`) |

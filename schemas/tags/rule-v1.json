@@ -1,0 +1,8 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pactia.io/schemas/tags/rule-v1.json",
+  "title": "Pactia kernel tag @rule (v1)",
+  "description": "Normative body schema stub for kernel @rule. See spec/registry/kernel-tags.yaml.",
+  "type": "object",
+  "additionalProperties": true
+}

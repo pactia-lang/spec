@@ -30,7 +30,7 @@ Tags and macros resolve through a **workspace-effective registry** built at comp
 
 | Tier | Source | In workspace how | Default category |
 | --- | --- | --- | --- |
-| **kernel** | pactiac builtin catalog | Always — no `import` | `core` |
+| **kernel** | pactiac builtin catalog | Always — no `import` | `product` \| `module` \| `model` \| `service` \| `field` (per tag) |
 | **stack** | Package bound by `@stack` tag on `product` | When `@stack` tag resolves a stack-kind package | `stack` |
 | **std** | `@pactia/*` declared by stack profile; activated by `pactia init` or explicit `import` | Merged when imported — not auto-loaded by `@stack` alone | `protocol`, `surface`, … |
 | **package** | `import @scope/name` | **Only imported names** (or full export with `import * from`) | Author `export` on `define tag` / `define macro` |
@@ -40,37 +40,42 @@ Tags and macros resolve through a **workspace-effective registry** built at comp
 
 ### Categories
 
-Every tag and macro in a package manifest carries a **category** for tooling, docs, and IDE grouping — not a separate namespace.
+Every tag and macro carries a **category** aligned with Pactia keyword scope — not a parallel taxonomy (`protocol`, `surface`, `domain`, …).
 
-| Category | Typical members |
-| --- | --- |
-| `core` | Kernel tags: `@entity`, `@api`, `@auth`, `@guide`, … |
-| `stack` | Stack macros: `#[database]`, platform defaults |
-| `protocol` | REST/GraphQL/gRPC wire field schemas and nested blocks (`@grpc`, `@graphql`, …) |
-| `surface` | `@web`, `@ios`, `#[form]`, `#[a11y]` |
-| `compliance` | HIPAA, GDPR, sanctions tags |
-| `domain` | Vertical domain tags (`@escrow`, `@listing`, …) |
-| `extension` | Org-specific custom tags (default for package authors) |
+| Category | Keyword scope | Typical kernel tags |
+| --- | --- | --- |
+| `product` | `product { }` | `@stack`, `@topology`, `@tenancy`, `@guide`, `@surface`, `@bind` |
+| `module` | `module { }` | `@actor`, `@config`, `@errors`, `@event`, `@integration`, `@rule`, `@observe`, `@security`, `@policy`, `@compliance`, `@deploy`, … |
+| `model` | `model { }` | `@entity`, `@enum`, `@relation`, `@states`, `@rule` |
+| `service` | `service { }` | `@api`, `@auth`, `@input`, `@output`, `@test`, `@must`, … |
+| `field` | field line in `model` | `@pk`, `@fk`, `@unique`, `@pii`, `@nullable`, … |
 
-Package authors set category on registry definitions:
+**Tier** (separate from category) controls resolution: `kernel` | `stack` | `std` | `package`.
+
+Optional **`kind`** metadata on package tags (`protocol`, `surface`, `compliance`, …) is for IDE grouping only — never a category.
+
+Normative kernel catalog: [registry/kernel-tags.yaml](../registry/kernel-tags.yaml).
+
+Package authors set **category** on `define tag` / `define macro` to match where the symbol may appear:
 
 ```pactia
 define tag sanctions_check {
-  category compliance
-  scope endpoint
+  category service
+  kind compliance
+  scope api
   body { level: string, provider: string, }
   lowers { product.yaml security.sanctionsChecks[] }
 }
 ```
 
-Omitting `category` defaults to `extension`. Kernel entries are always `core`.
+Omitting `category` on package tags defaults to `service`. Kernel entries use the categories above.
 
 ### Building `effectiveRegistry`
 
 Per compile unit (single file or [workspace](language-spec.md#workspace-layout)):
 
 ```
-1. Seed kernel tags[] (category core) — always visible
+1. Seed kernel tags[] from [kernel-tags.yaml](../registry/kernel-tags.yaml) — always visible
 2. Resolve package bound by `@stack` tag target on `product` (if present); merge its tags[] + macros[] at stack-tier precedence
 3. Walk `import` statements in scope chain for the current file:
      product.pactia imports → whole workspace
@@ -186,18 +191,18 @@ Canonical shapes match [fleet-management-v2.pactia](../fixtures/kernel/fleet-man
 | `@security` | clause | `module` | required | prose / assignments | `product.yaml` (`security`) — declared at module scope, aggregated to product IR |
 | `@policy` | clause | `module` | required | assignments | `product.yaml` (`security`) |
 | `@api` | clause | `service`, template | snake_case | assignments | `modules/<module>/services/*.service.yaml` |
-| `@web` / `@ios` | clause | `@api` | snake_case | assignments | `product.yaml` (`surfaces`) |
+| `@surface` | clause | `@api` | snake_case | assignments | `product.yaml` (`surfaces[]`) |
+| `@bind` | modifier | `@surface` | omit | assignments | `product.surfaces[].bind` — inherits from `@api` when omitted |
 | `@test` | clause | `service` | snake_case | assignments | service YAML `scenarios[]` |
 | `@must` | clause | `service` | snake_case | assignments + prose | service YAML `obligations[]` |
+| `@input` | modifier shorthand | `@api` | omit | type ref | `endpoint.request` |
+| `@output` | modifier shorthand | `@api` | omit | type ref | `endpoint.response` |
+| `@status` | modifier shorthand | `@api` | omit | number | `response.status` |
 | `@auth` | modifier | `@api` | omit | assignments | `authorization` |
 | `@public` | modifier flag | `@api` | omit | flag | `authorization.type: PUBLIC` |
-| `@body` | modifier shorthand | `@api` | omit | type ref | `request.dto` |
-| `@returns` | modifier shorthand | `@api` | omit | type ref | `response.dto` |
-| `@status` | modifier shorthand | `@api` | omit | number | `response.status` |
-| `@emit` | modifier shorthand | `@api` | omit | event ref | `emits` |
+| `@emit` | modifier shorthand | `@api` | omit | event ref | `endpoint.emits[]` |
 | `@pk` `@unique` `@index` `@nullable` `@pii` | modifier flag | `@entity` field | omit | flag | field annotations |
 | `@fk` | modifier | `@entity` field | omit | `{ entity: T }` | `annotations.references` |
-| `@bind` | modifier | `@web`, `@ios` | omit | assignments | optional — inherits from `@api` |
 | `#[database]` etc. | macro | `service` | — | expands | `service.flags` |
 | `#[list]` `#[owner]` etc. | macro | `@api` | — | expands | endpoint patterns |
 
@@ -232,28 +237,32 @@ Field modifiers **prefix** the field line (`@pk`, `@fk { entity: Customer }`) �
 | `@topology` | `@topology { mode: microservices, }` | `product.topology` |
 | `@tenancy` | `@tenancy { mode: single, }` | `product.tenancy` |
 
-### Service options (tags, not macros)
+### Service options (macros only)
 
-Prefer macros `#[database]` `#[cache]` `#[events]` **immediately above** `service Name { }` — they expand to `@database { }`, etc. See [language-spec.md — Prefix decorations](language-spec.md#prefix-decorations-macros-and-modifier-tags).
+Service infrastructure flags are **macros only** — no kernel `@database` / `@cache` / `@events` tags:
+
+| Macro | Example | Lowers to |
+| --- | --- | --- |
+| `#[database]` | above `service FleetService { }` | `service.flags.database: true` |
+| `#[cache]` | above `service` | `service.flags.cache: true` |
+| `#[events]` | above `service` | `service.flags.events: true` |
+
+Place macros **immediately above** `service Name { }`. See [language-spec.md — Prefix decorations](language-spec.md#prefix-decorations-macros-and-modifier-tags).
+
+### HTTP / API (kernel + protocol packages)
 
 | Tag | Example | Lowers to |
 | --- | --- | --- |
-| `@database` | `@database { }` | `service.database: true` |
-| `@cache` | `@cache { }` | `service.cache: true` |
-| `@events` | `@events { }` | `service.events: true` |
-
-### HTTP / API (tags only — modifiers are macros)
-
-| Tag | Example | Lowers to |
-| --- | --- | --- |
+| `@api` | `@api list_vehicles { }` | `service.endpoints[]` — identity and summary only in kernel |
 | `@auth` | `@auth { roles: [Customer, Admin] }` | `authorization.roles` |
 | `@public` | `@public` | `authorization.type: PUBLIC` |
-| `@body` | `@body CreateVehicleRequest` | `request.dto` |
-| `@returns` | `@returns VehicleListResponse` | `response.dto` |
-| `@status` | `@status 201` | `response.status` |
-| `@emit` | `@emit vehicle.created` | `emits` |
-| `@throws` | `@throws { names: [NotFound, Forbidden] }` on `@api` | `endpoint.errors` |
-| `@transition` | `@transition { from: PENDING, to: PAID }` | statemachine edge on endpoint |
+| `@input` | `@input CreateVehicleRequest` | `endpoint.request` |
+| `@output` | `@output VehicleListResponse` | `endpoint.response` |
+| `@status` | `@status 201` | `endpoint.response.status` |
+| `@emit` | `@emit vehicle.created` | `endpoint.emits[]` |
+| `@throws` | `@throws { names: [NotFound, Forbidden] }` on `@api` | `endpoint.errors[]` |
+
+**Wire fields** (`method`, `path`, REST nested blocks) require `import @pactia/protocol-rest` (tier `std`, category `service`). gRPC and GraphQL wire blocks are **package tags only** — not kernel.
 
 Endpoint **patterns** use macros — not tags: `#[list]` `#[paginated]` `#[owner]` `#[create]` `#[idempotent]` — see #macros.
 
@@ -328,45 +337,55 @@ A line like `> on vehicle.created -> NotificationService.onVehicleCreated` **out
 
 ---
 
-## Protocol tags (wire validation packages)
+## Protocol packages (std tier — not kernel)
 
-`@api` is a **kernel clause** — always parsed. **`import @pactia/protocol-rest`** adds REST wire validation (`method`, `path`, REST-specific nested tags). gRPC and GraphQL follow the same pattern.
+`@api` is a **kernel clause** (category `service`) — always parsed. It carries operation identity only. **`import @pactia/protocol-rest`** adds REST wire validation (`method`, `path`, …). Without that import, wire fields in `@api` are compile errors.
 
-| Tag | Package | Example |
+| Package tag | Package | Example |
 | --- | --- | --- |
-| `@api` | `@pactia/protocol-rest` (wire fields) | `@api list_vehicles { method: GET, path: "/api/v1/vehicles", }` |
-| `@grpc` | `@pactia/protocol-grpc` | `@grpc MarkPaymentSent { service: trade.TradeService, rpc: MarkPaymentSent, }` |
-| `@graphql` | `@pactia/protocol-graphql` | `@graphql vehicles { type: Query, field: vehicles, }` |
+| REST wire fields | `@pactia/protocol-rest` | `method: GET, path: "/api/v1/vehicles"` inside `@api { }` |
+| `@body` / `@returns` aliases | `@pactia/protocol-rest` | Optional ergonomic aliases for `@input` / `@output` on REST profiles |
+| gRPC wire block | `@pactia/protocol-grpc` | Package tag nested in `@api { }` — not kernel |
+| GraphQL wire block | `@pactia/protocol-graphql` | Package tag nested in `@api { }` — not kernel |
 
-REST endpoints with `method` / `path` require `import @pactia/protocol-rest`. The kernel does not parse bare `GET` / `POST` lines outside `@api { }`.
+REST endpoints with `method` / `path` require `import @pactia/protocol-rest`. The kernel does not define `@grpc`, `@graphql`, `@web`, or `@ios`.
 
 See [platform.md](platform.md#protocol-packages).
 
 ---
 
-## Surface tags (package-registered)
+## Surfaces (kernel `@surface` + std packages)
 
-Surface intent uses **block tags** for each platform. Nested tags and macros live inside:
+Client UI intent uses one **kernel** tag — `@surface` — nested inside `@api { }` (category `product`, lowers to `product.yaml` `surfaces[]`). Platform-specific detail (`#[form]`, `#[a11y]`, layout macros) comes from **surface std packages** after `import`.
 
 ```pactia
-@web {
-  @screen { vehicle-list }
-  @route { /fleet/vehicles }
-  #[a11y(WCAG-AA)]
-  @bind { service: FleetService, method: GET, path: "/api/v1/vehicles" }
-  > Customer browses their vehicles in a paginated table
+@api list_vehicles {
+  method: GET,
+  path: "/api/v1/vehicles",
+
+  @surface vehicle_list {
+    platform: web,
+    screen: { id: vehicle_list },
+    route: { path: "/fleet/vehicles" },
+    > Customer browses their vehicles in a paginated table
+  }
+
+  @surface vehicle_list {
+    platform: ios,
+    screen: { id: vehicle_list },
+    nav: { tab: FleetTab },
+    > Customer scrolls fleet on phone with pull-to-refresh
+  }
 }
 ```
 
-| Tag | Package | Purpose |
+| Concern | Kernel | Std package (after import) |
 | --- | --- | --- |
-| `@web` | `@pactia/surface-react` | Web client block |
-| `@ios` | `@pactia/surface-swiftui` | iOS block |
-| `@android` | `@pactia/surface-compose` | Android block |
-| `@desktop` | `@pactia/surface-electron` | Desktop block |
-| `@screen` | surface packages | `@screen { id }` |
-| `@route` | `@web` | `@route { /path }` |
-| `@nav` | mobile packages | `@nav { TabName }` |
+| Surface block | `@surface { platform, screen, route, nav, … }` | — |
+| `@bind` | Links surface to `@api` (inherits service + operation when omitted) | — |
+| Layout / a11y macros | — | `#[form]`, `#[a11y(WCAG-AA)]` from `@pactia/surface-*` |
+
+There are **no** kernel platform tags (`@web`, `@ios`, `@android`, `@desktop`). Use `@surface { platform: web \| ios \| android \| desktop, … }`.
 
 ---
 
@@ -388,7 +407,8 @@ Package authors register new `@name { }` tags in **`index.pactia`** with `define
 
 ```pactia
 define tag compliance {
-  category compliance
+  category module
+  kind compliance
   scope module
   body {
     framework: string,
@@ -473,7 +493,7 @@ Hand-authored `extensions[]` in manifest remains valid for protocol packages. **
 #[cache(ttl: 300)]
 ```
 
-Macros attach to the **nearest `@api { }` block**, `service` block, or surface block (`@web { }`, …). Multiple macros on one line are expanded left-to-right.
+Macros attach to the **nearest `@api { }` block**, `service` block, or `@surface { }` block. Multiple macros on one line are expanded left-to-right.
 
 Arguments are **scalars only** — identifiers, numbers, strings, simple `key: value` pairs. No nested blocks inside macro argument lists.
 
@@ -535,9 +555,9 @@ Default expansions below; stack packages **replace** these in `pactia.package.ya
 
 | Macro | Default expansion | IR effect |
 | --- | --- | --- |
-| `#[database]` | `@database { }` | `service.database: true` |
-| `#[cache]` | `@cache { }` | `service.cache: true` |
-| `#[events]` | `@events { }` | `service.events: true` |
+| `#[database]` | `service.flags.database: true` | `service.flags.database: true` |
+| `#[cache]` | `service.flags.cache: true` | `service.flags.cache: true` |
+| `#[events]` | `service.flags.events: true` | `service.flags.events: true` |
 
 ---
 
@@ -552,7 +572,7 @@ When multiple packages register the same macro name, **the first winning layer**
 4. pactiac built-in default expansions     ← lowest
 ```
 
-Tags: **kernel tags** are always available (`core`). **Package tags** exist in the workspace only after `import` (selective or wildcard). Two imports exposing the same unqualified name → `REGISTRY_COLLISION` unless one is qualified with `as`.
+Tags: **kernel tags** are always available (see [kernel-tags.yaml](../registry/kernel-tags.yaml)). **Package tags** exist in the workspace only after `import` (selective or wildcard). Two imports exposing the same unqualified name → `REGISTRY_COLLISION` unless one is qualified with `as`.
 
 See [Workspace registry](#workspace-registry) for selective import and categories.
 
@@ -617,8 +637,8 @@ Domain and protocol packages may register additional macros the same way. Prefer
 These remain **tags** (always `{ }`):
 
 - `@auth { roles: [Customer, Admin] }` — roles are facts
-- `@returns VehicleListResponse` — response DTO is a fact
-- `@body CreateVehicleRequest` — request DTO is a fact
+- `@output VehicleListResponse` — response DTO is a fact
+- `@input CreateVehicleRequest` — request DTO is a fact
 - `@throws { names: [NotFound, Forbidden] }` — error list is a fact
 - `@emit vehicle.created` — event name is a fact
 - `@public` — public route is a fact
@@ -658,7 +678,7 @@ Tags and prose **attach to the nearest scope** and **cascade downward** unless o
 product
   └── module
         └── service
-              └── `@api { }` / model field / `@web` screen
+              └── `@api { }` / model field / `@surface`
 ```
 
 | Scope | Typical cross-cutting content |
@@ -829,7 +849,7 @@ CI/CD **tool choice** (GitHub Actions, ArgoCD) stays in the **stack package**. `
 | --- | --- | --- |
 | `#[rate_limit(n, unit)]` | `#[rate_limit(100, rpm)]` inside `@api { }` or `@security { }` | `endpoint.rateLimit` |
 | `@require_mfa { }` | `@require_mfa { Admin }` | `security.mfa.roles` |
-| `#[a11y(...)]` | `#[a11y(WCAG-AA)]` inside `@web { }` | `product.yaml` (`surfaces`) |
+| `#[a11y(...)]` | `#[a11y(WCAG-AA)]` inside `@surface { }` | `product.yaml` (`surfaces`) |
 | `@retain { }` | `@retain { 7y }` on field | `policies.retention` |
 | `@encrypt { }` | `@encrypt { at_rest }` on field | `policies.encryption` |
 | `@audit { }` | `@audit { }` on `@api { }` POST | `security.auditRequired` |
@@ -867,7 +887,7 @@ Example — MVP constraint as prose (not a keyword):
 | HIPAA PHI tagging | `import @pactia/hipaa` + `@compliance` |
 | Hexagonal architecture preference | `@guide` prose |
 | Endpoint rate limit | `#[rate_limit(100, rpm)]` inside `@api { }` or `@security { }` |
-| VoiceOver on iOS | `@ios { ... #[a11y(VoiceOver)] ... }` |
+| VoiceOver on iOS | `@surface { platform: ios, … #[a11y(VoiceOver)] … }` |
 | Never log secrets | `@guide` or `@must always` + `@test` |
 
 ---
@@ -886,8 +906,9 @@ import @acme/engineering-standards as standards;
 | Package kind | Injects |
 | --- | --- |
 | `stack` | Platform law, CI baseline, coding standards |
-| `domain` | Entities, rules, integrations, compliance blocks (`@guide`, `@security`, `@compliance`) |
-| `protocol` | Wire tags (`@api` validation, `@grpc`, `@graphql`) and surface block schemas |
+| `vertical` | Entities, rules, integrations, compliance blocks (`@guide`, `@security`, `@compliance`) |
+| `protocol` | Wire validation on `@api` (REST/gRPC/GraphQL package tags) |
+| `surface` | UI macros and layout patterns inside `@surface { }` |
 
 Consumer `product` inherits package guidance; overrides only where the product diverges.
 

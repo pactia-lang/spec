@@ -11,7 +11,7 @@ Authors: start with [overview.md](overview.md) (three altitudes) and [language-s
 ```
 ClauseTag         ::= "@" TagName TagTarget "{" ClauseBody "}"
 ModifierFlag      ::= "@" TagName                              // zero args — @pk, @public
-ModifierShorthand ::= "@" TagName ( Reference | Number )      // one arg — @returns VehicleDto, @status 201, @auth Customer
+ModifierShorthand ::= "@" TagName ( Reference | Number )      // one arg — @output VehicleDto, @status 201, @auth Customer
 ModifierTag       ::= "@" TagName "{" ModifierBody "}"         // multiple args — @auth { roles: [...] }
 Macro             ::= "#[" Identifier MacroArgs? "]"
 
@@ -32,7 +32,7 @@ HostLine          ::= ModuleDecl | ServiceDecl | FieldDecl | ApiDecl | WebDecl |
 | Arity | Canonical form | Examples |
 | --- | --- | --- |
 | Zero | Flag | `@pk`, `@public`, `@unique` |
-| One | Shorthand | `@returns VehicleListResponse`, `@status 201`, `@emit vehicle.created`, `@auth Customer` |
+| One | Shorthand | `@output VehicleListResponse`, `@status 201`, `@emit vehicle.created`, `@auth Customer` |
 | Multiple | Body | `@auth { roles: [Customer, Admin] }`, `@fk { entity: Customer }` |
 
 ---
@@ -61,7 +61,7 @@ Inside `{ }`: every structured line is a comma-terminated field/assignment **or*
 ```pactia
 @auth { roles: [Customer, Admin] }
 #[list] #[paginated] #[owner]
-@returns VehicleListResponse
+@output VehicleListResponse
 @throws { names: [Forbidden] }
 @api list_vehicles {
   method: GET,
@@ -69,7 +69,7 @@ Inside `{ }`: every structured line is a comma-terminated field/assignment **or*
 }
 ```
 
-Modifiers (`@auth`, `@returns`, `@body`, …) use **prefix** placement on lines above `@api`. Wire fields (`method`, `path`) require `import @pactia/protocol-rest`.
+Modifiers (`@auth`, `@output`, `@input`, …) use **prefix** placement on lines above `@api`. Wire fields (`method`, `path`) require `import @pactia/protocol-rest`.
 
 ---
 
