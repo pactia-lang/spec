@@ -1,0 +1,36 @@
+pactia 1.0
+
+import @pactia/rust-anb;
+
+product FleetManagement {
+  > Platform for tracking vehicles and managing fleets.
+  > Trust is the core product value — customers must only ever see their own vehicles.
+  > Every action that touches fleet data must be auditable.
+  > Map all API errors to the platform envelope before returning to clients.
+  > Use cursor pagination on every list endpoint — never offset.
+
+  @stack rust-anb { }
+
+  module fleet {
+
+    > Admins manage fleets, register vehicles, and decommission vehicles.
+    > Customers browse and track vehicles assigned to their account.
+    > Only admins may register or decommission a vehicle.
+    > All admin mutations must be audit-logged.
+
+    > A vehicle belongs to exactly one customer.
+    > VIN must be unique across the platform.
+    > GPS position history is retained indefinitely for audit and dispute resolution.
+
+    > Customers and admins can list vehicles.
+    > Results are owner-scoped for customers and show the full fleet for admins.
+    > Lists are cursor-paginated with a stable sort by creation time.
+
+    > Only admins may create a vehicle.
+    > Creating a vehicle requires a valid customer, VIN, label, and device binding.
+    > A vehicle.created notification is emitted when registration succeeds.
+
+    > Customers who attempt to register a vehicle receive forbidden — not found masking.
+    > Duplicate VIN registration returns conflict with a clear error code.
+  }
+}

@@ -1,9 +1,38 @@
 # Pactia specification
 
-**Pactia is an AI-native intent language** — compiled to AI-neutral YAML IR; BSC renders for any model or coding platform.
+### The intent language for the AI era
+
+**You write what must stay true. AI writes how it works.**
+
+Pactia is an **AI-native intent language** — compiled by **pactiac** to AI-neutral YAML IR; BSC renders for any model or coding platform. Packages ship on **pactia.io**.
 
 **Current version:** 1.0  
 **Status:** Specification
+
+---
+
+### The intent line
+
+```
+┌─────────────────────────────────────────────┐
+│  ABOVE THE LINE — Intent                    │
+│  Entities · APIs · Roles · Policy · Stack   │
+│  Prose · Tags · Packages · Provenance       │
+└─────────────────────────────────────────────┘
+────────────── conformance gate ───────────────
+┌─────────────────────────────────────────────┐
+│  BELOW THE LINE — Implementation            │
+│  Logic · indexes · edge cases · tuning      │
+│  Owned by AI and engineers. Free.           │
+└─────────────────────────────────────────────┘
+```
+
+Above the line: what every session must inherit — regardless of model, engineer, or sprint.  
+Below the line: how it works today. Pactia never owns it.
+
+See [overview.md](docs/overview.md) for philosophy, three altitudes, and architecture coverage.
+
+---
 
 ## Hello world (altitude 0)
 
@@ -17,7 +46,26 @@ product MyApp {
 }
 ```
 
-No tags. No `module`. At least one `>` line should describe the product. See [overview.md](docs/overview.md#three-altitudes).
+No tags. No `module`. At least one `>` line should describe the product. See [overview.md — three altitudes](docs/overview.md#three-altitudes).
+
+---
+
+## See it
+
+Fleet management in **Pactia 1.0** — mostly prose, with tags only where structure matters (**56 lines**):
+
+[![Pactia 1.0 fleet-management-mini example](https://raw.githubusercontent.com/pactia-lang/.github/main/profile/assets/fleet-management-example.png)](https://raw.githubusercontent.com/pactia-lang/.github/main/profile/assets/fleet-management-example.png)
+
+Almost pure prose — same product, **`@stack` only**, no model or API tags (**37 lines**):
+
+[![Pactia 1.0 fleet-management-prose example](https://raw.githubusercontent.com/pactia-lang/.github/main/profile/assets/fleet-management-prose-example.png)](https://raw.githubusercontent.com/pactia-lang/.github/main/profile/assets/fleet-management-prose-example.png)
+
+[Mini fixture](fixtures/kernel/fleet-management-mini.pactia)
+· [Prose fixture](fixtures/kernel/fleet-management-prose.pactia)
+· [Full fixture](fixtures/kernel/fleet-management-v2.pactia)
+· [Language spec](docs/language-spec.md)
+
+---
 
 ## Documents
 
@@ -40,14 +88,23 @@ Full index: [docs/README.md](docs/README.md) (8 documents)
 | --- | --- | --- |
 | 1.0 | `>=1.0.0` | `>=1.0.0` |
 
-## Related repositories
+## The stack
 
-| Repo | Role |
-| --- | --- |
-| [pactiac](https://github.com/pactia-lang/pactiac) | Compiler |
-| [pactia](https://github.com/pactia-lang/pactia) | Package manager (`pactia.toml`, `pactia.lock`) |
-| [examples](https://github.com/pactia-lang/examples) | Sample programs |
-| [vscode-pactia](https://github.com/pactia-lang/vscode-pactia) | Editor extension |
+```
+*.pactia  ──pactiac──▶  AI-neutral IR  ──▶  agent context + specifications
+              ▲
+         pactia + pactia.io — resolve, lock, publish packages
+```
+
+| | Repo | Role |
+| --- | --- | --- |
+| Language | **spec** (this repo) | Pactia 1.0 — grammar, tags, intent line |
+| Compiler | [pactiac](https://github.com/pactia-lang/pactiac) | Deterministic compile to module-scoped IR |
+| Packages | [pactia](https://github.com/pactia-lang/pactia) | `pactia add`, lockfiles, publish *(in progress)* |
+| Editor | [vscode-pactia](https://github.com/pactia-lang/vscode-pactia) | Syntax, tags, diagnostics |
+| Examples | [examples](https://github.com/pactia-lang/examples) | Canonical workspaces *(planned)* |
+
+**Model-agnostic by design.** Switch Cursor, Claude Code, or Copilot — your `.pactia` files and lockfile stay the same.
 
 ## Changelog
 
