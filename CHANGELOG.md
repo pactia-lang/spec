@@ -14,6 +14,8 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 ### Changed
 
+- **Normative fleet tag schemas:** `api-v1`, `auth-v1`, `entity-v1`, `stack-v1`, and `public-v1` now constrain bodies used in `fleet-management-v2.pactia` (remaining tag schemas are still stubs).
+
 - **Kernel registry model:** single `@surface` + `@bind` for multi-platform UI; no kernel `@web`, `@ios`, `@grpc`, or protocol/platform tags.
 - **Service DTO tags:** kernel `@input` / `@output` replace `@body` / `@returns` (REST package may register aliases).
 - **Service flags:** `#[database]`, `#[cache]`, `#[events]` macros only — no `@database` / `@cache` / `@events` kernel tags.

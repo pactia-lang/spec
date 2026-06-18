@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://pactia.io/schemas/tags/stack-v1.json",
   "title": "Pactia kernel tag @stack (v1)",
-  "description": "Normative body schema stub for kernel @stack. See spec/registry/kernel-tags.yaml.",
+  "description": "Product stack binding. Target id is parsed from source; body is optional stack profile facts.",
   "type": "object",
   "additionalProperties": true
 }
