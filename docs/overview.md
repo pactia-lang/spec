@@ -135,7 +135,7 @@ When you formalize something, Pactia is strict about **how** (tags and macros) s
 
 ### Shareable prompts (packages)
 
-Chat prompts die in history. `kabol.toml` + `kabol.lock` pin package versions; `use @scope/name;` imports paths only — same intent in every repo and session.
+Chat prompts die in history. `kabol.toml` + `kabol.lock` pin package versions; import @scope/name;` imports paths only — same intent in every repo and session.
 
 ### What Pactia is not
 
@@ -231,7 +231,7 @@ Pactia is how humans **author**. `pactiac` produces **vendor-neutral IR**. BSC *
 | Senior architect / tech lead | `data`, `service`, `@api { }`, `@tag { }`, `#[macro]`, `@web { }` / `@ios { }`, `@test { }` |
 | Platform team                | Stack packages on pactia.io — not Pactia                   |
 | Frontend / mobile leads      | `@web { }`, `@ios { }`, `@bind { }` in same `.pactia` file |
-| Community / vendors          | Pactia packages (`use @pactia/*` on pactia.io)            |
+| Community / vendors          | Pactia packages (import @pactia/*` on pactia.io)            |
 | AI coding agent              | **Never** edits Pactia — implements from `specification/` |
 
 ## Language version
@@ -247,9 +247,9 @@ A mid-altitude program: actors and entities are tagged; **payment lifecycle is p
 ```pactia
 pactia 1.0
 
-use @pactia/kyc-compliance;
-use @pactia/protocol-rest;
-use @pactia/rust-anb;
+import @pactia/kyc-compliance;
+import @pactia/protocol-rest;
+import @pactia/rust-anb;
 
 product P2PExchange {
   > Peer-to-peer crypto/fiat marketplace with escrow
@@ -668,7 +668,7 @@ CI tool vendor → (1). Metrics per event → (2). SLO targets → (3). Entity r
 | Product, data, services | `product`, `data { @entity … }`, `@api { }` in `service` |
 | State machines, party roles | `@states { }` + `#[buyer]` / `#[owner]` + `@transition { }` |
 | Request/response shapes | `@body { }` `@returns { }` |
-| Packages | `use @scope/name`, `import`, `define template` |
+| Packages | `import @scope/name`, `import`, `define template` |
 | Integration, events, policy | `@event { }`, `@policy { }`, `@integration { }`, prose |
 | Observability, deploy gates | `@observe { }`, `@deploy { }` |
 | Acceptance tests | `@test { }` + When/Then |

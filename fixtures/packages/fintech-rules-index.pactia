@@ -4,7 +4,7 @@
 
 pactia 1.0
 
-define tag sanctions_check {
+export define tag sanctions_check {
   scope endpoint
 
   body {
@@ -18,7 +18,7 @@ define tag sanctions_check {
   }
 }
 
-define macro sanctions_screen {
+export define macro sanctions_screen {
   expands {
     @sanctions_check { level enhanced }
   }

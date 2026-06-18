@@ -11,7 +11,7 @@ Nine documents. Read top to bottom for a full picture.
 | [overview.md](overview.md) | Three altitudes, philosophy, intent line, architecture coverage |
 | [language-spec.md](language-spec.md) | Kernel grammar, `define`, workspace layout, authorization |
 | [grammar-reference.md](grammar-reference.md) | BNF and implementer error codes (not required for authors) |
-| [registry.md](registry.md) | All `@tag { }`, `#[macro]`, cross-cutting blocks — skip if not using `use` |
+| [registry.md](registry.md) | All `@tag { }`, `#[macro]`, cross-cutting blocks — skip if not using `import` |
 | [packages.md](packages.md) | pactia.io packages, registry authoring, extensibility |
 | [platform.md](platform.md) | Stack packages, semver / `kabol.lock`, protocol packages |
 | [compilation.md](compilation.md) | Compiler pipeline, provenance, package build |

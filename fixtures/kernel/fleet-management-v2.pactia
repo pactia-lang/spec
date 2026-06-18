@@ -3,8 +3,8 @@
 
 pactia 1.0
 
-use @pactia/protocol-rest;
-use @pactia/rust-anb;
+import @pactia/protocol-rest;
+import @pactia/rust-anb;
 
 product FleetManagement {
   > Platform for tracking vehicles and managing fleets

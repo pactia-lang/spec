@@ -26,13 +26,13 @@ cd vscode-pactia && npm install && npm run test:grammar
 
 | Highlight as | Examples |
 | --- | --- |
-| **Kernel keywords (9)** | `pactia`, `product`, `module`, `service`, `data`, `use`, `import`, `define`, `yaml` |
+| **Kernel keywords (9)** | `pactia`, `product`, `module`, `service`, `data`, `import`, `export`, `define`, `yaml` |
 | **Registry headers** | `scope endpoint`, `body { }`, `lowers { }`, `expands { }`, `category compliance` |
 | **Clause tags (teal)** | `@entity Vehicle { }`, `@api list { }`, `@actor customers { }` |
 | **Macros (purple, bold)** | `#[list]`, `#[database]`, `#[alias::macro]` — above `service` / `@api` |
 | **Modifier flags** | `@pk`, `@public`, `@pii`, `@optional` — no `{ }` when empty |
 | **Modifier shorthand** | `@returns VehicleDto`, `@status 201`, `@emit vehicle.created` |
-| **Imports** | `use @scope/name;`, `use @pkg::{a, b};`, `use @pkg as alias;` |
+| **Imports** | `import @scope/name;`, `import { a, b } from @pkg;`, `import @pkg as alias;` |
 | **Qualified tags** | `@alias::sanctions_check { }` |
 | **Prose (purple, italic)** | `> sentence` |
 | **Strings (green)** | `"PostgreSQL connection string"`, `"/api/v1/orders"` |
@@ -45,7 +45,7 @@ cd vscode-pactia && npm install && npm run test:grammar
 3. **Indent-aware close** — `}` at the same indent as the opening line closes the block.
 4. **Inline objects** — `{ service: FleetService, metric: error_rate }` inside arrays.
 5. **Package authoring** — `define tag` / `define macro` with nested `body { }`, `lowers { }`, `expands { }` registry blocks.
-6. **Qualified symbols** — `@alias::tag`, `#[alias::macro]` after `use @pkg as alias;`.
+6. **Qualified symbols** — `@alias::tag`, `#[alias::macro]` after import @pkg as alias;`.
 
 ## Keeping grammar in sync
 
