@@ -12,7 +12,10 @@ product PactiaLangWebsite {
   > Primary goals: explain the problem, show code, link to spec and GitHub, capture newsletter interest.
   > All copy must be readable without JavaScript for core message; enhancements are progressive.
 
-  @stack rust-anb { }
+  @stack html-css-js {
+    > HTML, CSS, and JavaScript stack.
+    > responsive design for desktop and mobile.
+   }
 
   @topology {
     mode: modular_monolith,

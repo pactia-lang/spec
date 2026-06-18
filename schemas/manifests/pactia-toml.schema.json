@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pactia.io/schemas/manifests/pactia-toml.schema.json",
+  "title": "pactia.toml (parsed)",
+  "description": "Logical shape after parsing pactia.toml. Source is TOML on disk; see spec/docs/packages.md.",
+  "type": "object",
+  "properties": {
+    "stackPackage": {
+      "type": "string",
+      "description": "Stack-kind package coordinate bound by product @stack",
+      "pattern": "^@[\\w-]+/[\\w-]+$"
+    },
+    "dependencies": {
+      "type": "object",
+      "description": "Semver ranges keyed by package coordinate",
+      "additionalProperties": {
+        "type": "string",
+        "minLength": 1
+      }
+    }
+  },
+  "additionalProperties": false
+}
