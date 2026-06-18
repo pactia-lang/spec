@@ -11,13 +11,11 @@ Pactia compiles to **AI-neutral YAML IR** (`input/**/*.yaml`) — not vendor-spe
 ## Pipeline overview
 
 ```
-┌──────────────┐     ┌──────────────────────┐     ┌──────────────────────────────┐
-│  *.pactia    │────▶│  input/**/*.yaml    │────▶│  specification/            │
-│  pactiac     │     │  (deterministic IR)  │     │  bsc render + expand (LLM) │
-└──────────────┘     └──────────────────────┘     └──────────────────────────────┘
-        │                        │
-        │                        └── validated by @pactia/schema — source of truth
-        └── stack package from @stack { } on product
+┌──────────────┐     ┌──────────────────────────────┐     ┌──────────────────────────────┐
+│  *.pactia    │────▶│  input/                      │────▶│  bsc render + expand (LLM)   │
+│  pactiac     │     │  *.module.yaml *.model.yaml  │     │  (optional agent briefs)     │
+│              │     │  *.service.yaml              │     │                              │
+└──────────────┘     └──────────────────────────────┘     └──────────────────────────────┘
 ```
 
 `pactiac` never calls an LLM. Optional LLM expansion happens only in **BSC** after IR is fixed, and only for agent-facing narrative — not for mutating enforceable fields.
@@ -43,11 +41,11 @@ Pactia compiles to **AI-neutral YAML IR** (`input/**/*.yaml`) — not vendor-spe
 12. Infer missing response/request shapes; warn on ambiguity
 13. Write kabol.lock if absent or updated
 14. Lower @tags → YAML IR with provenance (MACRO, DEFINE, PACKAGE on expanded fields)
-15. Lower @web { } / @ios { } → input/surfaces/*.yaml; resolve @bind { }
+15. Lower @web { } / @ios { } → `product.yaml` (`surfaces`); resolve @bind { }
 16. Apply yaml merge embeds: parse → validate → deep-merge (provenance: YAML_EMBED)
-17. Write output files (optional: input/macros.yaml audit trail)
-18. (optional) bsc compile-workspace → project-definition.yaml + specification/ (template render)
-19. (optional) bsc expand --target cursor|claude-code|… → LLM-enriched agent context from IR (provenance GENERATED; cacheable)
+17. Write module-scoped output: `<module>.module.yaml`, `<module>.model.yaml`, `services/<service>.service.yaml`
+18. (optional) bsc compile-workspace → project-definition.yaml + agent briefs from IR
+19. (optional) bsc expand --target cursor|claude-code|… → LLM-enriched agent context (provenance GENERATED; cacheable)
 ```
 
 See [language-spec.md](language-spec.md) for `yaml merge` rules and [workspace layout](language-spec.md#workspace-layout) for merge order.
@@ -59,7 +57,7 @@ See [language-spec.md](language-spec.md) for `yaml merge` rules and [workspace l
 | Step | Tool | LLM? | Output |
 | --- | --- | --- | --- |
 | Lower intent | `pactiac` | No | `input/**/*.yaml` |
-| Template render | `bsc render` | No | `specification/*.md`, target rule files |
+| Template render | `bsc render` | No | Agent briefs, target rule files |
 | Enrich for agent | `bsc expand` | Optional | Longer narratives, derived scenarios, stack hints — **grounded in IR** |
 
 **Rules for `bsc expand`:**
@@ -74,37 +72,149 @@ This is how a minimal Pactia file becomes a **contentful** agent brief without a
 
 ---
 
+## IR layout
+
+IR file names **mirror the kernel block** they lower from: `<target>.<block>.yaml`.
+
+| Pactia block | IR file |
+| --- | --- |
+| `module trading { }` | `trading.module.yaml` |
+| `model { }` in module `trading` | `trading.model.yaml` |
+| `service OrderService { }` | `order.service.yaml` |
+
+Ownership chain:
+
+```
+Manifest
+ └─ Product
+      └─ Module
+           ├─ Model
+           └─ Service
+```
+
+Example output tree (`pactiac compile -w ./my-product -o ./input`):
+
+```text
+input/
+  manifest.yaml
+  product.yaml
+
+  modules/
+    trading/
+      trading.module.yaml
+      trading.model.yaml
+      services/
+        order.service.yaml
+
+    wallet/
+      wallet.module.yaml
+      wallet.model.yaml
+      services/
+```
+
+| Path | Scope | Contents |
+| --- | --- | --- |
+| `manifest.yaml` | Compile output | Version, entry, lockfile digest, module file index, cross-module `references` (see below) |
+| `product.yaml` | Product | `product { }` — `@stack`, `@topology`, `@tenancy`, `@guide`, **`surfaces`**, **`security`**, **`deployment`** |
+| `modules/<module>/<module>.module.yaml` | Module | `module { }` — `@actor`, `@event`, `@config`, `@errors`, `@integration`, rules, `depends_on` |
+| `modules/<module>/<module>.model.yaml` | Module | `model { }` — `@entity`, `@enum`, `@relation`, `@states`, model rules |
+| `modules/<module>/services/<service>.service.yaml` | Service | `service { }` — metadata, `@api { }`, `@test`, `@must`, nested API tags |
+
+**Naming rules:**
+
+- `<module>` — kebab-case of the `module` clause identifier (`trading` → folder `modules/trading/`, files `trading.module.yaml`, `trading.model.yaml`).
+- `<service>` — service clause identifier lowercased, with a trailing `Service` suffix removed when present (`OrderService` → `order.service.yaml`, `FleetService` → `fleet.service.yaml`).
+
+**Agent retrieval:** work on `OrderService` in module `trading` → read `modules/trading/trading.module.yaml`, `modules/trading/trading.model.yaml`, and `modules/trading/services/order.service.yaml`.
+
+Single-file products with one `module` block compile to the same shape under `modules/<module>/`. Products with no explicit `module` use `modules/default/default.module.yaml` and `default.model.yaml`.
+
+See [registry.md](registry.md#cross-cutting-concerns) for tag-level routing and provenance.
+
+---
+
+## `manifest.yaml`
+
+`manifest.yaml` records **what the compiler produced**: language version, compile metadata, the module file tree, and cross-module model links. It is emitted last.
+
+It is **not** product intent — no tags, no macros, no `@security` / `@deploy` / surface facts (those lower to `product.yaml`).
+
+| Field | Source |
+| --- | --- |
+| `pactiaVersion` | `pactia 1.0` declaration |
+| `compiledAt` | Compiler timestamp (ISO 8601) |
+| `entry` | Workspace entry file (e.g. `product.pactia`) |
+| `lockfileDigest` | Digest of `kabol.lock` at compile time |
+| `modules[]` | One entry per compiled module — file paths only |
+| `references[]` | Cross-module `@fk` / `@relation` edges the compiler resolved |
+
+Module and service file names in `modules[]` are **relative to** `path` (the module directory).
+
+```yaml
+manifest:
+  pactiaVersion: "1.0"
+  compiledAt: "2026-06-18T12:00:00Z"
+  entry: product.pactia
+  lockfileDigest: sha256:abc123...
+
+  modules:
+    - name: trading
+      path: modules/trading/
+      module: trading.module.yaml
+      model: trading.model.yaml
+      services:
+        - name: order
+          file: services/order.service.yaml
+
+    - name: wallet
+      path: modules/wallet/
+      module: wallet.module.yaml
+      model: wallet.model.yaml
+      services: []
+
+  references:
+    - from:
+        module: trading
+        entity: Order
+        field: customerId
+      to:
+        module: identity
+        entity: Customer
+```
+
+`references[]` entries are derived from compiled `*.model.yaml` — e.g. a field with `@fk { entity: Customer }` where `Customer` is declared in another module. Keys `module`, `entity`, and `field` are manifest schema fields, not kernel keywords.
+
+---
+
 ## Output file mapping
+
+Paths are relative to the compile output root (`input/` by convention). `<module>` and `<service>` are kebab-case.
 
 | Pactia source | Output file |
 | --- | --- |
-| `product { @stack @topology @tenancy ... }` | `input/project.yaml` |
-| `service { @api { } + nested @tag { } + #[macro] }` | `input/services/<kebab-name>.yaml` |
-| `@actor { }` | `input/business.yaml` |
-| `model { @entity @enum @relation @states }` | `input/domain.yaml` |
-| `>` rules, constraint prose | `input/business.yaml` (prose / guidance) |
-| `@integration` / integration prose | `input/integrations.yaml` |
-| `@event { }` with `handler` line | `input/communication.yaml` + `eventHandlers[]` |
-| `@policy { ... }` | `input/policies.yaml` |
-| `@errors` | `input/errors.yaml` (catalog) |
-| `@errors` on `@api` | `response.errors[]` per endpoint |
-| `@event` declarations | `input/communication.yaml` → `events[].payload` |
-| `@config { ... }` | `input/config.yaml` |
-| `@test` blocks | `input/scenarios.yaml` |
-| `@must` blocks | `input/obligations.yaml` |
-| Workspace `entities/*.pactia` | `input/domain.yaml` |
-| Workspace `features/*.pactia` | `input/services/<kebab-name>.yaml` |
+| Compiler-emitted file index | `manifest.yaml` |
+| `product { @stack @topology @tenancy ... }` | `product.yaml` |
+| `module { @actor @event @config @errors ... }` | `modules/<module>/<module>.module.yaml` |
+| `model { @entity @enum @relation @states }` | `modules/<module>/<module>.model.yaml` |
+| `>` rules on `module` | `<module>.module.yaml` (`rules[]` / guidance) |
+| `>` rules on `model` | `<module>.model.yaml` |
+| `@integration` | `<module>.module.yaml` (`integrations[]`) |
+| `@event { }` with `handler` line | `<module>.module.yaml` (`events[]`, `eventHandlers[]`) |
+| `@observe` on module | `<module>.module.yaml` |
+| `service { @api { } + nested @tag { } + #[macro] }` | `modules/<module>/services/<service>.service.yaml` |
+| `@errors` on `@api` | `response.errors[]` in the service file |
+| `@test` blocks | `<service>.service.yaml` (`scenarios[]`) |
+| `@must` blocks | `<service>.service.yaml` (`obligations[]`) |
+| Workspace `entities/*.pactia` | `<module>.model.yaml` (aggregated per module) |
+| Workspace `features/*.pactia` | `<service>.service.yaml` |
 | `define template` (expands in place) | Same targets as expanded kernel — provenance `DEFINE` |
-| `@web { }` / `@ios { }` surface blocks | `input/surfaces/*.yaml` |
-| `@guide`, `>` (guidance) | `input/guidance.yaml` |
-| `@security` | `input/security-policy.yaml` |
-| `@observe` | `input/observability.yaml` |
-| `@deploy` | `input/deployment.yaml` |
-| `@compliance` | `policies.yaml` + domain annotations |
-
-Service file naming: `FleetService` → `fleet-service.yaml`.
-
-See [registry.md](registry.md#cross-cutting-concerns) for cascade and provenance.
+| `@web { }` / `@ios { }` surface blocks | `product.yaml` (`surfaces`) |
+| `@guide` on product | `product.yaml` |
+| `@guide` on module / service | Respective `.module.yaml` or `.service.yaml` |
+| `@security`, `@policy`, `@compliance` | `product.yaml` (`security`) |
+| `@deploy`, `@environment`, `@gate` | `product.yaml` (`deployment`) |
+| `@compliance` field annotations | `<module>.model.yaml` field annotations |
+| Cross-module `@fk` / `@relation` | `*.model.yaml` + `manifest.yaml` `references[]` |
 
 ---
 
@@ -121,10 +231,10 @@ product FleetManagement {
 3. Otherwise query pactia.io for the highest matching release; write pin to `kabol.lock`.
 4. Download, verify digest, cache locally.
 
-Output in `input/project.yaml`:
+Output in `input/product.yaml`:
 
 ```yaml
-project:
+product:
   stackId: "@pactia/rust-anb"
   stackVersion: 1.0.0
   stackDigest: sha256:...
@@ -174,7 +284,7 @@ Used by **package authors** before `pactia publish` — distinct from product co
 1.  Read package source (index.pactia and/or pactia.package.yaml)
 2.  Lower define macro { expands { } } → macros[] entries
 3.  Lower define tag { scope body lowers } → tags[] + schemas/<name>-v1.json
-4.  Compile kernel declarations (model, service, …) → domain/integrations fragments
+4.  Compile kernel declarations (model, service, …) → `*.model.yaml` / `*.module.yaml` fragments
 5.  Merge yaml package/<section> heredocs → pactia.package.yaml
 6.  Merge hand-authored macros[] / tags[] with lowered define macro / define tag
 7.  Validate against schema for package.kind + @pactia/schema IR path allowlist

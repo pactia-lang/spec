@@ -80,12 +80,12 @@ At **`pactia package build`**, the compiler scans `export` modifiers on symbols 
 
 | `export` on | Merged into consumer when imported |
 | --- | --- |
-| `@entity`, `@enum`, shapes in `model { }` | `domain.yaml` entities, enums, invariants |
-| `@rule { }` blocks | `business.yaml` rules |
-| `@integration { }` blocks | `integrations.yaml` |
-| `@actor { }` blocks | `business.yaml` actors |
-| `service` blocks | `services/*.yaml` (prefix with package alias if collision) |
-| workflow tags | `business.yaml` workflows |
+| `@entity`, `@enum`, shapes in `model { }` | `modules/<module>/<module>.model.yaml` entities, enums, invariants |
+| `@rule { }` blocks | `<module>.module.yaml` rules |
+| `@integration { }` blocks | `<module>.module.yaml` integrations |
+| `@actor { }` blocks | `<module>.module.yaml` actors |
+| `service` blocks | `modules/<module>/services/*.service.yaml` (prefix with package alias if collision) |
+| workflow tags | `<module>.module.yaml` workflows |
 | `define tag` / `define macro` | `registry.tags[]` / `registry.macros[]` |
 
 Everything without `export` is **private** — consumers get `IMPORT_NOT_EXPORTED` if they import it.
@@ -245,7 +245,7 @@ Stack packages play **two roles** — both reference the same coordinate `@pacti
 | --- | --- | --- |
 | **`kabol.toml`** | Declare dependency + semver range; `kabol.lock` pins digest | `"@pactia/rust-anb" = "^1.0"` or `[stack] package = "@pactia/rust-anb"` |
 | **`import @pactia/rust-anb;`** | Import stack **registry** into authoring scope — `#[database]`, `#[cache]`, stack macros | Top of `product.pactia` |
-| **`@stack rust-anb { }` on `product`** | Product **fact** — lowers to `project.stackId`; triggers `platformLaw` / `technologyPolicy` merge | Inside `product { }` — **no version field** |
+| **`@stack rust-anb { }` on `product`** | Product **fact** — lowers to `product.stackId`; triggers `platformLaw` / `technologyPolicy` merge | Inside `product { }` — **no version field** |
 
 ```pactia
 import @pactia/protocol-rest;
@@ -344,7 +344,7 @@ model {
 }
 ```
 
-`pactia package build` compiles kernel declarations → `domain.yaml`, `integrations.yaml`, `business.yaml` fragments, bundles with manifest `exports` flags.
+`pactia package build` compiles kernel declarations → `*.model.yaml`, `*.module.yaml` fragments, bundles with manifest `exports` flags.
 
 Example: [examples/packages/kyc-compliance/](examples/packages/kyc-compliance/).
 
@@ -444,8 +444,8 @@ define tag sanctions_check {
     provider: string @optional { }
   }
   lowers {
-    input/security-policy.yaml sanctions_checks[]
-    input/services/{serviceKebab}.yaml endpoints[].sanctions
+    product.yaml security.sanctionsChecks[]
+    modules/{moduleKebab}/services/{serviceKebab}.service.yaml endpoints[].sanctions
   }
 }
 
@@ -481,9 +481,9 @@ tags:
     allowedScopes: [endpoint]
     schema: schemas/sanctions_check-v1.json
     lowers_to:
-      - file: input/security-policy.yaml
-        path: sanctions_checks[]
-      - file: input/services/{serviceKebab}.yaml
+      - file: product.yaml
+        path: security.sanctionsChecks[]
+      - file: modules/{moduleKebab}/services/{serviceKebab}.service.yaml
         path: endpoints[].sanctions
 
 macros:
@@ -761,8 +761,8 @@ define tag sanctions_check {
   }
 
   lowers {
-    input/security-policy.yaml sanctions_checks[]
-    input/services/{serviceKebab}.yaml endpoints[].sanctions
+    product.yaml security.sanctionsChecks[]
+    modules/{moduleKebab}/services/{serviceKebab}.service.yaml endpoints[].sanctions
   }
 }
 ```
@@ -815,7 +815,7 @@ One line per IR emission target. Format:
 
 | Part | Rule |
 | --- | --- |
-| `ir-file-path` | Path relative to workspace `input/` root, e.g. `input/security-policy.yaml` |
+| `ir-file-path` | Path relative to workspace `input/` root, e.g. `modules/{moduleKebab}/{moduleKebab}.model.yaml` |
 | `json-path` | Dot/bracket path into that file's schema; `[]` = append to array |
 | Placeholders | `{serviceKebab}` — replaced with enclosing service name in kebab-case at consumer compile |
 
@@ -832,9 +832,9 @@ tags:
     allowedScopes: [endpoint]
     schema: schemas/sanctions_check-v1.json
     lowers_to:
-      - file: input/security-policy.yaml
-        path: sanctions_checks[]
-      - file: input/services/{serviceKebab}.yaml
+      - file: product.yaml
+        path: security.sanctionsChecks[]
+      - file: modules/{moduleKebab}/services/{serviceKebab}.service.yaml
         path: endpoints[].sanctions
 ```
 
@@ -897,14 +897,14 @@ model {
 }
 ```
 
-`pactia package build` compiles these to **`domain.yaml`** (and related) fragments. Whether they merge into consumer products depends on manifest **`exports`**:
+`pactia package build` compiles these to **`*.model.yaml`** and **`*.module.yaml`** fragments. Whether they merge into consumer products depends on manifest **`exports`**:
 
 | `exports` flag | Merged into consumer |
 | --- | --- |
-| `domain: true` | `domain.yaml` entities, enums, relations |
-| `rules: true` | `business.yaml` rules |
-| `integrations: true` | `integrations.yaml` |
-| `services: true` | `services/*.yaml` |
+| `domain: true` | `modules/<module>/<module>.model.yaml` entities, enums, relations |
+| `rules: true` | `<module>.module.yaml` rules |
+| `integrations: true` | `<module>.module.yaml` integrations |
+| `services: true` | `modules/<module>/services/*.service.yaml` |
 
 See [packages.md](packages.md#export-sections).
 
@@ -1110,7 +1110,7 @@ define tag sanctions_check {
   scope endpoint
   body { level: string }
   lowers {
-    input/security-policy.yaml sanctions_checks[]
+    security/{moduleKebab}.yaml sanctions_checks[]
   }
 }
 
