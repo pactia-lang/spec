@@ -61,5 +61,5 @@ body:
       label: Related tooling (optional)
       options:
         - label: pactiac (compiler)
-        - label: kabol (package manager / lockfile)
+        - label: pactia (package manager / lockfile)
         - label: vscode-pactia (editor grammar)

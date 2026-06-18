@@ -20,12 +20,12 @@ export define tag sanctions_check {
 
 export define macro sanctions_screen {
   expands {
-    @sanctions_check { level enhanced }
+    @sanctions_check { level: enhanced, }
   }
 }
 
 model {
-  @enum {
-    > ScreeningLevel { STANDARD, ENHANCED }
+  @enum ScreeningLevel {
+    values: [STANDARD, ENHANCED],
   }
 }

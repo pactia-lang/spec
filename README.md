@@ -36,7 +36,7 @@ Full index: [docs/README.md](docs/README.md) (8 documents)
 
 ## Tooling
 
-| Pactia spec | pactiac | kabol |
+| Pactia spec | pactiac | pactia |
 | --- | --- | --- |
 | 1.0 | `>=1.0.0` | `>=1.0.0` |
 
@@ -45,7 +45,7 @@ Full index: [docs/README.md](docs/README.md) (8 documents)
 | Repo | Role |
 | --- | --- |
 | [pactiac](https://github.com/pactia-lang/pactiac) | Compiler |
-| [kabol](https://github.com/pactia-lang/kabol) | Package manager |
+| [pactia](https://github.com/pactia-lang/pactia) | Package manager (`pactia.toml`, `pactia.lock`) |
 | [examples](https://github.com/pactia-lang/examples) | Sample programs |
 | [vscode-pactia](https://github.com/pactia-lang/vscode-pactia) | Editor extension |
 

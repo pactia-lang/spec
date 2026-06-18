@@ -30,16 +30,16 @@ Pactia compiles to **AI-neutral YAML IR** (`input/**/*.yaml`) — not vendor-spe
 1.  Read and validate version declaration (pactia 1.0)
 2.  Lex: strip `//` line comments and `/* */` block comments (never in IR)
 3.  Resolve @stack { }; fetch stack package; load stack macros[] into effectiveRegistry
-4.  Resolve `import` per file scope; read `kabol.lock` pins for every package in `import`; build workspace effectiveRegistry
+4.  Resolve `import` per file scope; read `pactia.lock` pins for every package in `import`; build workspace effectiveRegistry
 5.  Merge declarations (package AST fragments per exports flags → local imports → main file)
 6.  Expand define (templates only) → kernel constructs
-7.  Expand #[macro] using effectiveRegistry (stack > use > std > defaults)
+7.  Expand #[macro] using effectiveRegistry (stack > import > std > defaults)
 8.  Validate @tag { } bodies against kernel rules + package JSON schemas
 9.  Validate protocol package @grpc / @api blocks against JSON schemas
 10. Verify protocol packages against stack allowedProtocolPackages
 11. Validate state graphs in model { states ... }
 12. Infer missing response/request shapes; warn on ambiguity
-13. Write kabol.lock if absent or updated
+13. Write pactia.lock if absent or updated
 14. Lower @tags → YAML IR with provenance (MACRO, DEFINE, PACKAGE on expanded fields)
 15. Lower @web { } / @ios { } → `product.yaml` (`surfaces`); resolve @bind { }
 16. Apply yaml merge embeds: parse → validate → deep-merge (provenance: YAML_EMBED)
@@ -144,7 +144,7 @@ It is **not** product intent — no tags, no macros, no `@security` / `@deploy` 
 | `pactiaVersion` | `pactia 1.0` declaration |
 | `compiledAt` | Compiler timestamp (ISO 8601) |
 | `entry` | Workspace entry file (e.g. `product.pactia`) |
-| `lockfileDigest` | Digest of `kabol.lock` at compile time |
+| `lockfileDigest` | Digest of `pactia.lock` at compile time |
 | `modules[]` | One entry per compiled module — file paths only |
 | `references[]` | Cross-module `@fk` / `@relation` edges the compiler resolved |
 
@@ -227,8 +227,8 @@ product FleetManagement {
 ```
 
 1. Read `@stack <id> { }` from `product`; expand bare id to `@pactia/<id>`.
-2. Resolve semver from `kabol.toml` — use `kabol.lock` when digest matches.
-3. Otherwise query pactia.io for the highest matching release; write pin to `kabol.lock`.
+2. Resolve semver from `pactia.toml` — use `pactia.lock` when digest matches.
+3. Otherwise query pactia.io for the highest matching release; write pin to `pactia.lock`.
 4. Download, verify digest, cache locally.
 
 Output in `input/product.yaml`:
@@ -312,7 +312,7 @@ pactia build fleet-management-v2.pactia -o ./specification
 
 **Author-facing** (beginners at altitude 0–1): see [language-spec.md — Author errors](language-spec.md#author-errors).
 
-**Implementer-facing** (registry collision, decorator placement, clause validation, legacy syntax): see [grammar-reference.md — Implementer error codes](grammar-reference.md#implementer-error-codes).
+**Implementer-facing** (registry collision, decorator placement, clause validation): see [grammar-reference.md — Implementer error codes](grammar-reference.md#implementer-error-codes).
 
 ---
 

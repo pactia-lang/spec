@@ -2,7 +2,7 @@
 
 Normative and supporting documents for **Pactia 1.0** — an AI-native, model-agnostic intent language. Start with [overview.md](overview.md#three-altitudes).
 
-Nine documents. Read top to bottom for a full picture.
+Nine documents in `docs/`. Read top to bottom for a full picture.
 
 ## Documents
 
@@ -13,7 +13,7 @@ Nine documents. Read top to bottom for a full picture.
 | [grammar-reference.md](grammar-reference.md) | BNF and implementer error codes (not required for authors) |
 | [registry.md](registry.md) | All `@tag { }`, `#[macro]`, cross-cutting blocks — skip if not using `import` |
 | [packages.md](packages.md) | pactia.io packages, registry authoring, extensibility |
-| [platform.md](platform.md) | Stack packages, semver / `kabol.lock`, protocol packages |
+| [platform.md](platform.md) | Stack packages, semver / `pactia.lock`, protocol packages |
 | [compilation.md](compilation.md) | Compiler pipeline, provenance, package build |
 | [editor-support.md](editor-support.md) | VS Code / Cursor syntax highlighting |
 
