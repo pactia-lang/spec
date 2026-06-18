@@ -3,7 +3,7 @@
 Version: **1.0**  
 Status: **Specification**
 
-> **If you are not importing packages, skip this document** — kernel tags and macros are always available with no setup. Return when you add `import @scope/name;` or publish packages.
+> **If you are not importing packages, skip this document** — kernel tags and macros (`@entity`, `@api`, `@auth`, …) are always available. Return when you add `import @scope/name;`, need protocol wire validation, or publish packages.
 
 Part of: [language-spec.md](language-spec.md) | [packages.md](packages.md) | [compilation.md](compilation.md)
 
@@ -77,7 +77,7 @@ Per compile unit (single file or [workspace](language-spec.md#workspace-layout))
      product.pactia imports → whole workspace
      module.pactia imports  → that module subtree
      service.pactia imports → that service subtree
-5. For each `import`: look up package in `kabol.lock`; import symbols per Rust path rules
+5. For each `import`: look up package in `pactia.lock`; import symbols per Rust path rules
 6. Apply `import … as alias` → qualified prefix for invocation
 7. Reject REGISTRY_COLLISION on duplicate unqualified names in the same scope
 8. Parse and expand source using effectiveRegistry at that file's scope
@@ -87,7 +87,7 @@ Transitive package dependencies (in `pactia.package.yaml` `dependencies:`) do **
 
 ### Import paths
 
-Versions live in **`kabol.toml`** (ranges) and **`kabol.lock`** (pins) — never in `import`. See [packages.md — Dependencies vs import](packages.md#dependencies-vs-import-cargo-model).
+Versions live in **`pactia.toml`** (ranges) and **`pactia.lock`** (pins) — never in `import`. See [packages.md — Dependencies vs import](packages.md#dependencies-vs-import-cargo-model).
 
 ```pactia
 import @pactia/kyc-compliance;
@@ -101,14 +101,14 @@ import { compliance, phi_screen } from @pactia/hipaa;
 
 | Form | Meaning |
 | --- | --- |
-| `import @scope/name;` | Package prelude (default exported registry symbols) |
+| `import @scope/name;` | Package prelude — [packages.md — Prelude export semantics](packages.md#prelude-export-semantics) |
 | `import * from @scope/name;` | All exported `registry.tags[]` + `registry.macros[]` |
 | `import symbol from @scope/name;` | One tag or macro |
 | `import { a, b } from @scope/name;` | Listed symbols only |
 | `import @scope/name as alias;` | Package qualifier: `@alias::tag`, `#[alias::macro]` |
 | `import symbol as alias from @scope/name;` | Rename one symbol |
 
-`VERSION_IN_IMPORT` if an `import` line contains semver. `DEPENDENCY_NOT_DECLARED` if `kabol.toml` lacks the package.
+`VERSION_IN_IMPORT` if an `import` line contains semver. `DEPENDENCY_NOT_DECLARED` if `pactia.toml` lacks the package.
 
 Selective import does **not** merge package `domain` / `rules` IR unless those symbols are marked `export` in package source — registry import and AST export share the same `export` modifier.
 
@@ -129,7 +129,7 @@ Selective import does **not** merge package `domain` / `rules` IR unless those s
 | `TAG_UNKNOWN` | `@name` not in kernel, stack, std, or any `import` in scope chain |
 | `MACRO_UNKNOWN` | `#[name]` not in effectiveRegistry for this file |
 | `IMPORT_NOT_EXPORTED` | `import symbol from @pkg` names a symbol not marked `export` in package source |
-| `DEPENDENCY_NOT_DECLARED` | `import @scope/name` without `kabol.toml` entry |
+| `DEPENDENCY_NOT_DECLARED` | `import @scope/name` without `pactia.toml` entry |
 | `VERSION_IN_IMPORT` | Semver in an `import` statement |
 | `REGISTRY_COLLISION` | Two imports expose the same unqualified tag/macro name |
 | `REGISTRY_QUALIFIER_REQUIRED` | Ambiguous name — compiler requires `@alias::name` |
@@ -228,7 +228,7 @@ Field modifiers **prefix** the field line (`@pk`, `@fk { entity: Customer }`) �
 
 | Tag | Example | Lowers to |
 | --- | --- | --- |
-| `@stack` | `@stack rust-anb { }` | `product.stackId` (version from `kabol.toml` / `kabol.lock`) |
+| `@stack` | `@stack rust-anb { }` | `product.stackId` (version from `pactia.toml` / `pactia.lock`) |
 | `@topology` | `@topology { mode: microservices, }` | `product.topology` |
 | `@tenancy` | `@tenancy { mode: single, }` | `product.tenancy` |
 
@@ -279,14 +279,14 @@ Prefix modifier tags on the line **above** the field declaration:
 | --- | --- | --- |
 | `@config` | `@config backend { DATABASE_URL: { required: true, ... }, }` | `<module>.module.yaml` `config` |
 | `@errors` | `@errors platform { NotFound: { status: 404, code: RESOURCE_NOT_FOUND, message: "..." }, }` | `<module>.module.yaml` error catalog |
-| `@policy` | `@policy { retain Entity forever because "..." }` | `product.yaml` (`security`) |
-| `@guide` | `@guide { Handlers use error envelope }` | module / service / product YAML (not enforced) |
+| `@policy` | `@policy fleet_retention { retain: { entity: GpsPosition, period: forever, reason: "..." }, residency: EU, }` | `product.yaml` (`security`) |
+| `@guide` | `@guide { > Handlers must map errors to the platform envelope }` | module / service / product YAML (not enforced) |
 | `@security` | `@security { ... }` | `product.yaml` (`security`) |
 | `@compliance` | `@compliance { gdpr ... }` | `product.yaml` (`security`) + model field annotations |
 | `@observe` | `@observe fleet_slos { slos: [...] }` | `<module>.module.yaml` |
 | `@deploy` | `@deploy fleet { @environment staging { replicas: 2 }, ... }` | `product.yaml` (`deployment`) |
-| `@event` | `@event { vehicle.created payload X handler Service.method "desc" }` | `<module>.module.yaml` `events[]`, `eventHandlers[]` |
-| `@test` | `@test { "name" When ... Then ... }` | service YAML `scenarios[]` |
+| `@event` | `@event vehicle.created { payload: VehicleCreatedPayload, handler: NotificationService.onVehicleCreated, > Fired when registered }` | `<module>.module.yaml` `events[]`, `eventHandlers[]` |
+| `@test` | `@test customer_views { name: "...", when: "...", then: "status is 200", }` | service YAML `scenarios[]` |
 | `@must` | `@must { on trigger outcome lines }` | service YAML `obligations[]` |
 | `@rule` | `@rule single_customer { > Vehicles belong to exactly one customer. }` | `rules[]` (enforced) |
 
@@ -315,10 +315,10 @@ Full lowering table: [language-spec.md — @integration](language-spec.md#exampl
 Event **declarations** and **handler wiring** both belong in `@event { }`:
 
 ```pactia
-@event {
-  vehicle.created payload VehicleCreatedPayload
-  handler NotificationService.onVehicleCreated
-  > Fired when a vehicle is registered
+@event vehicle.created {
+  payload: VehicleCreatedPayload,
+  handler: NotificationService.onVehicleCreated,
+  > Fired when a vehicle is registered in the platform
 }
 ```
 
@@ -326,15 +326,17 @@ A line like `> on vehicle.created -> NotificationService.onVehicleCreated` **out
 
 ---
 
-## Protocol tags (package-registered — required for APIs)
+## Protocol tags (wire validation packages)
+
+`@api` is a **kernel clause** — always parsed. **`import @pactia/protocol-rest`** adds REST wire validation (`method`, `path`, REST-specific nested tags). gRPC and GraphQL follow the same pattern.
 
 | Tag | Package | Example |
 | --- | --- | --- |
-| `@api` | `@pactia/protocol-rest` | `@api { method GET path /api/v1/vehicles @auth { Customer } ... }` |
-| `@grpc` | `@pactia/protocol-grpc` | `@grpc { service trade.TradeService rpc MarkPaymentSent }` |
-| `@graphql` | `@pactia/protocol-graphql` | `@graphql { type Query field vehicles }` |
+| `@api` | `@pactia/protocol-rest` (wire fields) | `@api list_vehicles { method: GET, path: "/api/v1/vehicles", }` |
+| `@grpc` | `@pactia/protocol-grpc` | `@grpc MarkPaymentSent { service: trade.TradeService, rpc: MarkPaymentSent, }` |
+| `@graphql` | `@pactia/protocol-graphql` | `@graphql vehicles { type: Query, field: vehicles, }` |
 
-REST endpoints **must** use `@api { }` after `import @pactia/protocol-rest`. The kernel does not parse bare `GET` / `POST` lines.
+REST endpoints with `method` / `path` require `import @pactia/protocol-rest`. The kernel does not parse bare `GET` / `POST` lines outside `@api { }`.
 
 See [platform.md](platform.md#protocol-packages).
 
@@ -349,7 +351,7 @@ Surface intent uses **block tags** for each platform. Nested tags and macros liv
   @screen { vehicle-list }
   @route { /fleet/vehicles }
   #[a11y(WCAG-AA)]
-  @bind { FleetService GET /api/v1/vehicles }
+  @bind { service: FleetService, method: GET, path: "/api/v1/vehicles" }
   > Customer browses their vehicles in a paginated table
 }
 ```
@@ -422,7 +424,7 @@ import @pactia/hipaa as hipaa;
 
 `@compliance` is **unknown** without `import` bringing it into the workspace effectiveRegistry. With import, the compiler validates the body and routes per `lowers { }` with provenance `PACKAGE`.
 
-Hand-authored `extensions[]` / `tags[]` in manifest remains valid (protocol packages, legacy stacks). **`define tag` is the Pactia-native authoring form**; YAML is the compiled interchange.
+Hand-authored `extensions[]` in manifest remains valid for protocol packages. **`define tag` is the Pactia-native authoring form**; YAML is the compiled interchange.
 
 ---
 
@@ -619,7 +621,7 @@ These remain **tags** (always `{ }`):
 - `@emit vehicle.created` — event name is a fact
 - `@public` — public route is a fact
 - `@transition { from: PENDING, to: PAID }` — legal edge is a fact
-- `@stack rust-anb { }` — stack selection is a fact (version in `kabol.toml`)
+- `@stack rust-anb { }` — stack selection is a fact (version in `pactia.toml`)
 
 ---
 
@@ -659,7 +661,7 @@ product
 
 | Scope | Typical cross-cutting content |
 | --- | --- |
-| `product` | `@stack`, global `@guide`, import @acme/standards` |
+| `product` | `@stack`, global `@guide`, `import @acme/standards;` |
 | `module` | `@policy`, `@compliance`, module `>` rules |
 | `service` | `@observe` SLOs, service `@guide`, `@security` rate limits |
 | Endpoint | `#[rate_limit(n, unit)]`, endpoint-specific `@guide { }` prose |
@@ -677,11 +679,10 @@ Block tags use `@name { ... }`. Body is **`> prose` lines** (where narrative) an
 ### `@policy` — retention, residency, encryption (law)
 
 ```pactia
-@policy {
-  retain GpsPosition forever because "regulatory audit trail"
-  retain Customer 7y after account closure
-  residency EU
-  encrypt PII at rest
+@policy fleet_retention {
+  retain: { entity: GpsPosition, period: forever, reason: "regulatory audit trail" },
+  retain: { entity: Customer, period: 7y, after: account_closure },
+  residency: EU,
 }
 ```
 
@@ -712,7 +713,7 @@ email: string @pii { } @retain { 7y }
 | Enforced | No |
 | Provenance | `GUIDANCE` |
 
-**Shareable prompts:** org packages like import @acme/engineering-standards;` inject `@guide` blocks at publish time.
+**Shareable prompts:** org packages like `import @acme/engineering-standards;` inject `@guide` blocks at publish time.
 
 Place `@guide` at `product` (global), `module` (domain conventions), or `service` (local patterns).
 
@@ -721,18 +722,20 @@ Place `@guide` at `product` (global), `module` (domain conventions), or `service
 ### `@security` — security policy (law + guidance mix)
 
 ```pactia
-@security {
-  All admin actions must be audit-logged
-  #[rate_limit(100, rpm)] on POST /api/v1/gps/ingest
-  @require_mfa { Admin } in production
-  @headers { HSTS max-age=31536000 } on all public endpoints
+@security fleet {
+  > All admin mutations must be audit-logged
+  controls: [
+    { type: rate_limit, path: "POST /api/v1/gps/ingest", limit: 100, unit: rpm },
+    { type: require_mfa, roles: [Admin], environments: [production] },
+    { type: headers, hsts: "max-age=31536000" },
+  ],
 }
 ```
 
 | Line type | Treatment |
 | --- | --- |
-| Prose sentence | `security.rules[]` — checked via `@test` when linked |
-| `@rate_limit`, `@require_mfa`, `@headers` | Structured `security.controls[]` (tags) or macro expansion for `#[rate_limit(...)]` |
+| `> sentence` | `security.rules[]` — checked via `@test` when linked |
+| `controls: [...]` or nested tags / `#[rate_limit(...)]` | Structured `security.controls[]` |
 
 | Lowers to | `product.yaml` (`security`) |
 | Enforced | Partial — structured tags yes; prose via linked `@test` |
@@ -745,10 +748,11 @@ Used with compliance packages (`import @pactia/gdpr-eu as gdpr`, `import complia
 
 ```pactia
 @compliance gdpr {
-  applies to module fleet
-  Customer email is personal data with lawful basis contract
-  data subject erasure within 30 days on verified request
-  @retain Customer 7y after account closure
+  applies_to: [fleet],
+  rules: [
+    { entity: Customer, field: email, basis: contract, subject_erasure_days: 30 },
+    { entity: Customer, retain: 7y, after: account_closure },
+  ],
 }
 ```
 
@@ -763,17 +767,21 @@ Package registers `@compliance` block schema in `pactia.package.yaml` (same mech
 ### `@observe` — SLOs, alerts, metrics (law when SLO conform exists)
 
 ```pactia
-@observe {
-  slo FleetService latency p99 < 300ms
-  slo FleetService error_rate < 0.5%
-  slo FleetService availability 99.9%
-
-  alert high_error_rate on FleetService
-    when error_rate > 2% for 5m
-    severity critical
-    notify on-call
-
-  metric business_vehicles_active type gauge from Vehicle where status ACTIVE
+@observe fleet_slos {
+  slos: [
+    { service: FleetService, metric: latency_p99, target: "< 300ms" },
+    { service: FleetService, metric: error_rate, target: "< 0.5%" },
+    { service: FleetService, metric: availability, target: "99.9%" },
+  ],
+  alerts: [
+    {
+      id: high_error_rate,
+      service: FleetService,
+      when: "error_rate > 2% for 5m",
+      severity: critical,
+      notify: pagerduty,
+    },
+  ],
 }
 ```
 
@@ -849,12 +857,12 @@ Example — MVP constraint as prose (not a keyword):
 | --- | --- |
 | Language, framework, forbidden crates | `@stack` package — do not repeat |
 | Handler error mapping style | Stack `codingStandards` or `@guide` |
-| GPS history forever | `@policy { retain GpsPosition forever ... }` |
-| EU residency | `@policy { residency EU }` |
+| GPS history forever | `@policy { retain: { entity: GpsPosition, period: forever, ... } }` |
+| EU residency | `@policy { residency: EU }` |
 | Email is PII | `email: string @pii { }` in `model` |
 | 80% coverage before prod | `@gate production { coverage: ">= 80%" }` inside `@deploy` |
-| p99 latency target | `@observe { slo ... }` |
-| HIPAA PHI tagging | import @pactia/hipaa` + `@compliance` |
+| p99 latency target | `@observe { slos: [...] }` |
+| HIPAA PHI tagging | `import @pactia/hipaa` + `@compliance` |
 | Hexagonal architecture preference | `@guide` prose |
 | Endpoint rate limit | `#[rate_limit(100, rpm)]` inside `@api { }` or `@security { }` |
 | VoiceOver on iOS | `@ios { ... #[a11y(VoiceOver)] ... }` |
@@ -876,9 +884,8 @@ import @acme/engineering-standards as standards;
 | Package kind | Injects |
 | --- | --- |
 | `stack` | Platform law, CI baseline, coding standards |
-| `domain` | Entities, rules, integrations |
-| `policy` (new kind) | `@guide`, `@security`, `@compliance` blocks |
-| `surface` | `@web { }`, `@ios { }` block schemas |
+| `domain` | Entities, rules, integrations, compliance blocks (`@guide`, `@security`, `@compliance`) |
+| `protocol` | Wire tags (`@api` validation, `@grpc`, `@graphql`) and surface block schemas |
 
 Consumer `product` inherits package guidance; overrides only where the product diverges.
 
@@ -920,8 +927,8 @@ Conformance **never** enforces `GUIDANCE` — only law tiers and linked `@test` 
 
 | Do not | Do instead |
 | --- | --- |
-| Copy stack `codingStandards` into every product | import @stack` only |
-| Put enforceable SLO only in `@guide` | `@observe { slo ... }` |
+| Copy stack `codingStandards` into every product | `import @pactia/rust-anb` via `@stack` only |
+| Put enforceable SLO only in `@guide` | `@observe { slos: [...] }` |
 | `flow { step 1; step 2 }` for policy | `@must` + `@test` |
 | New keyword `pipeline` | `@gate production { ... }` inside `@deploy` |
 | Unstructured compliance in Slack | `@compliance` block + package |

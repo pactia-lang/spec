@@ -2,7 +2,7 @@
 
 **Compiler implementer reference — not required reading to write Pactia.**
 
-Authors: start with [overview.md](overview.md) (three altitudes) and [language-spec.md](language-spec.md). This document holds BNF, shorthand arity rules, deprecated forms, and implementer error codes.
+Authors: start with [overview.md](overview.md) (three altitudes) and [language-spec.md](language-spec.md). This document holds BNF, shorthand arity rules, and implementer error codes.
 
 ---
 
@@ -69,13 +69,7 @@ Inside `{ }`: every structured line is a comma-terminated field/assignment **or*
 }
 ```
 
-**Deprecated (still parse, do not use in new files):**
-
-| Form | Replacement |
-| --- | --- |
-| `@api name { }` | `@api name { }` |
-| `@api name { auth: ..., body: ..., }` | Prefix decorators + `@api name { }` |
-| `{ type: VehicleDto }` on `@returns` | `@returns VehicleDto` |
+Modifiers (`@auth`, `@returns`, `@body`, …) use **prefix** placement on lines above `@api`. Wire fields (`method`, `path`) require `import @pactia/protocol-rest`.
 
 ---
 
@@ -97,7 +91,7 @@ Inside `{ }`: every structured line is a comma-terminated field/assignment **or*
 | `REGISTRY_COLLISION` | Two imports expose the same unqualified tag/macro name |
 | `REGISTRY_QUALIFIER_REQUIRED` | Ambiguous name — compiler requires `@alias::name` |
 | `IMPORT_NOT_EXPORTED` | `import symbol from @pkg` names a symbol not marked `export` in package source |
-| `DEPENDENCY_NOT_DECLARED` | `import @scope/name` without `kabol.toml` entry |
+| `DEPENDENCY_NOT_DECLARED` | `import @scope/name` without `pactia.toml` entry |
 | `VERSION_IN_IMPORT` | Semver appears in `import` statement |
 | `DEFINE_TAG_IN_PRODUCT` | `define tag` inside consumer `product { }` |
 | `DEFINE_MACRO_IN_PRODUCT` | `define macro` inside consumer `product { }` |
@@ -131,7 +125,7 @@ Inside `{ }`: every structured line is a comma-terminated field/assignment **or*
 | `ARRAY_REQUIRED` | Schema expects multiple values but author used a bare scalar |
 | `ARRAY_ELEMENT_INVALID` | Element inside `[...]` breaks rules |
 | `SCALAR_EXPECTED` | Schema expects one value but author used `[...]` |
-| `LEGACY_SLOT_SYNTAX` | Deprecated space-separated slots (`method GET`) |
+| `SLOT_SYNTAX_INVALID` | Space-separated slots (`method GET`) instead of `method: GET` |
 
 ### Compiler internals
 

@@ -32,10 +32,10 @@ product OrderPlatform {
 
 | Syntax | Resolves to |
 | --- | --- |
-| `@stack rust-anb { }` | `@pactia/rust-anb` — version from `kabol.toml` / `kabol.lock` |
+| `@stack rust-anb { }` | `@pactia/rust-anb` — version from `pactia.toml` / `pactia.lock` |
 | `@stack @acme/node-bff { }` | Private package at configured registry |
 
-**Do not** put semver inside `@stack { }`. Constraints live in `kabol.toml`; pins in `kabol.lock`. `VERSION_IN_STACK` if `version:` appears in the tag body. See [packages.md — @stack vs use](packages.md#stack-vs-use-for-stack-packages-eg-rust-anb).
+**Do not** put semver inside `@stack { }`. Constraints live in `pactia.toml`; pins in `pactia.lock`. `VERSION_IN_STACK` if `version:` appears in the tag body. See [packages.md — @stack vs import](packages.md#stack-vs-import-for-stack-packages-eg-rust-anb).
 
 ---
 
@@ -246,12 +246,12 @@ product FleetManagement {
 }
 ```
 
-The compiler fetches the published bundle, verifies the digest from `kabol.lock`, and merges `profile` + `platformLaw` + `technologyPolicy` into workspace IR. No local `stacks/` directory is needed.
+The compiler fetches the published bundle, verifies the digest from `pactia.lock`, and merges `profile` + `platformLaw` + `technologyPolicy` into workspace IR. No local `stacks/` directory is needed.
 
 ## Compiler behavior
 
 1. Parse `@stack <id> { }` from `product`; expand bare id to `@pactia/<id>`.
-2. Resolve semver from `kabol.toml` against pactia.io (or read pinned digest from `kabol.lock`).
+2. Resolve semver from `pactia.toml` against pactia.io (or read pinned digest from `pactia.lock`).
 3. Download and verify package digest.
 4. Merge `profile` + `platformLaw` + `technologyPolicy` into workspace IR.
 5. Emit `input/product.yaml` with `stackId`, `stackVersion`, `stackDigest`.
@@ -278,7 +278,7 @@ The compiler fetches the published bundle, verifies the digest from `kabol.lock`
 ## See also
 
 - [examples/packages/rust-anb/](examples/packages/rust-anb/) — reference stack package source
-- [Stack versions](#stack-versions) — semver, kabol.lock, migration
+- [Stack versions](#stack-versions) — semver, pactia.lock, migration
 - [packages.md](packages.md) — authoring and publishing all package kinds
 - [overview.md](overview.md#architecture-coverage) — stack vs Pactia vs compiler
 - [packages.md](packages.md#extensibility) — packages extend domain, not stack
@@ -294,8 +294,8 @@ The compiler fetches the published bundle, verifies the digest from `kabol.lock`
 | --- | --- | --- |
 | Product release semver | Git tags / release process (not a kernel field in 1.0) | Your product version |
 | `package.version` in `pactia.package.yaml` | Stack package manifest | Platform stack semver |
-| `[stack]` / `[dependencies]` in `kabol.toml` | Project manifest | Semver **constraint** on which stack release to load |
-| `kabol.lock` | Lock file | **Pinned** stack version + digest |
+| `[stack]` / `[dependencies]` in `pactia.toml` | Project manifest | Semver **constraint** on which stack release to load |
+| `pactia.lock` | Lock file | **Pinned** stack version + digest |
 
 Do not confuse product release versioning with stack package semver. They are independent.
 
@@ -318,13 +318,13 @@ product FleetManagement {
 
 | Form | Resolves to |
 | --- | --- |
-| `@stack rust-anb { }` | `@pactia/rust-anb` — version from `kabol.toml` / `kabol.lock` |
+| `@stack rust-anb { }` | `@pactia/rust-anb` — version from `pactia.toml` / `pactia.lock` |
 | `@stack @acme/node-bff { }` | Package `@acme/node-bff` from configured registry |
 
-Bare ids resolve to `@pactia/<id>` on pactia.io. Semver constraints and exact pins belong in `kabol.toml`, not in the `@stack` tag body.
+Bare ids resolve to `@pactia/<id>` on pactia.io. Semver constraints and exact pins belong in `pactia.toml`, not in the `@stack` tag body.
 
 ```toml
-# kabol.toml
+# pactia.toml
 [stack]
 package = "@pactia/rust-anb"
 
@@ -345,9 +345,9 @@ product:
 
 ---
 
-## Lock file: `kabol.lock`
+## Lock file: `pactia.lock`
 
-Stack packages are pinned in the same `kabol.lock` as domain and protocol packages — there is no separate `kabol.lock`.
+Stack packages are pinned in the same `pactia.lock` as domain and protocol packages — there is no separate `pactia.lock`.
 
 ```yaml
 lockVersion: 1
@@ -366,11 +366,11 @@ packages:
 
 | Command | Behavior |
 | --- | --- |
-| `pactiac compile` | Uses `kabol.lock` if present; else resolves and writes lock |
+| `pactiac compile` | Uses `pactia.lock` if present; else resolves and writes lock |
 | `pactia update` | Re-resolve all packages within declared constraints; refresh lock |
 | `pactia update --stack` | Re-resolve only stack package |
 
-CI should commit `kabol.lock`. AI agent sessions must not silently upgrade platform law.
+CI should commit `pactia.lock`. AI agent sessions must not silently upgrade platform law.
 
 ---
 
@@ -444,8 +444,8 @@ Planned:
 ## Migrating between stack versions
 
 1. Read the package changelog on pactia.io.
-2. Update `kabol.toml` constraint (e.g. `"@pactia/rust-anb" = "^1.1"`).
-3. Run `pactia update --stack` or delete `kabol.lock` and recompile.
+2. Update `pactia.toml` constraint (e.g. `"@pactia/rust-anb" = "^1.1"`).
+3. Run `pactia update --stack` or delete `pactia.lock` and recompile.
 4. Review diff in IR slices and `platformLaw` sections.
 5. Run conformance tests against forbidden crate list if enabled.
 
@@ -459,8 +459,10 @@ Planned:
 | --- | --- | --- |
 | `STACK_NOT_FOUND` | Error | Stack package coordinate not found in registry |
 | `STACK_VERSION_UNSATISFIED` | Error | No release matches semver constraint |
-| `STACK_LOCK_MISMATCH` | Error | `kabol.lock` digest differs from fetched package |
+| `STACK_LOCK_MISMATCH` | Error | `pactia.lock` digest differs from fetched package |
 | `STACK_INCOMPATIBLE` | Error | An imported package's `compatibleStacks` is not satisfied |
+| `STACK_COORDINATE_MISMATCH` | Error | `@stack` id, `import`, and `pactia.toml [stack].package` do not resolve to the same lock entry |
+| `VERSION_IN_STACK` | Error | `version:` appears inside `@stack { }` body |
 | `STACK_DEPRECATED` | Warning | Resolved version marked deprecated on registry |
 
 ---
@@ -471,7 +473,7 @@ Planned:
 pactia stack list                    # packages with kind:stack on pactia.io
 pactia stack show @pactia/rust-anb   # versions, technologyPolicy summary
 pactia stack resolve rust-anb ^1.0   # print resolved version + digest
-pactia update --stack                # refresh stack pin in kabol.lock
+pactia update --stack                 # refresh stack pin in pactia.lock
 ```
 
 ---
@@ -479,7 +481,7 @@ pactia update --stack                # refresh stack pin in kabol.lock
 ## See also
 
 - #stack-packages — stack package anatomy, use/forbid policy
-- [packages.md](packages.md) — all package types and kabol.lock
+- [packages.md](packages.md) — all package types and pactia.lock
 - [language-spec.md](language-spec.md) — `@stack` on `product`
 - [compilation.md](compilation.md) — stack resolution phase
 
@@ -504,9 +506,9 @@ pactia update --stack                # refresh stack pin in kabol.lock
 
 | Correct pattern | Benefit |
 | --- | --- |
-| import @pactia/protocol-rest` | REST is a library |
-| `@api { method GET path /api/v1/vehicles ... }` | Wire format is a tag block |
-| import @vendor/protocol-odata` | New protocol without a language version bump |
+| `import @pactia/protocol-rest;` | REST is a library |
+| `@api list_vehicles { method: GET, path: "/api/v1/vehicles", … }` | Wire format is a tag block |
+| `import @vendor/protocol-odata;` | New protocol without a language version bump |
 
 ---
 
@@ -586,7 +588,7 @@ Block names (`@api`, `@grpc`, `@graphql`) come from the package manifest — not
 3. Add `schemas/<name>-v1.json` for each extension schema
 4. `pactia package build` → validate manifest + schemas
 5. `pactia publish` → pactia.io
-6. Consumers: `kabol add @yourorg/protocol-foo@^1.0` then import @yourorg/protocol-foo;`
+6. Consumers: `pactia add @yourorg/protocol-foo@^1.0` then `import @yourorg/protocol-foo;`
 
 See [packages.md](packages.md). New wire formats are **packages**, not kernel keywords.
 

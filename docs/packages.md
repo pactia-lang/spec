@@ -10,7 +10,7 @@ Part of the intent-first ecosystem: BSC vision | [language-spec.md](language-spe
 
 | Without packages                          | With packages                            |
 | ----------------------------------------- | ---------------------------------------- |
-| Every P2P exchange redefines KYC entities | `kabol add @pactia/kyc-compliance@^1.0` then `import @pactia/kyc-compliance;` |
+| Every P2P exchange redefines KYC entities | `pactia add @pactia/kyc-compliance@^1.0` then `import @pactia/kyc-compliance;` |
 | Every marketplace redefines dispute flow  | `import { … } from @pactia/dispute-resolution;` selective import |
 | Copy-paste integration blocks             | `import @vendor/sumsub-webhooks;` |
 
@@ -30,7 +30,7 @@ Architects write product-specific Pactia; community/vendor packages supply commo
 | **`domain`** (vendor) | `@sumsub/pactia-webhooks` | `import @scope/name` | Official Sumsub → Pactia integration |
 | **`domain`** (org-private) | `@acme/internal-auth` | `import @scope/name` | Company-specific roles (private registry) |
 
-All kinds use the same registry, manifest format, semver, and `kabol.lock`. The `kind` field drives how the compiler processes the package:
+All kinds use the same registry, manifest format, semver, and `pactia.lock`. The `kind` field drives how the compiler processes the package:
 - `stack` — merged as platform law; selected once per `product`
 - `domain` — declarations merged into compilation unit
 - `protocol` — registers expose block names; see [platform.md](platform.md#protocol-packages)
@@ -133,23 +133,23 @@ Registry symbols (tags and macros) are **workspace-scoped** — see [registry.md
 
 | Layer | File | Role |
 | --- | --- | --- |
-| **Declare** | `kabol.toml` `[dependencies]` | Semver **ranges** — like `Cargo.toml` |
-| **Pin** | `kabol.lock` | Exact **version + digest** — like `Cargo.lock` |
+| **Declare** | `pactia.toml` `[dependencies]` | Semver **ranges** — like `Cargo.toml` |
+| **Pin** | `pactia.lock` | Exact **version + digest** — like `Cargo.lock` |
 | **Import** | `.pactia` `import` | **Path only** — like TypeScript `import … from`; **no version in source** |
 
 ```bash
-kabol add @pactia/kyc-compliance@^1.0   # writes kabol.toml + kabol.lock
+pactia add @pactia/kyc-compliance@^1.0   # writes pactia.toml + pactia.lock
 ```
 
 ```toml
-# kabol.toml
+# pactia.toml
 [dependencies]
 "@pactia/kyc-compliance" = "^1.0"
 "@pactia/protocol-rest" = "^1.0"
 ```
 
 ```yaml
-# kabol.lock (committed)
+# pactia.lock (committed)
 packages:
   - name: "@pactia/kyc-compliance"
     version: 1.0.3
@@ -157,13 +157,13 @@ packages:
 ```
 
 ```pactia
-import @pactia/kyc-compliance;   // resolves 1.0.3 from kabol.lock — not ^1.0 here
+import @pactia/kyc-compliance;   // resolves 1.0.3 from pactia.lock — not ^1.0 here
 ```
 
 | Error | Condition |
 | --- | --- |
-| `DEPENDENCY_NOT_DECLARED` | `import @scope/name` but package absent from `kabol.toml` |
-| `LOCK_ENTRY_MISSING` | Declared in `kabol.toml` but no pin in `kabol.lock` — run `kabol build` |
+| `DEPENDENCY_NOT_DECLARED` | `import @scope/name` but package absent from `pactia.toml` |
+| `LOCK_ENTRY_MISSING` | Declared in `pactia.toml` but no pin in `pactia.lock` — run `pactia build` |
 | `VERSION_IN_IMPORT` | Version range or pin appears in an `import` statement — forbidden |
 
 ### Import forms
@@ -193,7 +193,7 @@ import "./packages/kyc-compliance/index.pactia";
 
 | Form | Meaning |
 | --- | --- |
-| `import @scope/name;` | Import package prelude (exported defaults) |
+| `import @scope/name;` | Package prelude — see [Prelude export semantics](#prelude-export-semantics) |
 | `import * from @scope/name;` | Import **all** exported registry + AST symbols |
 | `import symbol from @scope/name;` | Import one tag, macro, entity, enum, or service |
 | `import { a, b } from @scope/name;` | Import listed symbols only |
@@ -203,7 +203,31 @@ import "./packages/kyc-compliance/index.pactia";
 
 Local `import` of a `.pactia` file merges **kernel AST** only. It does **not** register tag/macro names unless the file is a built package consumed via `import @scope/name`.
 
-**No version** in any `import` form — not `^1.0`, not `1.2.0`. Version constraints live only in `kabol.toml`; resolved pins only in `kabol.lock`.
+**No version** in any `import` form — not `^1.0`, not `1.2.0`. Version constraints live only in `pactia.toml`; resolved pins only in `pactia.lock`.
+
+### Prelude export semantics
+
+`import @scope/name;` (package prelude) is **not** the same as `import * from @scope/name;`. Prelude is a deterministic subset of exported symbols.
+
+| Rule | Detail |
+| --- | --- |
+| **Registry symbols** | When `registry.prelude[]` is present in `pactia.package.yaml`, prelude imports exactly those tag and macro names (each must also appear in `registry.tags[]` / `registry.macros[]`). |
+| **Default prelude** | When `registry.prelude` is **omitted**, prelude defaults to **all** exported registry tags and macros — not domain AST symbols. |
+| **Empty prelude** | When `registry.prelude: []`, prelude imports **no** unqualified registry symbols. Consumers use `import { … } from`, `import symbol from`, or `import * from`. |
+| **Domain AST** | `export @entity`, `export service`, `@rule`, `@integration`, and other IR symbols are **never** imported by prelude alone. Use `import * from` or explicit `import { Entity } from`. |
+| **Zero exports** | A package with no exported symbols is valid. Prelude is a no-op; `import @scope/name;` still satisfies `DEPENDENCY_NOT_DECLARED` checks when declared in `pactia.toml`. |
+| **Qualified access** | `import @scope/name as alias;` registers the alias for `@alias::tag` / `#[alias::macro]` even when prelude brings no unqualified names. |
+
+At `pactia package build`, authors may set `registry.prelude` explicitly:
+
+```yaml
+registry:
+  tags: [{ name: sanctions_check, category: compliance, version: 1 }]
+  macros: [{ name: sanctions_screen, category: compliance, version: 1 }]
+  prelude: [sanctions_check, sanctions_screen]
+```
+
+Consumers writing `import @acme/fintech-rules;` get `sanctions_check` and `sanctions_screen` in unqualified scope. They do **not** get exported entities unless they add `import * from` or a braced import.
 
 ### Workspace scope of `import`
 
@@ -215,6 +239,21 @@ Local `import` of a `.pactia` file merges **kernel AST** only. It does **not** r
 | Single-file program | Whole file |
 
 Inner scopes inherit outer `import` statements. An `import` in `module.pactia` does not leak to sibling modules.
+
+```
+product.pactia
+  import @pactia/protocol-rest;     ──▶ entire workspace
+
+module commerce.pactia
+  import @acme/payments;            ──▶ commerce subtree only
+    service BillingService { }      ──▶ sees @acme/payments (inherits module import)
+    service LedgerService { }         ──▶ sees @acme/payments
+
+module fleet.pactia                   ──▶ sibling — no @acme/payments
+  service FleetService { }            ──▶ product imports only
+```
+
+Registry visibility follows the same tree: a tag imported at module scope is available to every `service` block in that module, not to sibling modules.
 
 ### Qualified names after import
 
@@ -239,11 +278,11 @@ Domain types: `alias.TypeName`. Registry tags: `@alias::tag`. Macros: `#[alias::
 
 ### `@stack` vs `import` for stack packages (e.g. rust-anb)
 
-Stack packages play **two roles** — both reference the same coordinate `@pactia/rust-anb`, version only in `kabol.toml` / `kabol.lock`:
+Stack packages play **two roles** — both reference the same coordinate `@pactia/rust-anb`, version only in `pactia.toml` / `pactia.lock`:
 
 | Mechanism | Purpose | Example |
 | --- | --- | --- |
-| **`kabol.toml`** | Declare dependency + semver range; `kabol.lock` pins digest | `"@pactia/rust-anb" = "^1.0"` or `[stack] package = "@pactia/rust-anb"` |
+| **`pactia.toml`** | Declare dependency + semver range; `pactia.lock` pins digest | `"@pactia/rust-anb" = "^1.0"` and `[stack] package = "@pactia/rust-anb"` |
 | **`import @pactia/rust-anb;`** | Import stack **registry** into authoring scope — `#[database]`, `#[cache]`, stack macros | Top of `product.pactia` |
 | **`@stack rust-anb { }` on `product`** | Product **fact** — lowers to `product.stackId`; triggers `platformLaw` / `technologyPolicy` merge | Inside `product { }` — **no version field** |
 
@@ -258,7 +297,7 @@ product FleetManagement {
 ```
 
 ```toml
-# kabol.toml
+# pactia.toml
 [stack]
 package = "@pactia/rust-anb"
 
@@ -267,7 +306,15 @@ package = "@pactia/rust-anb"
 "@pactia/protocol-rest" = "^1.0"
 ```
 
-Compiler checks: `import` coordinate, `@stack` id, and `kabol.toml` `[stack].package` all resolve to the same lock entry. `VERSION_IN_STACK` if `version:` appears inside `@stack { }` body.
+**Three authorities, one coordinate — no precedence override.** The compiler checks that all three resolve to the **same** lock entry:
+
+| Authority | What it records |
+| --- | --- |
+| `pactia.toml [stack].package` | Which package is the stack dependency |
+| `pactia.toml [dependencies]` | Semver range for that coordinate (must be present) |
+| `@stack <id> { }` on `product` | Product fact — bare id expands to `@pactia/<id>` unless fully qualified |
+
+Version and digest always come from `pactia.lock` — never from `@stack { }` or `import`. Mismatch → `STACK_COORDINATE_MISMATCH`. `version:` inside `@stack { }` → `VERSION_IN_STACK`.
 
 See [platform.md](platform.md#stack-versions).
 
@@ -452,7 +499,7 @@ define tag sanctions_check {
 define macro sanctions_screen {
   category compliance
   expands {
-    @sanctions_check { level enhanced }
+    @sanctions_check { level: enhanced, }
   }
 }
 
@@ -475,22 +522,22 @@ package:
   kind: domain
   pactiaVersion: "1.0"
 
-tags:
-  - name: sanctions_check
-    version: 1
-    allowedScopes: [endpoint]
-    schema: schemas/sanctions_check-v1.json
-    lowers_to:
-      - file: product.yaml
-        path: security.sanctionsChecks[]
-      - file: modules/{moduleKebab}/services/{serviceKebab}.service.yaml
-        path: endpoints[].sanctions
-
-macros:
-  - name: sanctions_screen
-    version: 1
-    expands_to:
-      - "@sanctions_check { level enhanced }"
+registry:
+  tags:
+    - name: sanctions_check
+      version: 1
+      allowedScopes: [endpoint]
+      schema: schemas/sanctions_check-v1.json
+      lowers_to:
+        - file: product.yaml
+          path: security.sanctionsChecks[]
+        - file: modules/{moduleKebab}/services/{serviceKebab}.service.yaml
+          path: endpoints[].sanctions
+  macros:
+    - name: sanctions_screen
+      version: 1
+      expands_to:
+        - "@sanctions_check { level: enhanced, }"
 ```
 
 JSON Schema for `body { }` is derived from field declarations. Authors may still hand-edit manifest fragments; build validates the merged result.
@@ -498,7 +545,7 @@ JSON Schema for `body { }` is derived from field declarations. Authors may still
 ### Consumer compile
 
 ```
-1. kabol.toml declares @acme/fintech-rules; kabol.lock pins digest
+1. pactia.toml declares @acme/fintech-rules; pactia.lock pins digest
 2. import { sanctions_check, sanctions_screen } from @acme/fintech-rules;
 3. pactiac loads pinned tarball; imports listed symbols into workspace effectiveRegistry
 4. #[sanctions_screen] expands using package macro table
@@ -512,7 +559,7 @@ JSON Schema for `body { }` is derived from field declarations. Authors may still
 | --- | --- |
 | `TAG_UNKNOWN` | `@name` not in kernel, stack, std, or any `import` in scope chain |
 | `MACRO_UNKNOWN` | `#[name]` not in workspace effectiveRegistry |
-| `DEPENDENCY_NOT_DECLARED` | `import @scope/name` without `kabol.toml` entry |
+| `DEPENDENCY_NOT_DECLARED` | `import @scope/name` without `pactia.toml` entry |
 | `VERSION_IN_IMPORT` | Semver appears in an `import` statement |
 | `DEFINE_TAG_IN_PRODUCT` | `define tag` in consumer product |
 | `DEFINE_MACRO_IN_PRODUCT` | `define macro` in consumer product |
@@ -560,7 +607,7 @@ Environment: `Pactia_REGISTRY_URL`, `Pactia_REGISTRY_TOKEN` (see below).
 3. Stack packages: `profile`, `platformLaw`, `technologyPolicy` validated against stack schema.
 4. Domain packages: cannot export `platformLaw` or `technologyPolicy` (stack-closed law).
 5. No secrets in source; automated scan on upload.
-6. Digest pinned in consumer `kabol.lock` after first resolve.
+6. Digest pinned in consumer `pactia.lock` after first resolve.
 
 ---
 
@@ -573,7 +620,7 @@ Public registry at **https://pactia.io** (product vision; not yet built).
 | Actor         | Action                                                                              |
 | ------------- | ----------------------------------------------------------------------------------- |
 | **Publisher** | `pactia package build` → upload bundle (`pactia.package.yaml` + IR or schemas) → CI validates → version published |
-| **Consumer**  | `pactia add @pactia/kyc-compliance` → lockfile `kabol.lock`                        |
+| **Consumer**  | `pactia add @pactia/kyc-compliance@^1.0` → `pactia.toml` + `pactia.lock`             |
 | **Compiler**  | Resolves packages before compile; caches in `~/.pactia/registry/`                   |
 
 ### Package page (pactia.io)
@@ -594,7 +641,7 @@ Each package shows:
 4. Automated scan: no secrets in source
 5. Optional: verified publisher badge
 
-### Lock file: `kabol.lock`
+### Lock file: `pactia.lock`
 
 ```yaml
 lockVersion: 1
@@ -613,15 +660,20 @@ Reproducible compiles for CI and AI agent sessions.
 
 ## CLI commands (planned)
 
+**`pactia`** — package manager, language tooling, and registry (like `cargo` + publish):
+
 ```bash
-pactia init                            # new product with pactia.package.yaml
-pactia add @pactia/kyc-compliance        # add dependency, update lock
+pactia add @pactia/kyc-compliance@^1.0   # declare dependency, update lock
+pactia build                               # resolve pins, write pactia.lock
+pactia update                              # refresh dependency pins
+pactia update --stack                      # refresh stack pin only
+pactia init                                # new product workspace
 pactia package init @scope/name --kind domain   # scaffold package
-pactia package build                   # build publishable package bundle
-pactia package check                   # validate package without publishing
-pactia publish                         # publish to pactia.io (authenticated)
-pactiac compile main.pactia -o ./input    # resolve packages then compile product
-pactia registry search kyc             # search pactia.io
+pactia package build                       # build publishable package bundle
+pactia package check                       # validate package without publishing
+pactia publish                             # publish to pactia.io (authenticated)
+pactia registry search kyc                 # search pactia.io
+pactiac compile main.pactia -o ./input     # resolve packages then compile product
 ```
 
 Environment:
@@ -641,7 +693,7 @@ Enterprises run private registry mirrors:
 export Pactia_REGISTRY_URL=https://registry.acme.corp/pactia/v1
 ```
 
-Same import @acme/internal-billing` syntax; pactia.io is the public default.
+Same `import @acme/internal-billing;` syntax; pactia.io is the public default.
 
 ---
 
@@ -690,7 +742,7 @@ Example package source: [../fixtures/packages/fintech-rules-index.pactia](../fix
 
 ## Registry block headers (not kernel keywords)
 
-Pactia has **11 kernel keywords** — see [language-spec.md](language-spec.md#the-11-keywords).
+Pactia reserves **nine kernel keywords** — see [language-spec.md — Kernel keywords](language-spec.md#kernel-keywords-nine-reserved-words). Product authors use seven routinely; `export`, `define tag` / `define macro`, and `yaml package/*` are package-authoring forms of the same reserved words.
 
 `scope`, `body`, `lowers`, and `expands` are **registry block headers**. They are:
 
@@ -711,7 +763,7 @@ Pactia has **11 kernel keywords** — see [language-spec.md](language-spec.md#th
 | Syntax | Context | Meaning |
 | --- | --- | --- |
 | `body { level: string }` | Inside `define tag` | Package tag field schema |
-| `@body { CreateVehicleRequest }` | Inside `@api { }` | Request DTO reference (kernel tag) |
+| `@body CreateVehicleRequest` | Inside `@api { }` | Request DTO reference (kernel tag) |
 
 ---
 
@@ -849,7 +901,7 @@ Registers a **`#[name]`** pattern consumers invoke after `import`.
 ```pactia
 define macro sanctions_screen {
   expands {
-    @sanctions_check { level enhanced }
+    @sanctions_check { level: enhanced, }
   }
 }
 ```
@@ -880,7 +932,7 @@ macros:
   - name: sanctions_screen
     version: 1
     expands_to:
-      - "@sanctions_check { level enhanced }"
+      - "@sanctions_check { level: enhanced, }"
 ```
 
 ---
@@ -897,14 +949,7 @@ model {
 }
 ```
 
-`pactia package build` compiles these to **`*.model.yaml`** and **`*.module.yaml`** fragments. Whether they merge into consumer products depends on manifest **`exports`**:
-
-| `exports` flag | Merged into consumer |
-| --- | --- |
-| `domain: true` | `modules/<module>/<module>.model.yaml` entities, enums, relations |
-| `rules: true` | `<module>.module.yaml` rules |
-| `integrations: true` | `<module>.module.yaml` integrations |
-| `services: true` | `modules/<module>/services/*.service.yaml` |
+`pactia package build` compiles kernel blocks to **`*.model.yaml`** and **`*.module.yaml`** fragments. Whether they merge into consumer products depends on **`export` modifiers** on each symbol — same rules as [Export sections (derived)](#export-sections-derived). The build writes derived manifest export flags; authors do not hand-edit coarse `domain:` / `services:` booleans.
 
 See [packages.md](packages.md#export-sections).
 
@@ -913,9 +958,9 @@ See [packages.md](packages.md#export-sections).
 ## Consumer compile (after `import`)
 
 ```
-1. Resolve `kabol.lock` digest for each package referenced in `import` statements
+1. Resolve `pactia.lock` digest for each package referenced in `import` statements
 2. Load tarball manifest: tags[] + macros[] (+ optional IR fragments)
-3. Merge exported kernel AST per exports flags
+3. Merge exported kernel AST per `export` modifiers (see [Export sections (derived)](#export-sections-derived))
 4. Insert package tags/macros into effectiveRegistry
 5. Expand define template (local product only, if any)
 6. Expand #[packageMacro] using effectiveRegistry
@@ -931,11 +976,11 @@ import { sanctions_screen, sanctions_check } from @acme/fintech-rules;
 product MyApp {
   module payments {
     service TransferService {
-      @api {
-        method POST
-        path /api/v1/transfers
+      @api create_transfer {
+        method: POST,
+        path: "/api/v1/transfers",
         #[sanctions_screen]
-        @sanctions_check { level enhanced provider "refinitiv" }
+        @sanctions_check { level: enhanced, provider: "refinitiv", }
       }
     }
   }
@@ -980,7 +1025,7 @@ Distinct from product compile — see [compilation.md](compilation.md#package-bu
 ## See also
 
 - [packages.md](packages.md) — manifest, kinds, exports, pactia.io workflow
-- [language-spec.md](language-spec.md#define--templates-and-package-registry) — `define` in the 11-keyword model
+- [language-spec.md](language-spec.md#define--templates-and-package-registry) — `define` in the nine-keyword model
 - [registry.md#tags](registry.md#tags) — kernel vs package tags
 - [registry.md](registry.md#macros) — `#[macro]` precedence and purity
 - [../fixtures/packages/fintech-rules-index.pactia](../fixtures/packages/fintech-rules-index.pactia) — reference package source
@@ -1057,24 +1102,24 @@ Packages are **not** new keywords — they are **bundles of kernel constructs** 
 ### 2.1 Endpoint templates (named patterns)
 
 ```pactia
-define template crud_list(Entity, path) {
-  @api {
-    method GET
-    path path
-    @auth { Admin }
-    #[list] #[paginated]
+define template crud_list(Entity, listPath, detailPath) {
+  @auth { roles: [Admin] }
+  #[list] #[paginated]
+  @api crud_list {
+    method: GET,
+    path: listPath,
   }
 
-  @api {
-    method GET
-    path path/:id
-    @auth { Admin }
-    #[detail]
+  @auth { roles: [Admin] }
+  #[detail]
+  @api crud_detail {
+    method: GET,
+    path: detailPath,
   }
 }
 
 service AdminService {
-  #[crud_list(Vehicle, /api/v1/admin/vehicles)]
+  #[crud_list(Vehicle, "/api/v1/admin/vehicles", "/api/v1/admin/vehicles/:id")]
 }
 ```
 
@@ -1091,8 +1136,8 @@ After expansion → `@api { }` blocks. Reconciler runs on expanded output only.
 
 ```pactia
 define template financial_retention(Entity) {
-  @policy {
-    retain Entity forever because "Financial audit requirement"
+  @policy financial_retention {
+    retain: { entity: Entity, period: forever, reason: "Financial audit requirement" },
   }
 }
 
@@ -1116,7 +1161,7 @@ define tag sanctions_check {
 
 define macro sanctions_screen {
   expands {
-    @sanctions_check { level enhanced }
+    @sanctions_check { level: enhanced, }
   }
 }
 ```
@@ -1156,9 +1201,13 @@ Both expand at compile time. They solve different problems and **compose** — t
 Product file                          Package manifest (@pactia/rust-anb)
 ────────────────                      ───────────────────────────────────
 define template fleet_list(...) {       - name: list
-  @api { method GET path path            expands_to: ["@cursor { ... }", "#[paginated]"]
-    #[list] #[paginated]    ──invoke──▶ - name: owner
-    @returns { Dto }                      expands_to: ["@filter { ... }"]
+  @auth { roles: [Customer, Admin] }      expands_to: ["@cursor { ... }", "#[paginated]"]
+  #[list] #[paginated]    ──invoke──▶   - name: owner
+  @returns Dto                            expands_to: ["@filter { ... }"]
+  @api fleet_list {
+    method: GET,
+    path: path,
+  }
 }
 #[fleet_list(/api/v1/vehicles, VehicleListResponse)]
 ```
@@ -1231,7 +1280,7 @@ Stack authors publish `@pactia/rust-anb` by writing `yaml package/*` blocks — 
 **Use case:** Stack- and package-owned patterns — pagination, ownership filters, rate limits — that expand to tags before IR emit.
 
 ```pactia
-// Stack macros from @stack rust-anb { } — resolved via kabol.lock, not `import`
+// Stack macros from @stack rust-anb { } — resolved via pactia.lock, not `import`
 
 #[database]
 #[cache]
@@ -1258,7 +1307,7 @@ Macros register in stack or domain packages — see [registry.md](registry.md#ma
 
 | Need                                   | Use                                                 |
 | -------------------------------------- | --------------------------------------------------- |
-| Reuse KYC / escrow domain              | import @pactia/...`                           |
+| Reuse KYC / escrow domain              | `import @pactia/...;`                           |
 | Repeat list/detail on one line | `#[list]` `#[paginated]` from stack package |
 | Repeat multi-line CRUD / surface blocks | `define template crud_list(...)` |
 | HIPAA / SOC2 vertical block            | `@compliance` block from `@pactia/hipaa`         |

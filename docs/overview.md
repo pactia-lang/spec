@@ -31,20 +31,24 @@ Add structure where it helps. Keep a **product description** in `product { }`, t
 ```pactia
 pactia 1.0
 
+import @pactia/protocol-rest;
+
 product MyApp {
   > A mobile app for tracking personal fitness goals and sharing progress with friends.
 
   module fitness {
     service WorkoutService {
+      @auth Customer
+      @returns WorkoutListResponse
       @api list_workouts {
         > Customers browse their workout history, paginated.
-        @auth Customer
-        @returns WorkoutListResponse
       }
     }
   }
 }
 ```
+
+Altitude 1 may omit `method` / `path`; add them when you need wire-level IR.
 
 ### Altitude 2 — fully specified
 
@@ -135,7 +139,7 @@ When you formalize something, Pactia is strict about **how** (tags and macros) s
 
 ### Shareable prompts (packages)
 
-Chat prompts die in history. `kabol.toml` + `kabol.lock` pin package versions; import @scope/name;` imports paths only — same intent in every repo and session.
+Chat prompts die in history. `pactia.toml` + `pactia.lock` pin package versions; `import @scope/name;` imports paths only — same intent in every repo and session.
 
 ### What Pactia is not
 
@@ -169,10 +173,10 @@ A Pactia program is not executed. It is **compiled to module-scoped YAML IR** (`
 - An **AI-native intent language** — human-readable; AI is the primary consumer of compiled output, not the author of source
 - **Model and platform agnostic** — same `.pactia` → same YAML IR; BSC adapts to Cursor, Claude Code, Copilot, or custom agents
 - A **shareable product spec** — backend, web, mobile, desktop in one file or [workspace](language-spec.md#workspace-layout)
-- **Nine kernel keywords**, `@tag { }`, `#[macro]`, `define`, and **`> prose`** — [language-spec.md](language-spec.md)
+- **Nine reserved kernel words** (seven for product authoring; `export`, package `define`, and `yaml package/*` for package authoring), `@tag { }`, `#[macro]`, `define template`, and **`> prose`** — [language-spec.md](language-spec.md)
 - Composable via [packages](packages.md) on pactia.io — **the prompt is the package**
 - Extensible via [define templates and registered blocks](packages.md#extensibility) — not arbitrary user keywords
-- Stack-aware via `@stack rust-anb { }` on `product` + semver in `kabol.toml` ([platform.md](platform.md#stack-versions))
+- Stack-aware via `@stack rust-anb { }` on `product` + semver in `pactia.toml` ([platform.md](platform.md#stack-versions))
 - [Role-based](language-spec.md#authorization) at two layers: application roles and party roles
 
 ## What Pactia is not
@@ -194,7 +198,7 @@ Pactia deliberately describes **less than the full system** when you want it to.
 
 1. **Intent over implementation** — declare what must stay true; never imperative logic scripts.
 2. **Graded precision** — prose-only to fully tagged; the author picks the level.
-3. **Fixed skeleton, open content** — nine kernel keywords + three line kinds; everything inside is yours.
+3. **Fixed skeleton, open content** — nine reserved words (seven for products) + three line kinds; everything inside is yours.
 4. **AI-native artifact** — durable `.pactia`, not disposable chat.
 5. **AI model and platform agnostic** — compile to neutral YAML; BSC renders and optionally LLM-expands per consumer.
 6. **Share through packages** — reuse intent via pactia.io, not copy-paste.
@@ -232,12 +236,12 @@ Pactia is how humans **author**. `pactiac` produces **vendor-neutral IR**. BSC *
 | Senior architect / tech lead | `model`, `service`, `@api { }`, `@tag { }`, `#[macro]`, `@web { }` / `@ios { }`, `@test { }` |
 | Platform team                | Stack packages on pactia.io — not Pactia                   |
 | Frontend / mobile leads      | `@web { }`, `@ios { }`, `@bind { }` in same `.pactia` file |
-| Community / vendors          | Pactia packages (import @pactia/*` on pactia.io)            |
+| Community / vendors          | Pactia packages (`import @pactia/*` on pactia.io)            |
 | AI coding agent              | **Never** edits Pactia — implements from IR (`*.module.yaml`, `*.model.yaml`, `*.service.yaml`) |
 
 ## Language version
 
-**Pactia 1.0** — nine kernel keywords (`define` for templates and package registry), `@tag { }`, `#[macro]`, multi-surface (`input/surfaces/`), `@observe { }` / `@deploy { }`, workspace layout, `yaml` embed.
+**Pactia 1.0** — nine reserved kernel words (`define template` in products; `export` / `define tag` / `define macro` / `yaml package/*` in packages), `@tag { }`, `#[macro]`, multi-surface (`input/surfaces/`), `@observe { }` / `@deploy { }`, workspace layout, `yaml merge`.
 
 Grammar: [language-spec.md](language-spec.md)
 
@@ -319,10 +323,10 @@ When you need **enforceable** state edges, add `@transition { from, to }` on `@a
 
 | Goal               | Pactia contribution                   | BSC contribution                                     |
 | ------------------ | ------------------------------------- | ---------------------------------------------------- |
-| No ambiguous APIs  | `@body { }`, `@returns { }`, `#[macro]` on endpoints | Schema validation, OpenAPI render                    |
+| No ambiguous APIs  | `@body`, `@returns`, `#[macro]` on endpoints | Schema validation, OpenAPI render                    |
 | No auth guesswork  | `@actor { }`, `@auth { }`, `#[owner]` / `#[buyer]` | `security.md`, route rules                           |
-| No stack drift     | `@stack rust-anb { }` on `product` + `kabol.lock` | Stack package merge + [kabol.lock](platform.md#stack-versions) |
-| Reproducible specs | `kabol.lock`, packages                | Deterministic `bsc render`                           |
+| No stack drift     | `@stack rust-anb { }` on `product` + `pactia.lock` | Stack package merge + [pactia.lock](platform.md#stack-versions) |
+| Reproducible specs | `pactia.lock`, packages                | Deterministic `bsc render`                           |
 | No surface drift   | `@web { }`, `@ios { }`, `@bind { }` in same `.pactia` | Surface IR + linked API specs                      |
 | AI-ready output    | Compiles to IR (services + surfaces)  | Templates + agent rules per surface                  |
 
@@ -423,7 +427,7 @@ From [fleet-management-v2.pactia](../fixtures/kernel/fleet-management-v2.pactia)
 | Operation exists at `GET /api/v1/vehicles`         | Pactia (`@api { }`)    | Above |
 | Roles `Customer`, `Admin`                          | Pactia (`@auth { }`)    | Above |
 | Ownership scope `OWN_ROWS` on `Vehicle.customerId` | MACRO (`#[owner]`)      | Above |
-| Response shape `VehicleListResponse`               | Pactia (`@returns { }`) | Above |
+| Response shape `VehicleListResponse`               | Pactia (`@returns`) | Above |
 | Cursor pagination defaults (20/100)                | STACK_DEFAULT           | Above |
 | Error catalog (when `@errors { }` declared)          | Pactia                  | Above |
 | The SQL query, the index it uses, the handler code | —                       | Below |
@@ -611,7 +615,7 @@ If omitted: stack package `deploymentBaseline.autoscaling` applies to all servic
 
 ### Compiler derives
 
-- One happy-path scenario per endpoint (from `@auth { }` + `@returns { }` + shapes in `model`)
+- One happy-path scenario per endpoint (from `@auth` + `@returns` + shapes in `model`)
 - Auth negative cases for `#[owner]` endpoints
 - Kafka emit assertions for `@emit` tags
 
@@ -668,7 +672,7 @@ CI tool vendor → (1). Metrics per event → (2). SLO targets → (3). Entity r
 | --- | --- |
 | Product, model, services | `product`, `model { @entity … }`, `@api { }` in `service` |
 | State machines, party roles | `@states { }` + `#[buyer]` / `#[owner]` + `@transition { }` |
-| Request/response shapes | `@body { }` `@returns { }` |
+| Request/response shapes | `@body` `@returns` |
 | Packages | `import @scope/name`, `import`, `define template` |
 | Integration, events, policy | `@event { }`, `@policy { }`, `@integration { }`, prose |
 | Observability, deploy gates | `@observe { }`, `@deploy { }` |
