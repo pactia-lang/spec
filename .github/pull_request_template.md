@@ -22,7 +22,8 @@
 - [ ] `docs/grammar-reference.md`
 - [ ] `CHANGELOG.md`
 - [ ] `fixtures/` and/or `schemas/`
-- [ ] `registry/kernel-tags.yaml`
+
+**Tag/macro names:** not in this repo — they belong to packages (e.g. `@pactia/kernel` on pactia.io).
 
 **Primary doc / section:**
 
@@ -31,7 +32,7 @@
 - [ ] Examples match [fleet-management-v2.pactia](fixtures/kernel/fleet-management-v2.pactia) where applicable
 - [ ] Cross-links updated (`language-spec` ↔ `registry` ↔ `packages` ↔ `compilation`)
 - [ ] `CHANGELOG.md` updated under `[Unreleased]` for user-visible changes
-- [ ] JSON Schema / registry catalog aligned if tags or IR shapes changed
+- [ ] Field specs / IR JSON schemas aligned if shapes changed
 
 ## Downstream tooling
 

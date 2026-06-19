@@ -5,6 +5,22 @@
   "description": "Logical shape after parsing pactia.toml. Source is TOML on disk; see spec/docs/packages.md.",
   "type": "object",
   "properties": {
+    "workspace": {
+      "type": "object",
+      "properties": {
+        "entry": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Product entry file relative to project root"
+        },
+        "members": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "description": "Optional module directory paths for monorepos"
+        }
+      },
+      "additionalProperties": false
+    },
     "stackPackage": {
       "type": "string",
       "description": "Stack-kind package coordinate bound by product @stack",

@@ -4,9 +4,9 @@
 
 **You write what must stay true. AI writes how it works.**
 
-Pactia is an **AI-native intent language** — compiled by **pactiac** to AI-neutral YAML IR; BSC renders for any model or coding platform. Packages ship on **pactia.io**.
+Pactia is an **AI-native intent language** — compiled by **pactiac** to AI-neutral JSON IR; BSC renders for any model or coding platform. Packages ship on **pactia.io**.
 
-**Current version:** 1.0  
+**Current version:** 1.1  
 **Status:** Specification
 
 ---
@@ -69,18 +69,19 @@ Almost pure prose — same product, **`@stack` only**, no model or API tags (**3
 
 ## Documents
 
-Full index: [docs/README.md](docs/README.md) (8 documents)
+Full index: [docs/README.md](docs/README.md)
 
 | Document | Role |
 | --- | --- |
-| [overview.md](docs/overview.md) | Philosophy, three altitudes, intent line, architecture coverage |
-| [language-spec.md](docs/language-spec.md) | Kernel grammar, workspace, authorization |
-| [grammar-reference.md](docs/grammar-reference.md) | BNF and implementer error codes (not required for authors) |
-| [registry.md](docs/registry.md) | Tags, macros, cross-cutting blocks |
-| [packages.md](docs/packages.md) | Packages, registry authoring, extensibility |
-| [platform.md](docs/platform.md) | Stacks, versions, protocols |
-| [compilation.md](docs/compilation.md) | Compiler pipeline |
-| [editor-support.md](docs/editor-support.md) | VS Code / Cursor syntax highlighting |
+| [overview.md](docs/overview.md) | Philosophy, three altitudes, intent line |
+| [language-spec.md](docs/language-spec.md) | **Language only** — grammar, `def`, blocks |
+| [macros.md](docs/macros.md) | Unified `def` for tags and macros |
+| [grammar-reference.md](docs/grammar-reference.md) | BNF and implementer error codes |
+| [registry.md](docs/registry.md) | Symbol resolution mechanics |
+| [packages.md](docs/packages.md) | Packages, `pactia.toml`, publish |
+| [platform.md](docs/platform.md) | Stacks, protocols |
+| [compilation.md](docs/compilation.md) | Compiler pipeline, JSON IR |
+| [editor-support.md](docs/editor-support.md) | VS Code / Cursor highlighting |
 
 ## Tooling
 
@@ -98,7 +99,7 @@ Full index: [docs/README.md](docs/README.md) (8 documents)
 
 | | Repo | Role |
 | --- | --- | --- |
-| Language | **spec** (this repo) | Pactia 1.0 — grammar, tags, intent line |
+| Language | **spec** (this repo) | Pactia 1.1 — grammar, JSON IR, packages |
 | Compiler | [pactiac](https://github.com/pactia-lang/pactiac) | Deterministic compile to module-scoped IR |
 | Packages | [pactia](https://github.com/pactia-lang/pactia) | `pactia add`, lockfiles, publish *(in progress)* |
 | Editor | [vscode-pactia](https://github.com/pactia-lang/vscode-pactia) | Syntax, tags, diagnostics |

@@ -12,7 +12,7 @@ Each fixture should compile with the pactiac version listed in `spec/README.md`.
 | `kernel/fleet-management-mini.pactia` | [language-spec.md](../docs/language-spec.md) — compact tagged example |
 | `kernel/fleet-management-prose.pactia` | [language-spec.md](../docs/language-spec.md) — prose-first example |
 | `kernel/pactia-lang-website.pactia` | [language-spec.md](../docs/language-spec.md#multi-surface) — single-page marketing site |
-| `packages/fintech-rules-index.pactia` | [packages.md#package-authoring](packages.md#package-authoring) — `define macro` / `define tag` package source |
+| `packages/fintech-rules-index.pactia` | [packages.md](../docs/packages.md) — `export def @` / `export def #` package source |
 
 More fixtures will be added as normative sections cite minimal snippets.
 

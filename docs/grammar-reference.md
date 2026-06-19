@@ -2,166 +2,118 @@
 
 **Compiler implementer reference — not required reading to write Pactia.**
 
-Authors: start with [overview.md](overview.md) (three altitudes) and [language-spec.md](language-spec.md). This document holds BNF, shorthand arity rules, and implementer error codes.
+Authors: [overview.md](overview.md) | [language-spec.md](language-spec.md)
 
 ---
 
-## Tag application BNF
+## Program structure
 
 ```
-ClauseTag         ::= "@" TagName TagTarget "{" ClauseBody "}"
-ModifierFlag      ::= "@" TagName                              // zero args — @pk, @public
-ModifierShorthand ::= "@" TagName ( Reference | Number )      // one arg — @output VehicleDto, @status 201, @auth Customer
-ModifierTag       ::= "@" TagName "{" ModifierBody "}"         // multiple args — @auth { roles: [...] }
-Macro             ::= "#[" Identifier MacroArgs? "]"
-
-TagName           ::= Identifier
-TagTarget         ::= Identifier | Reference
-ClauseBody        ::= ( Assignment "," | FieldDecl "," | ProseLine | NestedClauseTag )*
-ModifierBody      ::= Assignment ( "," Assignment )*
+Program           ::= VersionLine ( ImportLine | DefDecl | ProductDecl )*
+VersionLine       ::= "pactia" Version
+ProductDecl       ::= "product" Identifier "{" ProductItem* "}"
+ModuleDecl        ::= "module" Identifier "{" ModuleItem* "}"
+ServiceDecl       ::= "service" Identifier "{" ServiceItem* "}"
+ModelDecl         ::= "model" "{" ModelItem* "}"
 ```
 
+---
+
+## Def declarations
+
 ```
-DecorationLine    ::= MacroApplication | ModifierFlag | ModifierShorthand | ModifierTag
+```
+DefDecl           ::= ExportOpt "def" DefSigil DefName DefParams? InClause? "{" DefBody* "}"
+ModuleConstDecl   ::= "def" Identifier "=" ( Literal | ProseLine | MultilineProse )
+ExportOpt         ::= "export" | ε
+DefSigil          ::= "@" | "#"
+DefName           ::= Identifier
+DefParams         ::= "(" ParamList ")"
+InClause          ::= "in" InTarget ( "," InTarget )*
+InTarget          ::= "product" | "module" | "model" | "service" | "field"
+DefBody           ::= FieldSpec | ModifierSpec | ProseLine | MultilineProse | TagApplication | MacroApplication | AssignmentLine
+ModifierSpec      ::= "modifier" ","
+FieldSpec         ::= Identifier ( "," | ":" DefaultValue "," )
+```
+
+Package `index.pactia`: `export def` at file root only. Consumer `product.pactia`: non-exported `def @` / `def #` inside `module { }` only. Module constants use `ModuleConstDecl` (no sigil).
+
+---
+
+## Tags and macros
+
+```
+TagApplication    ::= "@" Identifier TagBody?
+TagBody           ::= "{" TagBodyItem* "}"
+ModifierPrefix    ::= "@" Identifier ( ShorthandArg | "{" … "}" )   // prefix on next host line
 MacroApplication  ::= "#[" Identifier MacroArgs? "]"
-HostLine          ::= ModuleDecl | ServiceDecl | FieldDecl | ApiDecl | WebDecl | IosDecl
-```
-
-**One form per arity** — if a tag takes one value, the body form (`{ type: X }`) does **not** parse. `MODIFIER_TYPE_WRAPPER` is removed; there is no alternate spelling.
-
-| Arity | Canonical form | Examples |
-| --- | --- | --- |
-| Zero | Flag | `@pk`, `@public`, `@unique` |
-| One | Shorthand | `@output VehicleListResponse`, `@status 201`, `@emit vehicle.created`, `@auth Customer` |
-| Multiple | Body | `@auth { roles: [Customer, Admin] }`, `@fk { entity: Customer }` |
-
----
-
-## Unified tag body grammar
-
-```
-TagApplication    ::= "@" TagName TagTarget? "{" TagBodyItem* "}"
-TagBodyItem       ::= ProseLine | AssignmentLine | FieldDeclLine | NestedTagApplication | DecorationLine
+MacroArgs         ::= "(" ArgList ")" | ArgList
 ProseLine         ::= ">" ProseText
-AssignmentLine    ::= Identifier ":" AssignmentValue ","
-FieldDeclLine     ::= Identifier ":" TypeRef ","
-AssignmentValue   ::= String | Reference | Identifier | Number | Boolean | Array | NestedAssignBlock
+MultilineProse    ::= ">>" ProseText ">>"
+Interpolation     ::= "${" Identifier "}"
 ```
-
-Inside `{ }`: every structured line is a comma-terminated field/assignment **or** prose (`> ...`). Bare unquoted sentences → `TAG_BODY_INVALID` or `PROSE_PREFIX_REQUIRED`.
-
-**Prose everywhere:** every prose line starts with `>`, including altitude 0 in `product { }`. Multiline prose = multiple `>` lines in the same block.
 
 ---
 
-## API endpoints
+## Tag body items
 
-**Canonical:** prefix-decorated `@api`:
-
-```pactia
-@auth { roles: [Customer, Admin] }
-#[list] #[paginated] #[owner]
-@output VehicleListResponse
-@throws { names: [Forbidden] }
-@api list_vehicles {
-  method: GET,
-  path: "/api/v1/vehicles",
-}
 ```
-
-Modifiers (`@auth`, `@output`, `@input`, …) use **prefix** placement on lines above `@api`. Wire fields (`method`, `path`) require `import @pactia/protocol-rest`.
-
----
-
-## Error catalog naming
-
-| Tag | Role | Scope |
-| --- | --- | --- |
-| `@errors platform { NotFound: { status, code, message } }` | **Defines** catalog entries | `module` |
-| `@throws { names: [NotFound, Forbidden] }` | **References** catalog on `@api` | prefix on `@api` |
+TagBodyItem       ::= ProseLine | MultilineProse | AssignmentLine | FieldDeclLine | NestedTag | MacroApplication
+AssignmentLine    ::= Identifier ":" Value ","
+```
 
 ---
 
 ## Implementer error codes
 
-### Registry and workspace
+### Registry
 
 | Code | Condition |
 | --- | --- |
-| `REGISTRY_COLLISION` | Two imports expose the same unqualified tag/macro name |
-| `REGISTRY_QUALIFIER_REQUIRED` | Ambiguous name — compiler requires `@alias::name` |
-| `IMPORT_NOT_EXPORTED` | `import symbol from @pkg` names a symbol not marked `export` in package source |
-| `DEPENDENCY_NOT_DECLARED` | `import @scope/name` without `pactia.toml` entry |
-| `VERSION_IN_IMPORT` | Semver appears in `import` statement |
-| `DEFINE_TAG_IN_PRODUCT` | `define tag` inside consumer `product { }` |
-| `DEFINE_MACRO_IN_PRODUCT` | `define macro` inside consumer `product { }` |
-| `MACRO_UNKNOWN` | `#[name]` not registered |
-| `MACRO_ARGS_INVALID` | Argument count or types fail package schema |
-| `MACRO_EXPANSION_CYCLE` | Macro expansion references itself |
-| `MACRO_EXPANSION_INVALID` | `expands { }` references unknown tag or macro |
+| `UNKNOWN_SYMBOL` | `@` / `#` name not in effectiveRegistry |
+| `DEF_IN_PRODUCT` | `export def` in consumer product |
+| `DEF_PLACEMENT_REQUIRED` | `export def` missing `in` |
+| `PLACEMENT_VIOLATION` | Use outside symbol's `in` targets |
+| `REGISTRY_COLLISION` | Two imports expose same unqualified name |
+| `DEPENDENCY_NOT_DECLARED` | Import without `pactia.toml` entry |
+| `VERSION_IN_IMPORT` | Semver in import |
+| `MACRO_UNKNOWN` | Unknown `#[name]` |
+| `MACRO_ARGS_INVALID` | Wrong arity |
+| `MACRO_EXPANSION_CYCLE` | Recursive macro |
+| `MACRO_EXPANSION_INVALID` | Invalid macro def body or splice result |
 
-### Tag and clause validation
-
-| Code | Condition |
-| --- | --- |
-| `TAG_TARGET_REQUIRED` | Multi-instance tag without target |
-| `TAG_SCOPE_VIOLATION` | Tag outside allowed host (scope matrix) |
-| `TAG_BODY_INVALID` | Body fails tag JSON Schema |
-| `TAG_BODY_UNKNOWN_FIELD` | Unknown slot in tag body |
-| `CLAUSE_DUPLICATE_KEY` | Same assignment key twice in one clause |
-| `CLAUSE_FIELD_SEPARATOR` | Object clause field not followed by `,` |
-| `DECORATOR_MUST_PREFIX` | Modifier inside body instead of above host |
-| `DECORATOR_WITHOUT_HOST` | Decoration line not followed by valid host |
-| `DECORATOR_HOST_MISMATCH` | Tag `scope` does not allow the following host |
-| `TAG_LOWERS_INVALID` | `lowers { }` targets a path not in the schema allowlist |
-
-### State graph validation
+### Tag bodies
 
 | Code | Condition |
 | --- | --- |
-| `STATE_BINDING_INVALID` | `@states entity:` does not resolve to entity + enum field, or `from`/`to` is not an enum member |
-| `STATE_DUPLICATE_TRANSITION` | Same `(from, to)` appears twice in one `@states` block |
-| `STATE_MACHINE_DUPLICATE` | Two `@states` blocks bind the same `Entity.field` |
-| `STATE_TRANSITION_UNDEFINED` | `@transition` on `@api` is not an edge in any module `@states` graph |
+| `TAG_BODY_MISSING_FIELD` | Required def field missing |
+| `TAG_BODY_UNKNOWN_FIELD` | Extra field (warning) |
+| `TAG_BODY_INVALID` | Unparseable body |
+| `CLAUSE_DUPLICATE_KEY` | Duplicate assignment key |
 
-### Literals and arrays
-
-| Code | Condition |
-| --- | --- |
-| `STRING_REQUIRED` | Value looks like text/path but is not wrapped in `"..."` |
-| `INVALID_LITERAL` | Unquoted token breaks Identifier / Reference / Number rules |
-| `PROSE_QUOTED` | Prose line incorrectly wrapped in quotes instead of `>` |
-| `ARRAY_REQUIRED` | Schema expects multiple values but author used a bare scalar |
-| `ARRAY_ELEMENT_INVALID` | Element inside `[...]` breaks rules |
-| `SCALAR_EXPECTED` | Schema expects one value but author used `[...]` |
-| `SLOT_SYNTAX_INVALID` | Space-separated slots (`method GET`) instead of `method: GET` |
-
-### Compiler internals
+### State graphs
 
 | Code | Condition |
 | --- | --- |
-| `COMMENT_IN_IR` | Comment token appeared in lowered output (compiler bug) |
-| `PROSE_PREFIX_REQUIRED` | Non-empty line looks like prose but does not start with `>` |
+| `STATE_BINDING_INVALID` | Invalid `@states` binding |
+| `STATE_DUPLICATE_TRANSITION` | Duplicate edge |
+| `STATE_TRANSITION_UNDEFINED` | `@transition` not in graph |
+
+### Package resolution
+
+| Code | Condition |
+| --- | --- |
+| `PACKAGE_NOT_FOUND` | Unknown package |
+| `PACKAGE_LOCK_MISMATCH` | Digest mismatch |
+| `LOCK_ENTRY_MISSING` | Missing lock pin |
+| `STACK_BINDING_MISMATCH` | Stack binding inconsistent |
 
 Author-facing subset: [language-spec.md — Author errors](language-spec.md#author-errors).
 
 ---
 
-## Package resolution
+## See also
 
-All package coordinates use one resolver — whether the coordinate comes from `import @scope/name` or from an `@stack` tag **target** on `product`. `@stack` is a kernel clause tag; the compiler does not treat it as a former keyword or a separate compile phase.
-
-| Code | Severity | Condition |
-| --- | --- | --- |
-| `PACKAGE_NOT_FOUND` | Error | Coordinate not found in registry |
-| `PACKAGE_VERSION_UNSATISFIED` | Error | No release matches semver constraint in `pactia.toml` |
-| `PACKAGE_LOCK_MISMATCH` | Error | `pactia.lock` digest differs from fetched tarball |
-| `PACKAGE_DEPRECATED` | Warning | Resolved version marked deprecated on registry |
-| `DEPENDENCY_NOT_DECLARED` | Error | `import @scope/name` or resolved `@stack` target absent from `pactia.toml` `[dependencies]` |
-| `LOCK_ENTRY_MISSING` | Error | Declared in `pactia.toml` but no pin in `pactia.lock` |
-| `VERSION_IN_IMPORT` | Error | Semver appears in an `import` statement |
-| `VERSION_IN_TAG_BODY` | Error | Semver or version constraint in a tag body (e.g. `version:` in `@stack { }`) |
-| `COMPATIBLE_STACKS_UNSATISFIED` | Error | Imported package's `compatibleStacks` not satisfied by the product's resolved stack-kind package |
-| `STACK_BINDING_MISMATCH` | Error | `@stack` tag target, optional matching `import`, and `pactia.toml [stack].package` resolve to different lock entries |
-
-See [packages.md — Package resolution](packages.md#package-resolution).
+- [language-spec.md](language-spec.md)
+- [registry.md](registry.md)
+- [packages.md](packages.md#package-resolution)

@@ -1,55 +1,46 @@
-# Pactia editor support
+# Editor support
 
-Syntax highlighting for `.pactia` in Cursor / VS Code.
+Status: **Specification** — VS Code / Cursor highlighting for Pactia 1.1.
 
-Extension: [vscode-pactia](../../vscode-pactia/) | [language-spec.md](language-spec.md) | [registry.md](registry.md)
+Part of: [language-spec.md](language-spec.md)
 
-## Install (required)
+---
 
-From repo root:
+## Install
 
-```bash
-./vscode-pactia/scripts/install-extension.sh
-```
+Install the **vscode-pactia** extension from the marketplace or load from the repo `vscode-pactia/` folder.
 
-Packages a VSIX and installs into Cursor and VS Code (when available). Removes stale `pactia-lang.pactia-*` versions and legacy symlinks.
-
-Then **Developer: Reload Window** and open a `.pactia` file. Bottom-right language mode must show **Pactia** (not Plain Text).
-
-Verify grammar balance:
-
-```bash
-cd vscode-pactia && npm install && npm run test:grammar
-```
+---
 
 ## Highlighting
 
-| Highlight as | Examples |
+| Token | Examples |
 | --- | --- |
-| **Kernel keywords (9)** | Product (7): `pactia`, `product`, `module`, `service`, `model`, `import`, `define` (template). Package forms: `export`, `define tag` / `define macro`, `yaml` |
-| **Registry headers** | `scope endpoint`, `body { }`, `lowers { }`, `expands { }`, `category service` |
-| **Clause tags (teal)** | `@entity Vehicle { }`, `@api list { }`, `@actor customers { }` |
-| **Macros (purple, bold)** | `#[list]`, `#[database]`, `#[alias::macro]` — above `service` / `@api` |
-| **Modifier flags** | `@pk`, `@public`, `@pii`, `@optional` — no `{ }` when empty |
-| **Modifier shorthand** | `@output VehicleDto`, `@status 201`, `@emit vehicle.created` |
-| **Imports** | `import @scope/name;`, `import { a, b } from @pkg;`, `import @pkg as alias;` |
-| **Qualified tags** | `@alias::sanctions_check { }` |
-| **Prose (purple, italic)** | `> sentence` |
-| **Strings (green)** | `"PostgreSQL connection string"`, `"/api/v1/orders"` |
-| **Braces (gold)** | `{` `}` on blocks and inline objects |
+| Keyword | `pactia`, `product`, `module`, `service`, `model`, `import`, `export`, `def`, `in` |
+| Reserved | `view`, `interface`, `class`, `function`, `field` |
+| Tag invoke | `@identifier` |
+| Macro invoke | `#[identifier]` |
+| Def sigil | `def @name`, `def #name` |
+| Prose | `> line`, `>> block >>` |
+| Comment | `//`, `/* */` |
 
-## Grammar rules (v1.0.0)
+---
 
-1. **Multiline blocks** open only when `{` is the **last character on the line** (`@entity Vehicle {`, `product X {`).
-2. **Single-line modifiers** — `@auth { roles: [...] }`, inline `screen: { id: x }` inside `@surface { }` matched before multiline rules.
-3. **Indent-aware close** — `}` at the same indent as the opening line closes the block.
-4. **Inline objects** — `{ service: FleetService, metric: error_rate }` inside arrays.
-5. **Package authoring** — `define tag` / `define macro` with nested `body { }`, `lowers { }`, `expands { }` registry blocks.
-6. **Qualified symbols** — `@alias::tag`, `#[alias::macro]` after import @pkg as alias;`.
+## Grammar rules
+
+Highlighting follows [language-spec.md](language-spec.md) and [grammar-reference.md](grammar-reference.md):
+
+- Block keywords open `{` … `}` nests
+- `@tag { }` and `#[macro]` / `#[macro(args)]` are distinct line kinds
+- `def` bodies: field lists, prose, optional `modifier,`; macro bodies may include `@tag` / `#[macro]` lines directly
+- `${identifier}` in prose and macro bodies is a compile-time interpolation token
+
+---
 
 ## Keeping grammar in sync
 
-1. Update [language-spec.md](language-spec.md) and [registry.md](registry.md)
-2. Edit [vscode-pactia/syntaxes/pactia.tmLanguage.json](../../vscode-pactia/syntaxes/pactia.tmLanguage.json)
-3. Run `cd vscode-pactia && npm run test:grammar`
-4. Re-run `scripts/install-extension.sh` and reload window
+When the language spec changes:
+
+1. Update [vscode-pactia/syntaxes/pactia.tmLanguage.json](../../vscode-pactia/syntaxes/pactia.tmLanguage.json)
+2. Run extension grammar tests if present
+3. Adjust [grammar-reference.md](grammar-reference.md) in the same change
