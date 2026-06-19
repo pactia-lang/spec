@@ -14,7 +14,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 ### Changed
 
-- **Normative fleet tag schemas:** all tag bodies used in `fleet-management-v2.pactia` are constrained, including product/service clauses (`topology-v1`, `tenancy-v1`, `guide-v1`, `security-v1`, `surface-v1`, `test-v1`); `must-v1` is normative for obligation tags not yet used in the fleet fixture; other kernel tag schemas remain stubs.
+- **Normative fleet tag schemas:** all 41 kernel tags in `registry/kernel-tags.yaml` have normative JSON Schema bodies; none remain stubs.
 
 - **Kernel registry model:** single `@surface` + `@bind` for multi-platform UI; no kernel `@web`, `@ios`, `@grpc`, or protocol/platform tags.
 - **Service DTO tags:** kernel `@input` / `@output` replace `@body` / `@returns` (REST package may register aliases).
