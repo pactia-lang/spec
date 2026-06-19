@@ -31,6 +31,7 @@ Add structure where it helps. Keep a **product description** in `product { }`, t
 ```pactia
 pactia 1.0
 
+import @pactia/kernel;
 import @pactia/protocol-rest;
 
 product MyApp {
@@ -97,20 +98,20 @@ Pactia does **not** replace Rust, React, or Swift. It sits above them as a durab
 
 **AI model agnostic** means Pactia is **not** tied to any specific model (GPT, Claude, Gemini, …) or coding platform (Cursor, Claude Code, Copilot, custom agents). The same compiled output must work everywhere.
 
-That is why `pactiac` lowers Pactia to **AI-neutral YAML IR** (`input/**/*.yaml`) — structured facts with provenance, not vendor prompt templates. **BSC** then:
+That is why `pactiac` lowers Pactia to **AI-neutral JSON IR** (`input/**/*.json`) — structured facts with provenance, not vendor prompt templates. **BSC** then:
 
 1. **Renders** that IR into each target’s file conventions (`.cursor/rules`, `CLAUDE.md`, Copilot instructions, …).
-2. **Optionally expands** it with an LLM — grounded in the YAML, not free-form — to produce richer, more contentful context for that specific AI coding target.
+2. **Optionally expands** it with an LLM — grounded in JSON IR, not free-form — to produce richer agent context.
 
-The LLM step does **not** re-parse `.pactia` or change enforceable facts. It elaborates **guidance**: module overviews, happy-path scenarios, stack-aligned coding notes, gaps marked `NOT_DERIVABLE`. Formal tags in YAML remain the source of truth for conformance.
+The LLM step does **not** re-parse `.pactia` or change enforceable facts. It elaborates **guidance**: module overviews, happy-path scenarios, stack-aligned coding notes, gaps marked `NOT_DERIVABLE`. Formal tags in JSON remain the source of truth for conformance.
 
 ```
-.pactia  ──pactiac──▶  input/modules/*/     (*.module.yaml, *.model.yaml, *.service.yaml)
+.pactia  ──pactiac──▶  input/modules/*/     (*.module.json, *.model.json, *.service.json)
                               │
                               └── bsc render ──▶  agent briefs (target profile)
                                         │
                                         └── bsc expand (LLM, optional) ──▶  richer agent context
-                                              grounded in YAML · provenance: GENERATED
+                                              grounded in JSON · provenance: GENERATED
 ```
 
 | Phase | Deterministic? | Role |
@@ -146,11 +147,11 @@ Chat prompts die in history. `pactia.toml` + `pactia.lock` pin package versions;
 | Not | Because |
 | --- | --- |
 | A replacement programming language | No execution, no general computation |
-| Bound to one AI vendor | BSC renders neutral YAML for any consumer |
+| Bound to one AI vendor | BSC renders neutral JSON for any consumer |
 | A mandatory full spec | Skeleton required; precision is optional |
 | A non-deterministic language | Parse and compile are deterministic; implementation is free |
 | Ephemeral prompt engineering | Versioned, diffable, composable, lockfile-pinned |
-| LLM rewriting your `.pactia` | LLM may only **expand** BSC output from YAML — not mutate source or IR law |
+| LLM rewriting your `.pactia` | LLM may only **expand** BSC output from JSON IR — not mutate source or IR law |
 
 ---
 
@@ -164,18 +165,18 @@ Pactia is an **intent language**, not a replacement for code. Authors declare wh
 | 4GL / config (SQL, Terraform) | Desired state | Reconciler converges actual to desired |
 | **Pactia + BSC** | **Product intent** | **Conformance flags violations of facts you chose to formalize** |
 
-A Pactia program is not executed. It is **compiled to module-scoped YAML IR** (`*.module.yaml`, `*.model.yaml`, `*.service.yaml`); BSC then **renders** and may **LLM-expand** agent briefs for your chosen toolchain — richer agent context without re-authoring `.pactia`. Conformance checks only the formalized facts in IR.
+A Pactia program is not executed. It is **compiled to module-scoped JSON IR** (`*.module.json`, `*.model.json`, `*.service.json`); BSC then **renders** and may **LLM-expand** agent briefs for your chosen toolchain — richer agent context without re-authoring `.pactia`. Conformance checks only the formalized facts in IR.
 
 **Above [the intent line](overview.md#the-intent-line), formalized facts are deterministic and enforceable. Below it, implementation is free.** See BSC vision.
 
 ## What Pactia is
 
 - An **AI-native intent language** — human-readable; AI is the primary consumer of compiled output, not the author of source
-- **Model and platform agnostic** — same `.pactia` → same YAML IR; BSC adapts to Cursor, Claude Code, Copilot, or custom agents
+- **Model and platform agnostic** — same `.pactia` → same JSON IR; BSC adapts to Cursor, Claude Code, Copilot, or custom agents
 - A **shareable product spec** — backend, web, mobile, desktop in one file or [workspace](language-spec.md#workspace-layout)
-- **Nine reserved kernel words** (seven for product authoring; `export`, package `define`, and `yaml package/*` for package authoring), `@tag { }`, `#[macro]`, `define template`, and **`> prose`** — [language-spec.md](language-spec.md)
-- Composable via [packages](packages.md) on pactia.io — **the prompt is the package**
-- Extensible via [define templates and registered blocks](packages.md#extensibility) — not arbitrary user keywords
+- **Keywords** — `product`, `module`, `service`, `model`, `import`, `export`, `def`, `in`; `@tag { }`, `#[macro]`, prose — [language-spec.md](language-spec.md)
+- Composable via [packages](packages.md) on pactia.io
+- Extensible via **`export def`** in packages — not new language keywords
 - Stack-aware via `@stack rust-anb { }` on `product` + semver in `pactia.toml` ([platform.md](platform.md#stack-versions))
 - [Role-based](language-spec.md#authorization) at two layers: application roles and party roles
 
@@ -185,7 +186,7 @@ A Pactia program is not executed. It is **compiled to module-scoped YAML IR** (`
 | --- | --- |
 | An intent language for whole products | A replacement for Rust, React, or Swift |
 | Graded precision (prose to full spec) | A mandate to specify everything |
-| AI-neutral YAML + optional conformance | A Cursor-only or Claude-only prompt format |
+| AI-neutral JSON + optional conformance | A Cursor-only or Claude-only prompt format |
 | Shareable prompt standard | Ephemeral ChatGPT one-offs |
 | Prose + `@tag { }` + `#[macro]` | 50-keyword classic DSL |
 | `> prose` + `//` / `/* */` comments | Bare sentences or undocumented notes in source |
@@ -198,9 +199,9 @@ Pactia deliberately describes **less than the full system** when you want it to.
 
 1. **Intent over implementation** — declare what must stay true; never imperative logic scripts.
 2. **Graded precision** — prose-only to fully tagged; the author picks the level.
-3. **Fixed skeleton, open content** — nine reserved words (seven for products) + three line kinds; everything inside is yours.
+3. **Fixed skeleton, open content** — block keywords + `def`; symbols from imported packages.
 4. **AI-native artifact** — durable `.pactia`, not disposable chat.
-5. **AI model and platform agnostic** — compile to neutral YAML; BSC renders and optionally LLM-expands per consumer.
+5. **AI model and platform agnostic** — compile to neutral JSON; BSC renders and optionally LLM-expands per consumer.
 6. **Share through packages** — reuse intent via pactia.io, not copy-paste.
 7. **Strict when structured** — tags lower deterministically; conformance can hold them.
 8. **Free when prose** — guidance for agents and humans unless linked to `@test` / `@must`.
@@ -213,7 +214,7 @@ Pactia deliberately describes **less than the full system** when you want it to.
 ┌─────────────────────────────────────────────────────────────┐
 │  Pactia (.pactia) + packages       ← humans author intent       │
 ├─────────────────────────────────────────────────────────────┤
-│  input/manifest.yaml, product.yaml, modules/*/*.yaml          │
+│  input/manifest.json, product.json, modules/*/*.json          │
 │  (AI-neutral IR)              ← pactiac compile               │
 ├─────────────────────────────────────────────────────────────┤
 │  Stack package (pactia.io)      ← platform law (read-only)   │
@@ -235,11 +236,11 @@ Pactia is how humans **author**. `pactiac` produces **vendor-neutral IR**. BSC *
 | Platform team                | Stack packages on pactia.io — not Pactia                   |
 | Frontend / mobile leads      | `@surface { }`, `@bind { }` in same `.pactia` file |
 | Community / vendors          | Pactia packages (`import @pactia/*` on pactia.io)            |
-| AI coding agent              | **Never** edits Pactia — implements from IR (`*.module.yaml`, `*.model.yaml`, `*.service.yaml`) |
+| AI coding agent              | **Never** edits Pactia — implements from IR (`*.module.json`, `*.model.json`, `*.service.json`) |
 
 ## Language version
 
-**Pactia 1.0** — nine reserved kernel words (`define template` in products; `export` / `define tag` / `define macro` / `yaml package/*` in packages), `@tag { }`, `#[macro]`, multi-surface (`input/surfaces/`), `@observe { }` / `@deploy { }`, workspace layout, `yaml merge`.
+**Pactia 1.1** — keywords: `product`, `module`, `service`, `model`, `import`, `export`, `def`, `in`; `@tag { }`, `#[macro]`, prose (`>`, `>>`); optional `[workspace]` in `pactia.toml`. Tag names from imported packages (e.g. `@pactia/kernel`).
 
 Grammar: [language-spec.md](language-spec.md)
 
@@ -339,7 +340,7 @@ When you need **enforceable** state edges, add `@transition { from, to }` on `@a
 
 ## The intent line
 
-The **intent line** (also called the contract line in BSC) divides every software product into **formalized intent** vs **free implementation** — across backend, web, mobile, and desktop. The word *contract* also names [cross-cutting contract blocks](registry.md#cross-cutting-contract-blocks) in the tag taxonomy and a single [API contract per feature file](language-spec.md#featurespactia) (one endpoint task in `features/*.pactia`).
+The **intent line** (also called the contract line in BSC) divides every software product into **formalized intent** vs **free implementation** — across backend, web, mobile, and desktop. Cross-cutting tags (policy, deploy, observe) are registered in packages like any other `@tag`. Multi-file workspaces may split endpoints across `features/*.pactia` under a service — see [language-spec.md — Workspace layout](language-spec.md#workspace-layout).
 
 ### The line
 
@@ -400,7 +401,7 @@ The compiler (`@pactia/pactiac`) tags every lowered fact with a provenance:
 1. **Above the line is deterministic.** No LLM decides anything above the line. Same Pactia, same contract, byte for byte.
 2. **Below the line is free.** AI and humans choose logic, topology, and structure however they like.
 3. **The contract never describes behavior.** No numbered `flow {}` blocks. Use `@must` for enforceable outcomes; use `@guide` or `implementation_hint` for suggested patterns (below the line).
-4. **The IR is the contract, not the system.** `input/manifest.yaml`, `input/product.yaml`, and `input/modules/*/` (`*.module.yaml`, `*.model.yaml`, `*.service.yaml`) carry only above-the-line facts. Optional below-the-line hints, if present, are marked and are never enforced.
+4. **The IR is the contract, not the system.** `input/manifest.json`, `input/product.json`, and `input/modules/*/` (`*.module.json`, `*.model.json`, `*.service.json`) carry only above-the-line facts.
 5. **The line is crossed only by conformance.** The sole connection between the two halves is the conformance gate: it checks the implementation against the contract and fails the build otherwise (static surface checks today; runtime enforcement planned).
 
 ### Worked example (fleet)
@@ -480,7 +481,7 @@ A senior architect using Pactia should finish in **one session** (~100–200 lin
 | Auth & roles                  | **Yes** — `@actor { }` + `@auth { }` + `#[owner]` | JWT baseline, claims                  | route guard table                  |
 | Config / secrets              | **Yes** — `@config { }`                           | 12-factor startup template            | env manifest, secrets list         |
 | Security / PII / retention    | **Overrides** — `@policy { }`, field `@pii { }` `@retain { }` | OWASP, encryption, default retention  | PII list from model tags            |
-| Best practices / coding style | `@guide` + stack `codingStandards`            | full patterns                         | module / service YAML for AI       |
+| Best practices / coding style | `@guide` + stack defaults | full patterns | module / service JSON for AI |
 | Observability (SLOs, alerts)  | `@observe` when non-default                   | trace sampling, metric types          | counters from `@emit` events       |
 | Scalability                   | `@deploy` environment replicas                | HPA defaults, replica baselines       | per-service flags from `service`   |
 | Deployment / environments     | `@deploy` when non-default                    | K8s, Helm, ports, health paths        | namespaces from env names          |
@@ -625,7 +626,7 @@ Even when Pactia is minimal, the specification package must include everything a
 | `project-overview.md`                  | `product`, `@actor { }`, prose rules               |
 | `model.md`                             | `model { @entity @enum @relation @states }`         |
 | `api-spec.md`                          | `@api { }` + nested `@tag { }` + `#[macro]`       |
-| `surfaces/*.yaml` / UI intent docs     | `@surface { }`, `@bind { }`                  |
+| `surfaces/*.json` / UI intent docs     | `@surface { }`, `@bind { }`                  |
 | `module-design.md`                     | services + stack layers                              |
 | `integrations.md`                      | `@integration { }` / integration prose                   |
 | `security.md`                          | stack policy + `@policy { }` + `@auth { }`                   |
@@ -647,7 +648,7 @@ The architect reads the **generated** deployment and testing docs to verify; the
 | **Extended** | Regulated / high-scale | ~250 lines  | + `@observe`, `@deploy`, `@security`, pipeline gates |
 
 
-All tiers compile to the **same YAML IR depth**; Express tier relies more on inference and stack defaults.
+All tiers compile to the **same JSON IR depth**; Express tier relies more on inference and stack defaults.
 
 ### Decision checklist for new Pactia constructs
 
@@ -667,27 +668,27 @@ CI tool vendor → (1). Metrics per event → (2). SLO targets → (3). Entity r
 | Product, model, services | `product`, `model { @entity … }`, `@api { }` in `service` |
 | State machines, party roles | `@states { }` + `#[buyer]` / `#[owner]` + `@transition { }` |
 | Request/response shapes | `@input` `@output` |
-| Packages | `import @scope/name`, `import`, `define template` |
+| Packages | `import @scope/name`, local `def @` / `def #` in `module { }` |
 | Integration, events, policy | `@event { }`, `@policy { }`, `@integration { }`, prose |
 | Observability, deploy gates | `@observe { }`, `@deploy { }` |
 | Acceptance tests | `@test { }` + When/Then |
 | Multi-surface UI | `@surface { }` + `@bind { }` |
 
-Platform overrides (`@observe { }`, `@deploy { }`) use tagged blocks — see [registry.md](registry.md#cross-cutting-concerns).
+Platform overrides use registered tags from imported packages (e.g. `@pactia/kernel`, stack packages).
 
 ### Summary
 
 - **Tradeoff:** simplicity in Pactia, comprehensiveness in compiled output.
 - **CI:** `@deploy { gate ... }` overrides, not a full CI DSL; stack owns the toolchain.
-- **Observability, deployment:** `@observe`, `@deploy` tags — see [registry.md](registry.md#cross-cutting-concerns).
+- **Observability, deployment:** `@observe`, `@deploy` tags — package-defined, same as other `@tag` symbols.
 - **Senior architect workflow:** write Pactia → compile → review generated spec → adjust Pactia overrides → AI implements.
 
-See: [language-spec.md](language-spec.md), [overview.md](overview.md), [registry.md](registry.md#cross-cutting-concerns), [compilation.md](compilation.md)
+See: [language-spec.md](language-spec.md), [compilation.md](compilation.md), [packages.md](packages.md)
 
 ## See also
 
 - [language-spec.md](language-spec.md) — grammar and workspace
-- [registry.md](registry.md) — tags and macros
+- [registry.md](registry.md) — symbol resolution
 - [packages.md](packages.md) — composition
 - [platform.md](platform.md) — stacks and protocols
 - [compilation.md](compilation.md) — compiler pipeline

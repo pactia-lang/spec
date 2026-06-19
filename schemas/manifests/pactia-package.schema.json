@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://pactia.io/schemas/manifests/pactia-package.schema.json",
-  "title": "pactia.package.yaml",
-  "description": "Publishable package manifest. See spec/docs/packages.md#manifest-pactiapackageyaml.",
+  "title": "pactia.package.json",
+  "description": "Publishable package manifest. See spec/docs/packages.md.",
   "type": "object",
   "required": ["name", "version", "kind"],
   "properties": {

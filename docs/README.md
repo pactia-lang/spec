@@ -1,21 +1,22 @@
 # Specification documents
 
-Normative and supporting documents for **Pactia 1.0** — an AI-native, model-agnostic intent language. Start with [overview.md](overview.md#three-altitudes).
-
-Nine documents in `docs/`. Read top to bottom for a full picture.
+Normative and supporting documents for **Pactia 1.1** — an AI-native, model-agnostic intent language. Start with [overview.md](overview.md#three-altitudes).
 
 ## Documents
 
 | Document | Description |
 | --- | --- |
 | [overview.md](overview.md) | Three altitudes, philosophy, intent line, architecture coverage |
-| [language-spec.md](language-spec.md) | Kernel grammar, `define`, workspace layout, authorization |
-| [grammar-reference.md](grammar-reference.md) | BNF and implementer error codes (not required for authors) |
-| [registry.md](registry.md) | All `@tag { }`, `#[macro]`, cross-cutting blocks — skip if not using `import` |
-| [packages.md](packages.md) | pactia.io packages, registry authoring, extensibility |
-| [platform.md](platform.md) | Stack packages, semver / `pactia.lock`, protocol packages |
-| [compilation.md](compilation.md) | Compiler pipeline, provenance, package build |
+| [language-spec.md](language-spec.md) | **Language only** — grammar, blocks, `def`, `@tag`, `#[macro]`, prose |
+| [macros.md](macros.md) | **Normative** — unified `def` for tags and macros |
+| [grammar-reference.md](grammar-reference.md) | BNF and implementer error codes |
+| [registry.md](registry.md) | Symbol resolution, tiers, precedence — **not** a tag catalog |
+| [packages.md](packages.md) | `pactia.toml`, imports, publish, `export def` |
+| [compilation.md](compilation.md) | Compiler pipeline, JSON IR layout, tag lowering, provenance |
+| [platform.md](platform.md) | Stack and protocol packages |
 | [editor-support.md](editor-support.md) | VS Code / Cursor syntax highlighting |
+
+Tag and macro **names** (e.g. `@entity`, `#[list]`) live in packages such as **`@pactia/kernel`** on pactia.io — not in this spec tree.
 
 ## Examples
 
