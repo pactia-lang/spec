@@ -14,7 +14,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 ### Changed
 
-- **Normative fleet tag schemas:** `api-v1`, `auth-v1`, `entity-v1`, `stack-v1`, `public-v1`, `input-v1`, `output-v1`, `emit-v1`, `throws-v1`, `actor-v1`, and `deploy-v1` constrain bodies used in `fleet-management-v2.pactia`; other kernel tag schemas remain stubs.
+- **Normative fleet tag schemas:** `api-v1`, `auth-v1`, `entity-v1`, `stack-v1`, `public-v1`, `input-v1`, `output-v1`, `emit-v1`, `throws-v1`, `actor-v1`, `deploy-v1`, `rule-v1`, `config-v1`, `errors-v1`, `event-v1`, `integration-v1`, `observe-v1`, `policy-v1`, and `status-v1` constrain bodies used in `fleet-management-v2.pactia`; other kernel tag schemas remain stubs.
 
 - **Kernel registry model:** single `@surface` + `@bind` for multi-platform UI; no kernel `@web`, `@ios`, `@grpc`, or protocol/platform tags.
 - **Service DTO tags:** kernel `@input` / `@output` replace `@body` / `@returns` (REST package may register aliases).
