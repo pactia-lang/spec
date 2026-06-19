@@ -49,6 +49,26 @@ Pactia compiles to **AI-neutral YAML IR** (`input/**/*.yaml`) — not vendor-spe
 
 See [language-spec.md](language-spec.md) for `yaml merge` rules and [workspace layout](language-spec.md#workspace-layout) for **workspace file merge order**.
 
+### State graph validation (phase 10)
+
+After tag JSON Schema validation, the compiler validates every `@states { }` block in each `model { }` and every `@transition { }` on `@api` endpoints in the same module.
+
+**Binding.** `@states` declares `entity: EntityName.fieldName`. The compiler resolves `EntityName` to an `@entity` in the same module and `fieldName` to a field on that entity. The field's type must name an `@enum` declared in the same module.
+
+**Transition values.** Each `from` and `to` in `@states transitions: [...]` must be a member of that enum's `values` list.
+
+**Graph shape.**
+
+| Rule | Code |
+| --- | --- |
+| Duplicate `(from, to)` edge in the same `@states` block | `STATE_DUPLICATE_TRANSITION` |
+| Two `@states` blocks bind the same `entity.field` | `STATE_MACHINE_DUPLICATE` |
+| Unknown entity, field, enum, or enum member | `STATE_BINDING_INVALID` |
+| `@transition { from, to }` on `@api` references an edge not declared in any `@states` in the module | `STATE_TRANSITION_UNDEFINED` |
+| `@transition` uses enum members invalid for the bound enum | `STATE_BINDING_INVALID` |
+
+**Not validated in v1:** reachability analysis, initial-state requirements, or matching `@transition` to a specific `@states` id when multiple machines exist — only that the edge exists in at least one module `@states` graph and all values are enum members.
+
 **Two merge pipelines:** [Compile merge order](language-spec.md#compile-merge-order) assembles multi-file workspaces (`product.pactia`, `module.pactia`, `features/*.pactia`, …). [Package merge order](#package-merge-order) below overlays imported domain-package AST. The [language-spec compile pipeline](language-spec.md#compile-pipeline) is an abbreviated author-facing summary; this section is the implementer reference.
 
 ---

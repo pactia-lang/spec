@@ -115,6 +115,15 @@ Modifiers (`@auth`, `@output`, `@input`, …) use **prefix** placement on lines 
 | `DECORATOR_HOST_MISMATCH` | Tag `scope` does not allow the following host |
 | `TAG_LOWERS_INVALID` | `lowers { }` targets a path not in the schema allowlist |
 
+### State graph validation
+
+| Code | Condition |
+| --- | --- |
+| `STATE_BINDING_INVALID` | `@states entity:` does not resolve to entity + enum field, or `from`/`to` is not an enum member |
+| `STATE_DUPLICATE_TRANSITION` | Same `(from, to)` appears twice in one `@states` block |
+| `STATE_MACHINE_DUPLICATE` | Two `@states` blocks bind the same `Entity.field` |
+| `STATE_TRANSITION_UNDEFINED` | `@transition` on `@api` is not an edge in any module `@states` graph |
+
 ### Literals and arrays
 
 | Code | Condition |

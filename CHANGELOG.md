@@ -15,6 +15,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 ### Changed
 
 - **Normative fleet tag schemas:** all 41 kernel tags in `registry/kernel-tags.yaml` have normative JSON Schema bodies; none remain stubs.
+- **State graph validation (phase 10):** documented algorithm in `compilation.md` and `grammar-reference.md` (`STATE_*` diagnostic codes).
 
 - **Kernel registry model:** single `@surface` + `@bind` for multi-platform UI; no kernel `@web`, `@ios`, `@grpc`, or protocol/platform tags.
 - **Service DTO tags:** kernel `@input` / `@output` replace `@body` / `@returns` (REST package may register aliases).
