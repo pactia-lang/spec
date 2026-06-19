@@ -2,7 +2,15 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://pactia.io/schemas/tags/must-v1.json",
   "title": "Pactia kernel tag @must (v1)",
-  "description": "Normative body schema stub for kernel @must. See spec/registry/kernel-tags.yaml.",
+  "description": "Service obligation — trigger/outcome facts or prose text.",
   "type": "object",
-  "additionalProperties": true
+  "required": ["id"],
+  "properties": {
+    "id": { "type": "string", "minLength": 1 },
+    "trigger": { "type": "string", "minLength": 1 },
+    "outcome": { "type": "string", "minLength": 1 },
+    "text": { "type": "string", "minLength": 1 }
+  },
+  "anyOf": [{ "required": ["trigger", "outcome"] }, { "required": ["text"] }],
+  "additionalProperties": false
 }

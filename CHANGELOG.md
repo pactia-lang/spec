@@ -14,7 +14,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 ### Changed
 
-- **Normative fleet tag schemas:** `api-v1`, `auth-v1`, `entity-v1`, `stack-v1`, `public-v1`, `input-v1`, `output-v1`, `emit-v1`, `throws-v1`, `actor-v1`, `deploy-v1`, `rule-v1`, `config-v1`, `errors-v1`, `event-v1`, `integration-v1`, `observe-v1`, `policy-v1`, `status-v1`, `enum-v1`, `relation-v1`, `states-v1`, `pk-v1`, `fk-v1`, `unique-v1`, `index-v1`, `nullable-v1`, and `pii-v1` constrain bodies used in `fleet-management-v2.pactia`; other kernel tag schemas remain stubs.
+- **Normative fleet tag schemas:** all tag bodies used in `fleet-management-v2.pactia` are constrained, including product/service clauses (`topology-v1`, `tenancy-v1`, `guide-v1`, `security-v1`, `surface-v1`, `test-v1`); `must-v1` is normative for obligation tags not yet used in the fleet fixture; other kernel tag schemas remain stubs.
 
 - **Kernel registry model:** single `@surface` + `@bind` for multi-platform UI; no kernel `@web`, `@ios`, `@grpc`, or protocol/platform tags.
 - **Service DTO tags:** kernel `@input` / `@output` replace `@body` / `@returns` (REST package may register aliases).

@@ -2,7 +2,12 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://pactia.io/schemas/tags/security-v1.json",
   "title": "Pactia kernel tag @security (v1)",
-  "description": "Normative body schema stub for kernel @security. See spec/registry/kernel-tags.yaml.",
+  "description": "Module security policy statement lowered to product security.",
   "type": "object",
-  "additionalProperties": true
+  "required": ["id", "text"],
+  "properties": {
+    "id": { "type": "string", "minLength": 1 },
+    "text": { "type": "string", "minLength": 1 }
+  },
+  "additionalProperties": false
 }
