@@ -2,7 +2,12 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://pactia.io/schemas/tags/unique-v1.json",
   "title": "Pactia kernel tag @unique (v1)",
-  "description": "Normative body schema stub for kernel @unique. See spec/registry/kernel-tags.yaml.",
+  "description": "Unique constraint field modifier.",
   "type": "object",
-  "additionalProperties": true
+  "required": ["entity", "field"],
+  "properties": {
+    "entity": { "type": "string", "minLength": 1 },
+    "field": { "type": "string", "minLength": 1 }
+  },
+  "additionalProperties": false
 }
