@@ -1,42 +1,101 @@
-# Pactia Packages & pactia.io
+# Pactia Packages
 
 Version: **1.2**
 
-Pactia programs compose from **packages** published to **pactia.io** (or a private registry). Stacks, verticals, and protocol wire formats are all packages.
+Pactia programs compose from **packages** — like Rust crates. Each package is `**pactia.toml` + `index.pactia`** only. There is **no** generated `pactia.package.json`.
 
-Part of: [language-spec.md](language-spec.md) | [registry.md](registry.md)
+Part of: [language-spec.md](language-spec.md) | [registry.md](registry.md) | [platform.md](platform.md)
 
-Tag and macro catalogs live in **package source** (`index.pactia`) — not in this document. Typical baseline: `@pactia/kernel` on pactia.io.
+Tag and macro catalogs live in **package source** (`index.pactia`). Baseline intent: `@pactia/kernel` from [pactia-lang/kernel](https://github.com/pactia-lang/kernel). Stack, protocol, surface, and vertical packages: [pactia-lang/pactia-io](https://github.com/pactia-lang/pactia-io).
 
 ---
 
-## Why packages
+## Crate mental model
 
-| Without packages | With packages |
-| --- | --- |
-| Every product redefines KYC entities | `pactia add @pactia/kyc-compliance@^1.0` |
-| Copy-paste integration blocks | `import @vendor/webhooks;` |
+
+| Rust                 | Pactia                                                                 |
+| -------------------- | ---------------------------------------------------------------------- |
+| `Cargo.toml`         | `pactia.toml` — name, version, kind, dependencies                      |
+| `lib.rs`             | `index.pactia` — `export def @…` / `#…`                                |
+| `cargo build`        | `pactia build` → invokes `pactiac compile`                             |
+| crates.io / git deps | git remote + semver tag (Go-style); vendored under `.pactia/packages/` |
+
+
+Authors edit `**index.pactia`**. The compiler parses it at product compile time and **derives IR slot metadata** from export def name + `in` placement (see [compilation.md](compilation.md#tag-lowering)).
 
 ---
 
 ## Package kinds
 
-| `kind` | Example | Role |
-| --- | --- | --- |
-| `stack` | `@pactia/rust-anb` | Platform law — `import` + product-level `#stack_macro` (e.g. `#rust_anb`) |
-| `vertical` | `@pactia/kyc-compliance` | Domain patterns merged into product |
-| `protocol` | `@pactia/protocol-rest` | Wire tags nested in `@api` |
-| `surface` | `@pactia/surface-react` | UI registration tags |
+
+| `kind`             | Example                  | Role                                                                    |                                                |
+| ------------------ | ------------------------ | ----------------------------------------------------------------------- | ---------------------------------------------- |
+| `library`          | `@pactia/kernel`         | Domain-neutral tags and macros                                          |                                                |
+| `@pactia/rust-anb` | `stack`                  |                                                                         | Platform law — `#stack_macro` at product scope |
+| `protocol`         | `@pactia/protocol-rest`  | Wire validation on `@api` (see [Protocol packages](#protocol-packages)) |                                                |
+| `vertical`         | `@pactia/kyc-compliance` | Domain patterns                                                         |                                                |
+| `surface`          | `@pactia/html-css-js`    | UI / static-site stack registration                                     |                                                |
+
 
 ---
 
-## Project files
+## Package manifest (`pactia.toml`)
 
-### `pactia.toml`
+### Library / stack / surface / vertical
 
 ```toml
-[stack]
-package = "@pactia/rust-anb"
+[package]
+name = "@pactia/rust-anb"
+version = "1.0.0"
+kind = "stack"
+
+[dependencies]
+"@pactia/kernel" = "^1.0"
+```
+
+### Protocol
+
+Protocol packages may ship a **wire JSON Schema** referenced from TOML:
+
+```toml
+[package]
+name = "@pactia/protocol-rest"
+version = "1.0.0"
+kind = "protocol"
+
+[protocol]
+wire-schema = "schemas/api-wire-v1.json"
+```
+
+When a product **imports** `@pactia/protocol-rest`, the compiler loads that schema from the vendored package directory and validates REST `**method`** and `**path**` fields on kernel `@api` blocks. Invalid wire → `WIRE_INVALID`.
+
+Example schema (package-relative path):
+
+```json
+{
+  "type": "object",
+  "required": ["method", "path"],
+  "properties": {
+    "method": { "type": "string", "enum": ["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"] },
+    "path": { "type": "string", "minLength": 1, "pattern": "^/" }
+  }
+}
+```
+
+Protocol packages do **not** require `index.pactia` when wire validation is schema-only. Stack and library packages require `index.pactia` with `export def`.
+
+gRPC and GraphQL use sibling protocol packages with their own wire artifacts (proto, GraphQL schema, or JSON Schema).
+
+---
+
+## Product manifest (`pactia.toml`)
+
+App / product workspaces use the same shape — like a binary crate:
+
+```toml
+[package]
+name = "marketplace"
+version = "0.1.0"
 
 [dependencies]
 "@pactia/kernel" = "^1.0"
@@ -44,12 +103,18 @@ package = "@pactia/rust-anb"
 "@pactia/rust-anb" = "^1.0"
 ```
 
-No module list in `pactia.toml`. Multi-file products compose via **partial imports + attach** in `product.pactia` (see [language-spec.md](language-spec.md#imports-exports-and-attach)). Legacy `modules/*` folder scan is deprecated.
+
+| Rule                 | Detail                                                                                        |
+| -------------------- | --------------------------------------------------------------------------------------------- |
+| No module list       | Multi-file products compose via **partial imports + attach** in `product.pactia`              |
+| No `[stack]` section | Stack binding is `**#stack_macro` in source** after `import` — see [platform.md](platform.md) |
+| Versions             | Only in `pactia.toml` / `pactia.lock` — never in `import` lines                               |
+
 
 ### `pactia.lock` (TOML)
 
 ```toml
-lock-version = 1
+lockVersion = 1
 
 [[package]]
 name = "@pactia/protocol-rest"
@@ -57,35 +122,7 @@ version = "1.0.0"
 digest = "sha256:…"
 ```
 
-Committed to git. Pins exact versions and tarball digests.
-
----
-
-## Manifest: `pactia.package.json`
-
-Built by `pactia package build` from `index.pactia`:
-
-```json
-{
-  "name": "@acme/fintech-rules",
-  "version": "1.0.0",
-  "kind": "vertical",
-  "registry": {
-    "tags": [
-      {
-        "name": "sanctions_check",
-        "in": ["service"],
-        "ir": { "file": "service", "path": "endpoints[].sanctions", "merge": "merge_fields" }
-      }
-    ],
-    "macros": [
-      { "name": "sanctions_screen", "in": ["service"] }
-    ]
-  }
-}
-```
-
-Authors edit **Pactia source**, not the manifest. `export def` drives registry exports; `pactia package build` adds **`ir`** slot metadata per tag (see [compilation.md](compilation.md#tag-lowering)).
+Committed to git. Pins exact versions and content digests for vendored packages.
 
 ---
 
@@ -98,91 +135,93 @@ pactia 1.0
 // Package: @acme/fintech-rules
 
 export def @sanctions_check in service {
-  level,
-  provider,
+  > Enhanced screening intent — provider and level in prose or structured fields.
 }
 
 export def #sanctions_screen in service {
-  @sanctions_check { level: enhanced, },
+  @sanctions_check { level: enhanced, }
 }
 ```
+
+Prose-first tags use `>` or `>> … >>` in def bodies; structured fields are optional.
 
 ---
 
 ## Import syntax
 
 ```pactia
-import @pactia/kyc-compliance;
 import @pactia/kernel;
-import "./local/overrides.pactia";
+import { @api, #list } from @pactia/kernel;
+import @pactia/protocol-rest;
+import { orders, OrderService } from ./fragments/orders.pactia;
 ```
 
-| Rule | Detail |
-| --- | --- |
-| Versions | Only in `pactia.toml` / `pactia.lock` — never in `import` |
-| Registry symbols | Only from **imported** packages' `export def` (declare in `pactia.toml`, `import` in source) |
-| Local files | Relative paths merge AST fragments |
 
----
+| Rule             | Detail                                        |
+| ---------------- | --------------------------------------------- |
+| Versions         | Only in `pactia.toml` / `pactia.lock`         |
+| Registry symbols | Only from **imported** packages' `export def` |
+| Local files      | Relative paths — fragment attach              |
 
-## Dependencies vs import
-
-| Layer | File | Role |
-| --- | --- | --- |
-| Declare | `pactia.toml` `[dependencies]` | Semver ranges |
-| Pin | `pactia.lock` | Exact version + digest |
-| Import | `.pactia` | Path only |
-
-```bash
-pactia add @pactia/kyc-compliance@^1.0
-```
 
 ---
 
 ## Package resolution
 
-Same resolver for `import @scope/name` and the stack coordinate in `[stack].package`:
+1. Read semver ranges from product `pactia.toml` `[dependencies]`
+2. Pin exact versions from `pactia.lock`
+3. Load vendored package from `.pactia/packages/@scope--name@version/` (or `PACTIA_VENDOR_ROOT`)
+4. Parse `**index.pactia`** export defs into effectiveRegistry
+5. For `kind: protocol`, load `**[protocol].wire-schema**` when validating `@api` wire fields
 
-1. Read range from `pactia.toml`
-2. Pin from `pactia.lock`
-3. Fetch tarball; verify digest
-4. Load `pactia.package.json` + parse `index.pactia` defs into effectiveRegistry
+Stack tier: the package whose `**#stack_macro**` is invoked at product scope (e.g. `#rust_anb` → `@pactia/rust-anb`). That macro must be imported from the same coordinate.
 
-The stack tier is the package whose macro is invoked at product scope (e.g. `#rust_anb` → `@pactia/rust-anb`). That coordinate must match `import` and `[stack].package`.
 
-| Code | Condition |
-| --- | --- |
-| `PACKAGE_NOT_FOUND` | Unknown coordinate |
-| `PACKAGE_LOCK_MISMATCH` | Digest mismatch |
-| `DEPENDENCY_NOT_DECLARED` | Import without `pactia.toml` entry |
-| `VERSION_IN_IMPORT` | Semver in import line |
-| `STACK_BINDING_MISMATCH` | Product-level `#stack_macro`, stack `import`, and `[stack].package` disagree |
+| Code                      | Condition                                       |
+| ------------------------- | ----------------------------------------------- |
+| `PACKAGE_NOT_FOUND`       | Unknown coordinate                              |
+| `PACKAGE_LOCK_MISMATCH`   | Digest mismatch                                 |
+| `DEPENDENCY_NOT_DECLARED` | Import without `pactia.toml` entry              |
+| `VERSION_IN_IMPORT`       | Semver in import line                           |
+| `WIRE_INVALID`            | `@api` wire fields fail protocol package schema |
+| `UNKNOWN_SYMBOL`          | `@` / `#` not in effectiveRegistry              |
+
 
 ---
 
-## Package build
+## Publish and fetch
+
+Packages publish as **git repositories** with semver tags — not a separate manifest build step.
 
 ```
-pactia package build -C ./packages/my-package
-pactia publish -C ./packages/my-package
+my-stack/
+  pactia.toml
+  index.pactia
+  schemas/          # protocol packages only
 ```
 
-Pipeline:
+```bash
+git tag v1.0.0 && git push origin v1.0.0
+```
 
-1. Parse `index.pactia`
-2. Collect `export def @` / `export def #` and compute `ir` slots
-3. Write `pactia.package.json`
-4. Validate; produce tarball digest
+Consumers declare the dependency in `pactia.toml` and pin in `pactia.lock`. `pactia fetch` (planned) resolves git URL + tag/rev into `.pactia/packages/`.
 
-No per-tag JSON Schema files in the published bundle — field specs come from parsed `def` bodies.
+Official repos:
+
+
+| Repo                                                              | Packages                             |
+| ----------------------------------------------------------------- | ------------------------------------ |
+| [pactia-lang/kernel](https://github.com/pactia-lang/kernel)       | `@pactia/kernel`, `@pactia/kernel-*` |
+| [pactia-lang/pactia-io](https://github.com/pactia-lang/pactia-io) | stack, protocol, surface, vertical   |
+
 
 ---
 
 ## Consumer compile
 
-```
-pactia build          # resolve lock, compile product
-pactiac compile -w . -o input/
+```bash
+pactia build          # vendor lock → pactiac compile → out/
+pactiac compile -w . -o out/
 ```
 
 Imported defs merge into [effectiveRegistry](registry.md). Product files use `@`, `@@`, and `#` — never `export def`.
@@ -191,19 +230,23 @@ Imported defs merge into [effectiveRegistry](registry.md). Product files use `@`
 
 ## CLI
 
-| Command | Role |
-| --- | --- |
-| `pactia init` | Create `pactia.toml` + stub `product.pactia` |
-| `pactia add @scope/pkg@range` | Update toml + lock |
-| `pactia package init` | Stub `index.pactia` + manifest |
-| `pactia package build` | Emit `pactia.package.json` |
-| `pactia publish` | Upload to registry |
+
+| Command          | Role                                                |
+| ---------------- | --------------------------------------------------- |
+| `pactia build`   | Vendor deps, compile workspace                      |
+| `pactia test`    | Compile workspace (acceptance harness TBD)          |
+| `pactia init`    | (planned) `pactia.toml` + stub `product.pactia`     |
+| `pactia add`     | (planned) Update toml + lock                        |
+| `pactia fetch`   | (planned) Resolve git deps into `.pactia/packages/` |
+| `pactia publish` | (planned) Tag + push package repo                   |
+
 
 ---
 
 ## See also
 
-- [registry.md](registry.md)
-- [platform.md](platform.md)
-- [compilation.md](compilation.md)
+- [platform.md](platform.md) — stack macros and protocol imports
+- [registry.md](registry.md) — effectiveRegistry and precedence
+- [compilation.md](compilation.md) — IR lowering
 - [language-spec.md](language-spec.md)
+

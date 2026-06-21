@@ -30,7 +30,7 @@ Pactia compiles to **AI-neutral JSON IR** (`input/**/*.json`) — not vendor-spe
 1.  Read and validate version declaration (pactia 1.0)
 2.  Lex: strip comments (never in IR)
 3.  Resolve packages via pactia.toml / pactia.lock (TOML); build effectiveRegistry from
-    every declared dependency's pactia.package.json + parsed export def bodies
+    every imported dependency's index.pactia export defs (IR slots derived at compile)
 4.  Merge declarations (local fragments → imported fragments → entry file)
 5.  Expand #macro until fixed point — splice def # bodies in-place (package + local);
     check in against enclosing block at each invocation
@@ -73,9 +73,9 @@ The compiler rejects tags whose `in` placement does not include the enclosing bl
 
 ### Slot — JSON path within the file
 
-At **`pactia package build`**, the compiler attaches an **`ir`** object to each exported tag in `pactia.package.json` — derived from tag name, `in` placement, and compiler lowering rules. Product compile reads that metadata from resolved packages; authors never write IR paths in Pactia source.
+At **product compile**, the compiler **derives** an **`ir`** object per exported tag from tag name, `in` placement, and lowering rules (`deriveIrSlotForTag`). Authors never write IR paths in Pactia source; there is no generated package manifest.
 
-Example registry entry (manifest excerpt):
+Example derived **ir** slot (internal — not authored in source):
 
 ```json
 {
@@ -208,26 +208,18 @@ Merge order (both paths):
 
 ---
 
-## Package build pipeline (`pactia package build`)
+## Package publish
 
-```
-1. Read index.pactia (export def @ / export def # at file root)
-2. Parse def bodies → registry summary in pactia.package.json (fields, in, ir slots)
-3. Validate bundle; write digest for publish
-```
-
-Published tarball is loaded into `effectiveRegistry` at product compile time. See [packages.md](packages.md).
+Packages ship **`pactia.toml` + `index.pactia`** (plus protocol wire schemas when `kind: protocol`). Publish is a **git tag** on the package repo — no `pactia package build` manifest step. Vendored copies load into `effectiveRegistry` at product compile. See [packages.md](packages.md).
 
 ---
 
 ## CLI
 
 ```bash
-pactiac compile product.pactia -o ./input
-pactiac compile -w ./my-product -o ./input
-pactia check product.pactia
-pactia package build -C ./packages/my-package
-pactia build                    # refresh lock + compile
+pactiac compile product.pactia -o ./out
+pactiac compile -w ./my-product -o ./out
+pactia build                    # vendor lock + compile
 ```
 
 ---

@@ -179,7 +179,7 @@ A Pactia program is not executed. It is **compiled to module-scoped JSON IR** (`
 - **Keywords** — `product`, `module`, `service`, `model`, `import`, `export`, `def`, `in`; `@` / `@@` / `#` sigils, prose — [language-spec.md](language-spec.md)
 - Composable via [packages](packages.md) on pactia.io
 - Extensible via **`export def`** in packages — not new language keywords
-- Stack-aware via product-level `#stack_macro` (e.g. `#rust_anb`) + `import @pactia/rust-anb` + `[stack].package` in `pactia.toml` ([platform.md](platform.md#selecting-a-stack))
+- Stack-aware via product-level `#stack_macro` (e.g. `#rust_anb`) + `import` of the stack package ([platform.md](platform.md#selecting-a-stack))
 - [Role-based](language-spec.md#authorization) at two layers: application roles and party roles
 
 ## What Pactia is not
@@ -326,7 +326,7 @@ When you need **enforceable** state edges, add `@transition { from, to }` on `@a
 | ------------------ | ------------------------------------- | ---------------------------------------------------- |
 | No ambiguous APIs  | `@@input`, `@@output`, `#macro` on endpoints | Schema validation, OpenAPI render                    |
 | No auth guesswork  | `@actor { }`, `@auth { }`, `#owner` / `#buyer` | `security.md`, route rules                           |
-| No stack drift     | `#rust_anb` + `import` + `[stack].package` + `pactia.lock` | Stack package merge + [pactia.lock](platform.md#stack-versions) |
+| No stack drift     | `#stack_macro` + stack `import` + `pactia.lock` | Stack package merge + [pactia.lock](platform.md#stack-versions) |
 | Reproducible specs | `pactia.lock`, packages                | Deterministic `bsc render`                           |
 | No surface drift   | `@surface { }`, `@bind { }` in same `.pactia` | Surface IR + linked API specs                      |
 | AI-ready output    | Compiles to IR (services + surfaces)  | Templates + agent rules per surface                  |

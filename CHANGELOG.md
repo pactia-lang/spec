@@ -8,15 +8,14 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
-- **Pactia 1.2 language model:** three sigils — `@` host, `@@` modifier (next `@` or field only), `#` macro (no `[ ]` brackets).
-- **Partial imports:** `import { @api, @@output, #list, max_page } from …;`
-- **Fragment exports + attach:** `export module` / `export service` / `export model`; `module(name) { service(…) { model(…) } }` in product.
-- **Stack binding:** product-level `#stack_macro` (e.g. `#rust_anb`) aligned with `[stack].package` and stack `import`; `@stack` optional profile tag only.
-- **Attach diagnostics:** `IMPORT_UNUSED`, `ATTACH_UNDEFINED`, `ATTACH_KIND_MISMATCH`.
+- **Crate model:** packages are `pactia.toml` + `index.pactia` only — no `pactia.package.json`; IR slots derived at product compile.
+- **Protocol wire schema:** `[protocol] wire-schema` in package `pactia.toml` (e.g. `@pactia/protocol-rest` → `schemas/api-wire-v1.json`); `WIRE_INVALID` on `@api` wire fields.
+- **Official package repos:** [pactia-lang/kernel](https://github.com/pactia-lang/kernel), [pactia-lang/pactia-io](https://github.com/pactia-lang/pactia-io).
 
 ### Changed
 
-- **Compiler alignment table:** updated for pactiac `feat/pactiac-1.2-compiler` (partial imports, fragment parse, package build, legacy macro warning).
+- **packages.md, platform.md, registry.md, compilation.md:** rewritten for Rust-crate mental model; removed `[stack]` in product TOML and manifest build pipeline.
+- **Stack binding:** product-level `#stack_macro` + stack `import` in source only — no `[stack].package` in `pactia.toml`.
 - **Fixtures README:** removed deleted fleet fixtures; relay remains canonical 1.2.
 - **Grammar reference:** optional `VersionLine` on fragment files; `LEGACY_MACRO_SYNTAX` and `CONSTANT_UNDEFINED` codes; named `export model`.
 

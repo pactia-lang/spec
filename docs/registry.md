@@ -42,11 +42,12 @@ Transitive package dependencies do not add symbols unless re-exported by a direc
 Built once per compile after package resolution:
 
 ```
-1. For each imported package: load pactia.package.json + parse index.pactia export defs
-2. Identify stack package from product-level #stack_macro (must match import + [stack].package); merge at stack tier
-3. Merge local non-exported def @ / def # from each module { } in the assembled workspace
-4. Apply precedence on name collision (see below)
-5. Attach field specs, in placements, ir slot metadata, macro splice bodies
+1. For each imported package: parse index.pactia export defs from vendored package directory
+2. Derive ir slot metadata per tag at compile (tag name + in placement + lowering rules)
+3. Identify stack package from product-level #stack_macro; merge at stack tier
+4. Merge local non-exported def @ / def # from each module { } in the assembled workspace
+5. Apply precedence on name collision (see below)
+6. Attach field specs, in placements, macro splice bodies
 ```
 
 Every `@name`, `@@name`, and `#name` must resolve to an entry or the compiler emits `UNKNOWN_SYMBOL`.
@@ -99,13 +100,15 @@ Macro **def body** may contain `@tag { }`, `@@tag`, nested `#macro`, field lines
 
 ---
 
-## Product compile vs package build
+## Product compile
 
-| | Product compile | Package build |
-| --- | --- | --- |
-| Input | `product.pactia`, workspace fragments | `index.pactia` |
-| Output | `input/**/*.json` | `pactia.package.json` + tarball |
-| `export def` | Forbidden in product | Required for published symbols |
+| | Product compile |
+| --- | --- |
+| Input | `product.pactia`, workspace fragments, vendored package `index.pactia` files |
+| Output | `out/**/*.json` (or `input/**/*.json`) |
+| `export def` | Forbidden in product; required in package `index.pactia` |
+
+Package publish ships **`pactia.toml` + `index.pactia`** (and protocol wire schemas). No separate manifest build step — see [packages.md](packages.md).
 
 ---
 

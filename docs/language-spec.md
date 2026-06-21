@@ -15,7 +15,7 @@ Tag and macro **names** (e.g. `@api`, `#list`, `@@output`) come from **imported 
 | `@output Type` before `@api` | `@@output Type` or `@@output(Type)` |
 | `@pk` on field lines | `@@pk` |
 | `modules/*/module.pactia` auto-scan | `import { … } from ./fragments/…` + `module(name) { … }` attach |
-| `#[rust_anb]` inside `@stack { }` | `#rust_anb` at product level (+ `[stack].package` in `pactia.toml`) |
+| `#[rust_anb]` inside `@stack { }` | `#rust_anb` at product level after `import @pactia/rust-anb` (no `[stack]` in TOML) |
 
 Legacy `#[…]` bracket macros and folder-based module discovery may still be accepted by older compilers during transition; new products should use 1.2 syntax only.
 
@@ -504,7 +504,8 @@ Normative spec vs **pactiac** ([feat/pactiac-1.2-compiler](https://github.com/pa
 | Partial package imports `{ @api, #list }` | Required | Supported (parse + registry filtering) |
 | `${constant}` in prose | Required | Supported (v2 pipeline; imported + module constants) |
 | `export module` / fragment parse at root | Required | Supported (v2 parser; attach-merge for workspace assembly) |
-| `pactia package build` | Required | Supported (`index.pactia` → `pactia.package.json` with derived `ir`) |
+| Crate model (`pactia.toml` + `index.pactia` only) | Required | Supported (no `pactia.package.json`) |
+| `[protocol].wire-schema` | Required | Supported (`parsePackageToml`; REST wire validation) |
 | Legacy `#[macro]`, `modules/*` scan | Deprecated | Accepted; `LEGACY_MACRO_SYNTAX` warning; folder scan still accepted |
 
 Fleet fixtures in pactiac retain 1.1 syntax until refreshed. **Canonical 1.2:** [relay.pactia](../fixtures/kernel/relay.pactia). Status: [plans/1.2-status.md](../../plans/1.2-status.md).
