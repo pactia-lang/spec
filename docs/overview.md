@@ -32,7 +32,7 @@ Add structure where it helps. Keep a **product description** in `product { }`, t
 pactia 1.0
 
 import @pactia/kernel;
-import @pactia/protocol-rest;
+import @pactia/rust-anb;
 
 product MyApp {
   > A mobile app for tracking personal fitness goals and sharing progress with friends.
@@ -53,7 +53,7 @@ Altitude 1 may omit `method` / `path`; add them when you need wire-level IR.
 
 ### Altitude 2 — fully specified
 
-Full enforcement surface — same file shape as [relay.pactia](../fixtures/kernel/relay.pactia) (1.2 canonical). Legacy 1.1 fleet examples remain in pactiac until refreshed.
+Full enforcement surface — same file shape as [relay.pactia](https://github.com/pactia-lang/pactiac/blob/main/test/fixtures/kernel/relay.pactia) (1.2 canonical).
 
 ```pactia
 service FleetService {
@@ -134,7 +134,7 @@ See [Three altitudes](#three-altitudes) above. In short:
 | Altitude 0 `>` prose in `product` — what it is + agent rules | Altitude 1: same product line + light `@tag` |
 | Inside blocks: tag, macro, or prose | How much structure vs narrative |
 
-**Heavy** reference: [relay.pactia](../fixtures/kernel/relay.pactia).
+**Heavy** reference: [relay.pactia](https://github.com/pactia-lang/pactiac/blob/main/test/fixtures/kernel/relay.pactia).
 
 ### Structure without suffocation
 
@@ -179,7 +179,7 @@ A Pactia program is not executed. It is **compiled to module-scoped JSON IR** (`
 - **Keywords** — `product`, `module`, `service`, `model`, `import`, `export`, `def`, `in`; `@` / `@@` / `#` sigils, prose — [language-spec.md](language-spec.md)
 - Composable via [packages](packages.md) — git repos with semver tags ([kernel](https://github.com/pactia-lang/kernel), [pactia-io](https://github.com/pactia-lang/pactia-io))
 - Extensible via **`export def`** in packages — not new language keywords
-- Stack-aware via product-level `#stack_macro` (e.g. `#rust_anb`) + `import` of the stack package ([platform.md](platform.md#selecting-a-stack))
+- Platform macros via product-level `#rust_anb` + `import @pactia/rust-anb` ([platform.md](platform.md))
 - [Role-based](language-spec.md#authorization) at two layers: application roles and party roles
 
 ## What Pactia is not
@@ -219,7 +219,7 @@ Pactia deliberately describes **less than the full system** when you want it to.
 │  workspace.json + slice IR         ← pactiac compile               │
 │  (start with workspace.json)                                      │
 ├─────────────────────────────────────────────────────────────┤
-│  Stack / protocol packages (GitHub)  ← platform + wire law       │
+│  Stack / surface packages (GitHub)  ← platform law                │
 ├─────────────────────────────────────────────────────────────┤
 │  bsc render + optional LLM expand (per target)                │
 ├─────────────────────────────────────────────────────────────┤
@@ -254,7 +254,6 @@ A mid-altitude program: actors and entities are tagged; **payment lifecycle is p
 pactia 1.0
 
 import @pactia/kyc-compliance;
-import @pactia/protocol-rest;
 import @pactia/rust-anb;
 
 product P2PExchange {
@@ -318,7 +317,7 @@ product P2PExchange {
 }
 ```
 
-When you need **enforceable** state edges, add `@transition { from, to }` on `@api` and a `transitions: [...]` array on `@states` — same IR path as prose, but conformance-checked. See [relay.pactia](../fixtures/kernel/relay.pactia) for altitude 2.
+When you need **enforceable** state edges, add `@transition { from, to }` on `@api` and a `transitions: [...]` array on `@states` — same IR path as prose, but conformance-checked. See [relay.pactia](https://github.com/pactia-lang/pactiac/blob/main/test/fixtures/kernel/relay.pactia) for altitude 2.
 
 ## Coherence with BSC goals
 
@@ -391,7 +390,8 @@ The compiler (`@pactia/pactiac`) tags every lowered fact with a provenance:
 | --------------- | ------------------------------------------------------ | ---------------- |
 | `Pactia`        | Written by the author                                  | Above            |
 | `INFERRED`      | Derived by a documented deterministic rule             | Above            |
-| `STACK_DEFAULT` | Supplied by the stack package                        | Above            |
+| `PACKAGE`       | Supplied by an imported package                        | Above            |
+| `MACRO`         | Supplied by `#macro` expansion                         | Above            |
 | `GUIDANCE`      | Author wrote `@guide` or best-practice prose           | Below (AI only)  |
 | `GENERATED`     | Optional `bsc expand` (LLM) narrative from IR        | Below (AI only)  |
 | `NOT_DERIVABLE` | The target IR wants it, but Pactia does not contain it | **Below**        |
@@ -408,7 +408,7 @@ The compiler (`@pactia/pactiac`) tags every lowered fact with a provenance:
 
 ### Worked example (fleet)
 
-From [relay.pactia](../fixtures/kernel/relay.pactia):
+From [relay.pactia](https://github.com/pactia-lang/pactiac/blob/main/test/fixtures/kernel/relay.pactia):
 
 ```pactia
 @auth { roles: [Customer, Admin] }
@@ -429,7 +429,7 @@ From [relay.pactia](../fixtures/kernel/relay.pactia):
 | Roles `Customer`, `Admin`                          | Pactia (`@auth { }`)    | Above |
 | Ownership scope `OWN_ROWS` on `Vehicle.customerId` | MACRO (`#owner`)      | Above |
 | Response shape `VehicleListResponse`               | Pactia (`@@output`) | Above |
-| Cursor pagination defaults (20/100)                | STACK_DEFAULT           | Above |
+| Cursor pagination defaults (20/100)                | MACRO (`#paginated`)    | Above |
 | Error catalog (when `@errors { }` declared)          | Pactia                  | Above |
 | The SQL query, the index it uses, the handler code | —                       | Below |
 | Human narrative summaries                          | NOT_DERIVABLE           | Below |
@@ -692,6 +692,6 @@ See: [language-spec.md](language-spec.md), [compilation.md](compilation.md), [pa
 - [language-spec.md](language-spec.md) — grammar and workspace
 - [registry.md](registry.md) — symbol resolution
 - [packages.md](packages.md) — composition
-- [platform.md](platform.md) — stacks and protocols
+- [platform.md](platform.md) — stack packages
 - [compilation.md](compilation.md) — compiler pipeline
 

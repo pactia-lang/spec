@@ -35,12 +35,11 @@ Pactia compiles to **AI-neutral JSON IR** (`input/**/*.json`) — not vendor-spe
 5.  Expand #macro until fixed point — splice def # bodies in-place (package + local);
     check in against enclosing block at each invocation
 6.  Validate @tag { } bodies against def field specs (required fields; open extensions)
-7.  Cross-check wire fields, protocol policy, state graphs (see below)
-8.  Lower @tags → JSON IR with provenance (scope + slot rules below)
+7.  Cross-check tag bodies, state graphs (see below)
+8.  Lower @tags → JSON IR with provenance (generic slot rules below)
 9.  Infer missing shapes on lowered IR per inference rules
-10. Validate output against IR JSON schemas (spec/schemas/ir/)
-11. Write IR files: `workspace.json` (full bundle), `manifest.json`, slice files (emitted last)
-12. (optional) bsc render / expand from IR
+10. Write IR files: `workspace.json` (full bundle), `manifest.json`, slice files (emitted last)
+11. (optional) bsc render / expand from IR
 ```
 
 See [language-spec.md — Workspace layout](language-spec.md#workspace-layout) for multi-file merge order.
@@ -57,7 +56,7 @@ Phase 9: after lowering, deterministic rules fill documented IR gaps. Explicit a
 
 ## Tag lowering
 
-Tag bodies are not routed by author syntax in `def @`. Lowering uses **enclosing scope** (which IR file) and **registry IR metadata** (which JSON path within that file).
+Lowering uses **enclosing scope** (which IR file) and **generic merge rules** from each tag's `in` placement and modifier flag. The compiler does **not** map tag names (e.g. `@api`, `@entity`) to fixed JSON keys — those names live in packages only.
 
 ### Scope — which IR file
 
@@ -67,36 +66,28 @@ Tag bodies are not routed by author syntax in `def @`. Lowering uses **enclosing
 | `module { }` | `modules/<m>/<m>.module.json` |
 | `model { }` | `modules/<m>/<m>.model.json` |
 | `service { }` | `modules/<m>/services/<s>.service.json` |
-| field line in `model { }` | same model file — under the owning entity/field |
+| field line in `model { }` | same model file — under the owning field |
 
 The compiler rejects tags whose `in` placement does not include the enclosing block (`PLACEMENT_VIOLATION`) before lower.
 
-### Slot — JSON path within the file
+### Slot — generic paths (no tag-name table)
 
-At **product compile**, the compiler **derives** an **`ir`** object per exported tag from tag name, `in` placement, and lowering rules (`deriveIrSlotForTag`). Authors never write IR paths in Pactia source; there is no generated package manifest.
+| Tag kind | `ir.file` | `ir.path` | `ir.merge` |
+| --- | --- | --- | --- |
+| Host tag (`@name { }`) | from `in` | `extensions[]` | `append_host` |
+| Modifier (`@@name`) | from `in` | `modifiers` | `merge_into_host` |
+| Field modifier on model line | model | `fields[]` | `field_annotation` |
 
-Example derived **ir** slot (internal — not authored in source):
-
-```json
-{
-  "name": "api",
-  "in": ["service"],
-  "ir": {
-    "file": "service",
-    "path": "endpoints[]",
-    "merge": "append_host"
-  }
-}
-```
+Each appended host object carries the tag body fields (and `id` / `name` when the tag declares a host id). There is **no** compiler table that routes `@api` → `endpoints[]` or `@entity` → `entities[]`.
 
 | `ir.merge` | Meaning |
 | --- | --- |
-| `append_host` | Tag opens a new host object at `path` (e.g. `@api list { }` → one endpoint) |
-| `merge_into_host` | Modifier `@@` lines merge into the nearest host at `path` (e.g. `@@output`, `@@auth` on an `@api` block) |
-| `merge_fields` | Tag body fields merge at `path` as a nested object |
-| `field_annotation` | Field-level tag on a model line merges under that field |
+| `append_host` | Tag block becomes one object pushed at `path` |
+| `merge_into_host` | Modifier merges into the pending host (e.g. `@@output` before `@api`) |
+| `merge_fields` | Body fields merge as a nested object at `path` |
+| `field_annotation` | Field-level tag merges under the model field |
 
-Modifier shorthand (`@@output VehicleListResponse` before `@api`) merges with **`merge_into_host`** when the tag's registry entry is a modifier — see [language-spec.md — Tags](language-spec.md#tags).
+Modifier shorthand (`@@output VehicleListResponse` before `@api`) uses **`merge_into_host`** — see [language-spec.md — Tags](language-spec.md#tags).
 
 ### Prose
 
@@ -142,7 +133,7 @@ input/
 
 **Naming:** `<module>` kebab-case; `<service>` lowercased with optional `Service` suffix stripped (`OrderService` → `order.service.json`).
 
-IR shape is validated by [spec/schemas/ir/](../schemas/ir/).
+There is no JSON Schema for IR in the spec repo — only prose rules here and package `export def` field specs at compile time.
 
 ---
 
@@ -156,7 +147,7 @@ IR shape is validated by [spec/schemas/ir/](../schemas/ir/).
 | `product` | Same object as `product.json` — product-level intent |
 | `modules` | Array of `{ module, model, services[] }` slices — same data as the per-file JSON under `modules/` |
 
-Emitted for agents and BSC: one read gives the full product without chasing paths. Validated by [ir-workspace.schema.json](../schemas/ir/ir-workspace.schema.json).
+Emitted for agents and BSC: one read gives the full product without chasing paths.
 
 **`manifest.json`** — the `manifest` slice alone. Records language version, entry file, lock digest, module file tree (`modules[].name`, `path`, `module`, `model`, `services[].file`), and cross-module `references[]`. Not product intent — navigation metadata only.
 
@@ -190,7 +181,7 @@ product Relay {
 
 Diagnostics: `IMPORT_UNUSED`, `ATTACH_UNDEFINED`, `ATTACH_KIND_MISMATCH`.
 
-No module list in `pactia.toml`. Single-file products declare all blocks inline (see [relay.pactia](../fixtures/kernel/relay.pactia)).
+No module list in `pactia.toml`. Single-file products declare all blocks inline (see [relay.pactia](https://github.com/pactia-lang/pactiac/blob/main/test/fixtures/kernel/relay.pactia)).
 
 ### Legacy folder merge (deprecated)
 
@@ -199,10 +190,10 @@ No module list in `pactia.toml`. Single-file products declare all blocks inline 
 
 Merge order (both paths):
 
-1. Load `pactia.toml` (stack + dependencies only)
+1. Load `pactia.toml` (dependencies only)
 2. Resolve package imports (lockfile pins)
 3. Assemble product AST (attach or legacy folder merge)
-4. Continue compile phases 1–12 (parse through manifest)
+4. Continue compile phases 1–11 (parse through emit)
 
 ---
 
@@ -212,7 +203,6 @@ Merge order (both paths):
 | --- | --- |
 | `Pactia` | Written directly by the author |
 | `INFERRED` | Derived by a documented deterministic rule |
-| `STACK_DEFAULT` | Supplied by the stack package |
 | `PACKAGE` | Supplied by an import |
 | `MACRO` | Supplied by `#macro` expansion |
 | `DEFINE` | Supplied by local `def #` template expansion |
@@ -224,7 +214,7 @@ Merge order (both paths):
 
 ## Package publish
 
-Packages ship **`pactia.toml` + `index.pactia`** (plus protocol wire schemas when `kind: protocol`). Publish is a **git tag** on the package repo — no `pactia package build` manifest step. Vendored copies load into `effectiveRegistry` at product compile. See [packages.md](packages.md).
+Packages ship **`pactia.toml` + `index.pactia`** only. Publish is a **git tag** on the package repo. See [packages.md](packages.md).
 
 ---
 

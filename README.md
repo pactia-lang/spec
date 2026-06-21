@@ -60,10 +60,10 @@ Almost pure prose — same product, **`@stack` only**, no model or API tags (**3
 
 [![Pactia 1.0 fleet-management-prose example](https://raw.githubusercontent.com/pactia-lang/.github/main/profile/assets/fleet-management-prose-example.png)](https://raw.githubusercontent.com/pactia-lang/.github/main/profile/assets/fleet-management-prose-example.png)
 
-[Relay fixture (1.2 canonical)](fixtures/kernel/relay.pactia)
+[Relay fixture (1.2 canonical)](https://github.com/pactia-lang/pactiac/blob/main/test/fixtures/kernel/relay.pactia)
 · [Language spec](docs/language-spec.md)
 
-Legacy fleet mini/prose/full fixtures were removed from this repo; see pactiac `test/fixtures` for 1.1 copies until refreshed.
+Legacy fleet mini/prose/full fixtures were removed from this repo; see pactiac [test/fixtures](https://github.com/pactia-lang/pactiac/tree/main/test/fixtures) for 1.2 copies.
 
 ---
 
@@ -79,9 +79,10 @@ Full index: [docs/README.md](docs/README.md)
 | [grammar-reference.md](docs/grammar-reference.md) | BNF and implementer error codes |
 | [registry.md](docs/registry.md) | Symbol resolution mechanics |
 | [packages.md](docs/packages.md) | Packages, `pactia.toml`, publish |
-| [platform.md](docs/platform.md) | Stacks, protocols |
+| [platform.md](docs/platform.md) | Stack packages |
 | [compilation.md](docs/compilation.md) | Compiler pipeline, JSON IR |
 | [editor-support.md](docs/editor-support.md) | VS Code / Cursor highlighting |
+| [schemas/](schemas/) | JSON Schema — `pactia.toml`, `pactia.lock` only |
 
 ## Tooling
 
@@ -103,7 +104,7 @@ Full index: [docs/README.md](docs/README.md)
 | Compiler | [pactiac](https://github.com/pactia-lang/pactiac) | Deterministic compile to module-scoped IR |
 | Package manager | [pactia](https://github.com/pactia-lang/pactia) | `pactia build`, lockfiles, fetch from git |
 | Kernel packages | [kernel](https://github.com/pactia-lang/kernel) | `@pactia/kernel`, `@pactia/kernel-*` |
-| Stack / protocol / surface | [pactia-io](https://github.com/pactia-lang/pactia-io) | Platform and wire packages |
+| Stack / surface | [pactia-io](https://github.com/pactia-lang/pactia-io) | Platform packages |
 | Editor | [vscode-pactia](https://github.com/pactia-lang/vscode-pactia) | Syntax, tags, diagnostics |
 | Examples | [examples](https://github.com/pactia-lang/examples) | Canonical workspaces |
 

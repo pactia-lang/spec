@@ -2,12 +2,12 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://pactia.io/schemas/manifests/pactia-toml.schema.json",
   "title": "pactia.toml (parsed)",
-  "description": "Logical shape after parsing pactia.toml. See spec/docs/packages.md. Product and package manifests use [package] name/version plus [dependencies]. Stack binding is in source (#stack_macro), not in TOML.",
+  "description": "Logical shape after parsing pactia.toml. See spec/docs/packages.md. [package] name, version, optional description, plus [dependencies] only — Cargo-style, no kind field.",
   "type": "object",
   "properties": {
     "package": {
       "type": "object",
-      "description": "Product or package identity (Cargo.toml [package])",
+      "description": "Product or package identity",
       "properties": {
         "name": {
           "type": "string",
@@ -16,10 +16,6 @@
         "version": {
           "type": "string",
           "minLength": 1
-        },
-        "kind": {
-          "type": "string",
-          "enum": ["library", "stack", "protocol", "vertical", "surface"]
         },
         "description": {
           "type": "string"
@@ -34,17 +30,6 @@
         "type": "string",
         "minLength": 1
       }
-    },
-    "protocol": {
-      "type": "object",
-      "description": "Protocol package only — wire validation schema path",
-      "properties": {
-        "wireSchema": {
-          "type": "string",
-          "minLength": 1
-        }
-      },
-      "additionalProperties": false
     }
   },
   "additionalProperties": false

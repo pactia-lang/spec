@@ -1,21 +1,22 @@
-# Pactia Platform — Stacks and Protocols
+# Pactia Platform — platform packages
 
 Version: **1.2**  
 Status: **Specification**
 
 Part of: [packages.md](packages.md) | [language-spec.md](language-spec.md)
 
-Stack law and wire validation live in **packages** — `@pactia/kernel` (intent), stack packages (platform), protocol packages (wire). Published from [pactia-lang/kernel](https://github.com/pactia-lang/kernel) and [pactia-lang/pactia-io](https://github.com/pactia-lang/pactia-io).
+Platform crates (e.g. `@pactia/rust-anb`, `@pactia/html-css-js`) are **ordinary packages** — same `pactia.toml` shape, resolution, registry rules, and lowering as `@pactia/kernel`. They publish **`export def @`** tags and **`export def #`** macros in `index.pactia`.
+
+`@stack` is a **kernel tag** like `@guide` or `@topology` — optional product-scope profile fields. Platform defaults arrive through **macros and tags** from imported packages, not through compiler stack binding.
+
+REST **`method`** and **`path`** on `@api` are ordinary tag fields from `@pactia/kernel` — not a separate wire layer.
 
 ---
 
-## Selecting a stack
-
-Stack packages are **imported** like any dependency. The product binds the stack with a **product-level stack macro** (e.g. `#rust_anb`) in source — **not** via a `[stack]` section in `pactia.toml`.
+## Product wiring
 
 ```pactia
 import @pactia/kernel;
-import @pactia/protocol-rest;
 import @pactia/rust-anb;
 
 product Relay {
@@ -29,13 +30,11 @@ product Relay {
 
 | Piece | Role |
 | --- | --- |
-| `import @pactia/rust-anb;` | Brings stack `export def` symbols into the registry |
-| `#rust_anb` | Stack macro at **product** scope — merges stack `@stack` profile and service macros |
-| `pactia.toml` `[dependencies]` | Declares semver range for the stack package |
-| `pactia.lock` | Pins exact version + digest |
-| `@stack { … }` | **Optional** kernel tag — extra profile fields after the stack macro; not the binding mechanism |
-
-Version ranges live in `pactia.toml` / `pactia.lock` — never in tag bodies.
+| `import @pactia/rust-anb;` | Brings that package's `export def` symbols into effectiveRegistry |
+| `#rust_anb` | Product-scope **macro** — splices `@stack { … }` and other defs from the package body |
+| `pactia.toml` `[dependencies]` | Semver range — same as any dependency |
+| `pactia.lock` | Pinned version + digest |
+| `@stack { … }` | Optional **kernel tag** — extra profile fields; lowers like any other `@` tag |
 
 Product `pactia.toml`:
 
@@ -46,13 +45,12 @@ version = "0.1.0"
 
 [dependencies]
 "@pactia/kernel" = "^1.0"
-"@pactia/protocol-rest" = "^1.0"
 "@pactia/rust-anb" = "^1.0"
 ```
 
-The stack macro invoked at product scope must come from an **imported** stack package. Unknown macro → `UNKNOWN_SYMBOL`.
+`#rust_anb` must resolve to a `export def #rust_anb` from an imported package. Unknown macro → `UNKNOWN_SYMBOL`.
 
-Canonical example: [relay.pactia](../fixtures/kernel/relay.pactia).
+Canonical example: [relay.pactia](https://github.com/pactia-lang/pactiac/blob/main/test/fixtures/kernel/relay.pactia).
 
 ### Legacy 1.1 binding (deprecated)
 
@@ -66,18 +64,16 @@ Compilers may accept this during transition. New products use product-level `#ru
 
 ---
 
-## Stack packages
+## Platform package authoring
 
-Stack packages (`kind: stack`) publish platform law: language, framework, CI defaults, deployment baselines, and service macros.
-
-Authoring: **`export def`** at file root in `index.pactia`:
+Author with **`export def`** in `index.pactia` — same as any crate's `lib.rs`:
 
 ```pactia
 pactia 1.0
 // Package: @pactia/rust-anb
 
 export def #rust_anb in product {
-  >> Rust / Actix / Node backend stack — primary APIs on actix-web and tokio. >>
+  >> Rust / Actix / Node backend — primary APIs on actix-web and tokio. >>
 
   @stack {
     language: rust,
@@ -96,39 +92,16 @@ export def #list in service {
 }
 ```
 
-Products activate the stack with `#rust_anb` in `product { }` after `import @pactia/rust-anb;`.
-
-At product compile, the stack package merges platform law and registers macros per [registry.md](registry.md) precedence.
+Products invoke `#rust_anb` in `product { }` after `import @pactia/rust-anb;`. Registry merge follows [registry.md](registry.md).
 
 ---
 
-## Stack versions
+## API wire fields
 
-| File | Role |
-| --- | --- |
-| `pactia.toml` | Semver **ranges** for stack + dependencies |
-| `pactia.lock` | **Pinned** version + digest (TOML) |
-
-```toml
-lockVersion = 1
-
-[[package]]
-name = "@pactia/rust-anb"
-version = "1.0.0"
-digest = "sha256:…"
-```
-
----
-
-## Protocol packages
-
-Protocol packages (`kind: protocol`) enable **wire validation** on kernel `@api` blocks.
-
-### Import in product source
+`@api` is a kernel tag. Wire-shaped fields such as `method` and `path` are **optional fields on the tag body** — validated from the `export def @api` spec in `@pactia/kernel`:
 
 ```pactia
 import @pactia/kernel;
-import @pactia/protocol-rest;
 
 service OrderService {
   #list
@@ -140,38 +113,16 @@ service OrderService {
 }
 ```
 
-Importing `@pactia/protocol-rest` does not add new tags — it activates validation of **`method`** and **`path`** on `@api` using the package wire schema.
-
-### Wire schema in `pactia.toml`
-
-```toml
-[package]
-name = "@pactia/protocol-rest"
-version = "1.0.0"
-kind = "protocol"
-
-[protocol]
-wire-schema = "schemas/api-wire-v1.json"
-```
-
-The schema file ships beside `pactia.toml` in the published package (see [packages.md — Protocol packages](packages.md#protocol-packages)). The compiler resolves it from the vendored package directory at compile time.
-
-| Field | Validated on | When |
-| --- | --- | --- |
-| `method` | `@api { method: … }` | Protocol package imported |
-| `path` | `@api { path: … }` | Protocol package imported |
-
-Failure → **`WIRE_INVALID`**.
-
-gRPC and GraphQL use sibling packages (`@pactia/protocol-grpc`, …) with proto or schema artifacts under the same `[protocol]` convention.
-
-The compiler lowers endpoints to JSON IR in the service slice — see [compilation.md](compilation.md).
-
 ---
 
-## Migrating stack versions
+## Versions
 
-Bump the range in `pactia.toml`, refresh `pactia.lock`, recompile. Review stack package release notes for macro or platform-law changes.
+| File | Role |
+| --- | --- |
+| `pactia.toml` | Semver **ranges** for dependencies |
+| `pactia.lock` | **Pinned** version + digest (TOML) |
+
+Bump the range, refresh `pactia.lock`, recompile. Review package release notes for macro or platform-law changes.
 
 ---
 

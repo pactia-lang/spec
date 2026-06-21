@@ -17,21 +17,20 @@ This document describes **how symbols resolve** at compile time. It is **not** a
 | Modifier tag | `export def @@name in … { }` | `@@name` / `@@name(Shorthand)` on next host or field |
 | Macro | `export def #name(…) in … { }` | `#name` / `#name(args)` |
 
-Validation uses the **field spec** parsed from each `def` body (required fields, defaults, open extensions). Protocol packages may additionally ship a **wire JSON Schema** (`[protocol].wire-schema` in `pactia.toml`) — see [packages.md](packages.md). There is no separate JSON Schema file per kernel tag.
+Validation uses the **field spec** parsed from each `def` body (required fields, defaults, open extensions). There is no separate JSON Schema sidecar per package — only `index.pactia` export defs.
 
 ---
 
 ## Tiers
 
-All symbols come from **packages** resolved through `pactia.toml` and `pactia.lock`. There is no bundled sysroot or always-loaded kernel in the compiler.
+All symbols come from **packages** resolved through `pactia.toml` and `pactia.lock`. There is no bundled sysroot, stack tier, or always-loaded kernel in the compiler.
 
 | Tier | Source | When symbols load |
 | --- | --- | --- |
 | **dependency** | Package in `[dependencies]` **and** `import`ed in source | Parsed `export def` from vendored `index.pactia` |
-| **stack** | Stack-kind package: `import` + product-level `#stack_macro` (see [platform.md](platform.md)) | Same as dependency; wins on name collision (see precedence) |
 | **local** | Non-exported `def @` / `def #` inside `module { }` in the product | Module scope only; not published |
 
-`@pactia/kernel` is a normal package — declare it in `pactia.toml`, pin it in `pactia.lock`, and `import @pactia/kernel;` (or partial import). The compiler does not parse a special `kernel.pactia` path.
+`@pactia/kernel`, `@pactia/rust-anb`, and every other package resolve the same way — declare in `pactia.toml`, pin in `pactia.lock`, `import` in source. `@stack` is a normal kernel tag (`export def @stack in product`); it has no special compiler path.
 
 Transitive package dependencies do not add symbols unless re-exported by a direct dependency.
 
@@ -43,11 +42,10 @@ Built once per compile after package resolution:
 
 ```
 1. For each imported package: parse index.pactia export defs from vendored package directory
-2. Derive ir slot metadata per tag at compile (tag name + in placement + lowering rules)
-3. Identify stack package from product-level #stack_macro; merge at stack tier
-4. Merge local non-exported def @ / def # from each module { } in the assembled workspace
-5. Apply precedence on name collision (see below)
-6. Attach field specs, in placements, macro splice bodies
+2. Derive generic ir slot per tag from `in` placement and modifier flag only (no tag-name routing table)
+3. Merge local non-exported def @ / def # from each module { } in the assembled workspace
+4. Apply precedence on name collision (see below)
+5. Attach field specs, in placements, macro splice bodies
 ```
 
 Every `@name`, `@@name`, and `#name` must resolve to an entry or the compiler emits `UNKNOWN_SYMBOL`.
@@ -59,10 +57,10 @@ Every `@name`, `@@name`, and `#name` must resolve to an entry or the compiler em
 On duplicate unqualified names:
 
 ```
-stack  >  explicit import  >  other imported dependency  >  local def @ / def #
+explicit import  >  other imported dependency  >  local def @ / def #
 ```
 
-Stack packages may override macros (e.g. pagination defaults) when the product binds that stack.
+Same rules for every package — including `@pactia/kernel` and `@pactia/rust-anb`. No manifest `kind` and no reserved registry tier.
 
 ---
 
@@ -108,7 +106,7 @@ Macro **def body** may contain `@tag { }`, `@@tag`, nested `#macro`, field lines
 | Output | `out/**/*.json` (or `input/**/*.json`) |
 | `export def` | Forbidden in product; required in package `index.pactia` |
 
-Package publish ships **`pactia.toml` + `index.pactia`** (and protocol wire schemas). No separate manifest build step — see [packages.md](packages.md).
+Package publish ships **`pactia.toml` + `index.pactia`** only — see [packages.md](packages.md).
 
 ---
 

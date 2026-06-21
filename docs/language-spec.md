@@ -46,7 +46,6 @@ product MyApp {
 pactia 1.0
 
 import @pactia/kernel;
-import @pactia/protocol-rest;
 
 product MyApp {
   > A mobile app for tracking personal fitness goals.
@@ -67,7 +66,7 @@ Names like `@auth`, `@api`, and `@output` are package-defined symbols — not la
 
 ### Altitude 2
 
-See [fixtures](../fixtures/kernel/relay.pactia) for a dense 1.2 example product. Legacy 1.1 altitude-2 examples (fleet) live in pactiac `test/fixtures` until refreshed to 1.2.
+See [relay.pactia](https://github.com/pactia-lang/pactiac/blob/main/test/fixtures/kernel/relay.pactia) for a dense 1.2 example product.
 
 ---
 
@@ -335,7 +334,7 @@ Field lines in `model` follow the same literal grammar plus registered field-lev
 ### Package imports
 
 ```pactia
-import @pactia/protocol-rest;
+import @pactia/rust-anb;
 ```
 
 Full import — all exports from the package. No semver in `import` — ranges in `pactia.toml`, pins in `pactia.lock` (TOML).
@@ -438,7 +437,7 @@ my-product/
     order.service.pactia      # export service OrderService { … }
 ```
 
-Canonical example: [relay workspace](../../pactiac/test/fixtures/workspace/relay/) (attach) and [relay.pactia](../fixtures/kernel/relay.pactia) (monolith).
+Canonical example: [relay workspace](https://github.com/pactia-lang/pactiac/tree/main/test/fixtures/workspace/relay) (attach) and [relay.pactia](https://github.com/pactia-lang/pactiac/blob/main/test/fixtures/kernel/relay.pactia) (monolith).
 
 ### Legacy folder merge (deprecated)
 
@@ -449,7 +448,7 @@ Older compilers merged `modules/<dir>/module.pactia` + `services/*.service.pacti
 Workspace **assembly** (compilation phase 0):
 
 ```
-1. Load pactia.toml (stack + dependencies)
+1. Load `pactia.toml` (dependencies)
 2. Resolve package import paths (lockfile pins)
 3. Resolve partial imports → load export module / service / model fragments
 4. Splice attach tree (module(name) { service(…) { model(…) } }) into product { }
@@ -466,7 +465,6 @@ Then run the full [compilation pipeline](compilation.md) on the assembled source
 | --- | --- |
 | `Pactia` | Author-written |
 | `INFERRED` | Deterministic rule |
-| `STACK_DEFAULT` | Stack package |
 | `PACKAGE` | Import |
 | `MACRO` | Macro expansion |
 | `DEFINE` | Local template |
@@ -483,10 +481,10 @@ Then run the full [compilation pipeline](compilation.md) on the assembled source
 3. Resolve packages → effectiveRegistry
 4. Expand `#macro` until fixed point
 5. Validate tag bodies against defs
-6. Cross-checks (wire, states, protocol policy)
+6. Cross-checks (states, tag field specs)
 7. Lower to JSON IR
 8. Infer gaps on lowered IR
-9. Validate IR schemas; write `workspace.json`, `manifest.json`, and slice files
+9. Write `workspace.json`, `manifest.json`, and slice files
 10. Optional BSC
 
 Full phase list: [compilation.md](compilation.md).
@@ -505,10 +503,9 @@ Normative spec vs **pactiac** ([feat/pactiac-1.2-compiler](https://github.com/pa
 | `${constant}` in prose | Required | Supported (v2 pipeline; imported + module constants) |
 | `export module` / fragment parse at root | Required | Supported (v2 parser; attach-merge for workspace assembly) |
 | Crate model (`pactia.toml` + `index.pactia` only) | Required | Supported (no `pactia.package.json`) |
-| `[protocol].wire-schema` | Required | Supported (`parsePackageToml`; REST wire validation) |
 | Legacy `#[macro]`, `modules/*` scan | Deprecated | Accepted; `LEGACY_MACRO_SYNTAX` warning; folder scan still accepted |
 
-Fleet fixtures in pactiac retain 1.1 syntax until refreshed. **Canonical 1.2:** [relay.pactia](../fixtures/kernel/relay.pactia). Status: [plans/1.2-status.md](../../plans/1.2-status.md).
+**Canonical 1.2:** [relay.pactia](https://github.com/pactia-lang/pactiac/blob/main/test/fixtures/kernel/relay.pactia). Status: [plans/1.2-status.md](../../plans/1.2-status.md).
 
 ---
 
