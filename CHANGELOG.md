@@ -8,12 +8,39 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
-- **Pactia 1.1 language model:** `def @` / `def #` with `in` placement; multiline prose `>> … >>`; module `def` constants; reserved words `view`, `interface`, `class`, `function`.
-- **`[workspace]` in `pactia.toml`:** optional entry + members — no separate workspace manifest file.
-- **Tag names are package-owned:** `@api`, `@entity`, `#[list]`, etc. live in **`@pactia/kernel`** on pactia.io — not in this spec repo.
-- **IR JSON Schema:** normative schemas under `schemas/ir/` for compiler output (`.json` files).
+- **Pactia 1.2 language model:** three sigils — `@` host, `@@` modifier (next `@` or field only), `#` macro (no `[ ]` brackets).
+- **Partial imports:** `import { @api, @@output, #list, max_page } from …;`
+- **Fragment exports + attach:** `export module` / `export service` / `export model`; `module(name) { service(…) { model(…) } }` in product.
+- **Stack binding:** product-level `#stack_macro` (e.g. `#rust_anb`) aligned with `[stack].package` and stack `import`; `@stack` optional profile tag only.
+- **Attach diagnostics:** `IMPORT_UNUSED`, `ATTACH_UNDEFINED`, `ATTACH_KIND_MISMATCH`.
 
 ### Changed
+
+- **Compiler alignment table:** updated for pactiac `feat/pactiac-1.2-compiler` (partial imports, fragment parse, package build, legacy macro warning).
+- **Fixtures README:** removed deleted fleet fixtures; relay remains canonical 1.2.
+- **Grammar reference:** optional `VersionLine` on fragment files; `LEGACY_MACRO_SYNTAX` and `CONSTANT_UNDEFINED` codes; named `export model`.
+
+### Changed (1.2 baseline)
+
+- **Workspace assembly:** import + attach replaces automatic `modules/*` folder scan as the normative model; folder merge documented as legacy/deprecated.
+- **Macro invocation:** `#name` / `#name(args)` replaces `#[name]` (legacy may still parse during transition).
+- **Modifier invocation:** `@@output`, `@@pk`, etc. replace `@output` / `@pk` prefix on the line above hosts/fields.
+- **Docs updated for 1.2:** `language-spec.md`, `compilation.md`, `platform.md`, `macros.md`, `registry.md`, `packages.md`, `grammar-reference.md`, `editor-support.md`, `overview.md`.
+- **Canonical fixture:** [relay.pactia](fixtures/kernel/relay.pactia) uses 1.2 syntax.
+
+### Deprecated
+
+- `#[macro]` bracket syntax — use `#macro`.
+- `@stack { #[rust_anb] }` stack binding — use `#rust_anb` at product level.
+- `modules/*/module.pactia` directory scan — use export + attach.
+
+### Added (1.1 baseline)
+
+- **Pactia 1.1 language model:** `def @` / `def #` with `in` placement; multiline prose `>> … >>`; module `def` constants; reserved words `view`, `interface`, `class`, `function`.
+- **Tag names are package-owned:** `@api`, `@entity`, etc. live in **`@pactia/kernel`** on pactia.io — not in this spec repo.
+- **IR JSON Schema:** normative schemas under `schemas/ir/` for compiler output (`.json` files).
+
+### Changed (1.1 baseline)
 
 - **Language spec is language-only:** no tag/macro catalog in `language-spec.md`; names come from imported packages (typically `@pactia/kernel`).
 - **Registry doc is mechanics-only:** resolution, tiers, precedence — not a tag encyclopedia.

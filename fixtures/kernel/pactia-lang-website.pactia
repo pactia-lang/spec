@@ -1,4 +1,4 @@
-// Pactia 1.0 — pactia.io landing page (single-page marketing site)
+// Pactia 1.2 — pactia.io landing page (single-page marketing site)
 // Spec-aligned: @surface inside @api, product.yaml surfaces[], module-scoped services
 
 pactia 1.0
@@ -46,8 +46,11 @@ product PactiaLangWebsite {
 
     model {
       @entity NewsletterSubscriber {
-        @pk id: uuid,
-        @pii @unique email: string,
+        @@pk
+        id: uuid,
+        @@pii
+        @@unique
+        email: string,
         subscribedAt: datetime,
         source: string,
       }
@@ -80,8 +83,8 @@ product PactiaLangWebsite {
       },
     }
 
-    #[database]
     service SiteService {
+      #database
       > Public marketing site — landing page and newsletter capture only.
 
       @public
@@ -175,10 +178,10 @@ product PactiaLangWebsite {
       }
 
       @public
-      #[create]
+      #create
       @status 201
-      @input SubscribeRequest
-      @output SubscribeResponse
+      @@input SubscribeRequest
+      @@output SubscribeResponse
       @throws { names: [ValidationFailed, Conflict] }
       @api subscribe_newsletter {
         method: POST,

@@ -1,22 +1,25 @@
 # Tags and macros — unified `def`
 
-Version: **1.1**  
+Version: **1.2**  
 Status: **Specification**
 
 Part of: [language-spec.md](language-spec.md#def--tags-and-macros)
 
-**Tags and macros are the same mechanism.** Both are registered with `def`. The only difference is the sigil and how you invoke them.
+**Tags and macros are the same mechanism.** Both are registered with `def`. Invocation uses three sigils: `@` (host), `@@` (modifier), `#` (macro).
 
 | | Definition | Invocation |
 | --- | --- | --- |
-| **Tag** | `def @name … { … }` | `@name { … }` or prefix shorthand when `modifier,` in def |
-| **Macro** | `def #name … { … }` | `#[name]` or `#[name(args)]` |
+| **Host tag** | `def @name … { … }` | `@name { … }` |
+| **Modifier tag** | `def @@name … { … }` | `@@name` or `@@name(Shorthand)` on the **next** `@` host or field line |
+| **Macro** | `def #name … { … }` | `#name` or `#name(args)` |
 
 There is **no** `expands { }` block. The **`def` body** is the whole definition.
 
+**Removed in 1.2:** `#[name]` bracket macro syntax — use `#name`.
+
 ---
 
-## `def` body (shared by `@` and `#`)
+## `def` body (shared by `@`, `@@`, and `#`)
 
 **In a product** — local defs inside `module { }` (no `export`):
 
@@ -60,10 +63,9 @@ export def #cursor_paginated(arg1) in service, model {
 | **Nested shape** | `name: { sub1, sub2, },` |
 | **Open extension** | use site may add fields **not** listed in `def`; compiler checks **required only** |
 | **Prose** | `>` and `>> … >>` allowed in **both** tag and macro defs |
-| **Parameters** | `def @name(a, b)` or `def #name(a)` — `${a}` in prose; macro args at `#[name(a)]` |
-| **`modifier,`** | optional in `def @` only — prefix shorthand on the line before a host |
+| **Parameters** | `def @name(a, b)` or `def #name(a)` — `${a}` in prose; macro args at `#name(a)` |
 
-Macro body lines may also be **`@tag { }`**, **`#[nested]`**, and assignments — whatever should be **spliced in place** at `#[name]`.
+Macro body lines may also be **`@tag { }`**, **`@@tag`**, **`#nested`**, and assignments — whatever should be **spliced in place** at `#name`.
 
 ---
 
@@ -90,7 +92,7 @@ Wrong placement → **`PLACEMENT_VIOLATION`**.
 
 ---
 
-## Tags (`def @`)
+## Host tags (`def @`)
 
 **Use:**
 
@@ -115,9 +117,38 @@ export def @sanctions_check in service {
 
 ---
 
+## Modifier tags (`def @@`)
+
+Modifiers bind **only** to the next `@` host tag or model field line — not to `#` macros.
+
+```pactia
+#list
+@@output(OrderListResponse)
+@api list_orders {
+  method: GET,
+  path: "/api/v1/orders",
+}
+
+@entity Order {
+  @@pk
+  @@nullable
+  nextCursor: string,
+}
+```
+
+Stacked modifiers apply to the same target:
+
+```pactia
+@@public
+@@create
+@api createUser { … }
+```
+
+---
+
 ## Macros (`def #`)
 
-C-style **call-site substitution**. The `def #` body is spliced at `#[name]` — not a prefix on the line above.
+C-style **call-site substitution**. The `def #` body is spliced at `#name` — not a prefix on the line above.
 
 **Register:**
 
@@ -127,26 +158,50 @@ export def #sanctions_screen in service {
 }
 ```
 
-**Use:**
+**Use (endpoint macros — inside `service`, before `@api`):**
 
 ```pactia
 service OrderService {
-  #[sanctions_screen]
+  #sanctions_screen
   @api create_transfer {
     method: POST,
     path: "/api/v1/transfers",
   }
 
-  #[cursor_paginated(100)]
+  #cursor_paginated(100)
   @api list_items { … }
 }
 ```
 
-**Invalid** — prefix decorator:
+**Use (service-scoped macros):**
 
 ```pactia
-#[sanctions_screen]
-@api create_transfer { … }
+service OrderService {
+  #database
+  > Core order relay API
+
+  #list
+  @@output OrderListResponse
+  @api list_orders { … }
+}
+```
+
+Service-scoped macros (e.g. `#database`, `#cache`, `#events` from `@pactia/kernel`) splice inside `service { }`. They lower to service `flags.*` in IR — not endpoint `modifiers.*`.
+
+**Invalid** — macro outside the host block:
+
+```pactia
+module orders {
+  #database
+  service OrderService { … }
+}
+```
+
+**Invalid** — prefix before the block keyword:
+
+```pactia
+#database
+service OrderService { … }
 ```
 
 Parameterized macro — args bind to `def #name(arg1)` parameters; body fields may reference `arg1`.
@@ -163,7 +218,7 @@ module example {
   >> Policy: ${hint} Max page is ${max_page}. >>
 
   service S {
-    #[cursor_paginated(max_page)]
+    #cursor_paginated(max_page)
   }
 }
 ```
@@ -179,7 +234,7 @@ Compile-time only. See [language-spec.md](language-spec.md#module-constants).
 | `PLACEMENT_VIOLATION` | use outside symbol's `in` targets |
 | `TAG_BODY_MISSING_FIELD` | required def field missing at use site |
 | `TAG_BODY_UNKNOWN_FIELD` | extra field (warning) |
-| `MACRO_UNKNOWN` | unknown `#[name]` |
+| `MACRO_UNKNOWN` | unknown `#name` |
 | `MACRO_ARGS_INVALID` | wrong arity |
 | `DEF_IN_PRODUCT` | `export def` in consumer `product.pactia` |
 | `DEF_PLACEMENT_REQUIRED` | `export def` missing `in` |

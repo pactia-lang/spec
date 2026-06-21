@@ -29,7 +29,7 @@
 
 ## Coherence checklist
 
-- [ ] Examples match [fleet-management-v2.pactia](fixtures/kernel/fleet-management-v2.pactia) where applicable
+- [ ] Examples match [relay.pactia](fixtures/kernel/relay.pactia) (1.2); legacy fleet examples live in pactiac until refreshed
 - [ ] Cross-links updated (`language-spec` ↔ `registry` ↔ `packages` ↔ `compilation`)
 - [ ] `CHANGELOG.md` updated under `[Unreleased]` for user-visible changes
 - [ ] Field specs / IR JSON schemas aligned if shapes changed
@@ -40,7 +40,7 @@
 - [ ] pactiac may need a follow-up PR (describe below)
 - [ ] [vscode-pactia](https://github.com/pactia-lang/vscode-pactia) grammar / fixtures may need a follow-up PR
 
-**Follow-up notes (if any):**
+**Follow-up notes (if any):** pactiac 1.2 compiler alignment: [feat/pactiac-1.2-compiler](https://github.com/pactia-lang/pactiac/tree/feat/pactiac-1.2-compiler). Remaining gap: `${constant}` compile-time substitution.
 
 ## Test plan
 

@@ -1,6 +1,6 @@
 # Editor support
 
-Status: **Specification** — VS Code / Cursor highlighting for Pactia 1.1.
+Status: **Specification** — VS Code / Cursor highlighting for Pactia 1.2.
 
 Part of: [language-spec.md](language-spec.md)
 
@@ -16,13 +16,17 @@ Install the **vscode-pactia** extension from the marketplace or load from the re
 
 | Token | Examples |
 | --- | --- |
-| Keyword | `pactia`, `product`, `module`, `service`, `model`, `import`, `export`, `def`, `in` |
+| Keyword | `pactia`, `product`, `module`, `service`, `model`, `import`, `export`, `def`, `in`, `from` |
 | Reserved | `view`, `interface`, `class`, `function`, `field` |
-| Tag invoke | `@identifier` |
-| Macro invoke | `#[identifier]` |
-| Def sigil | `def @name`, `def #name` |
+| Host tag | `@identifier` |
+| Modifier tag | `@@identifier` |
+| Macro invoke | `#identifier` |
+| Def sigil | `def @name`, `def @@name`, `def #name` |
 | Prose | `> line`, `>> block >>` |
+| Interpolation | `${identifier}` |
 | Comment | `//`, `/* */` |
+
+**Legacy:** `#[identifier]` — highlight as deprecated macro form if present.
 
 ---
 
@@ -31,8 +35,9 @@ Install the **vscode-pactia** extension from the marketplace or load from the re
 Highlighting follows [language-spec.md](language-spec.md) and [grammar-reference.md](grammar-reference.md):
 
 - Block keywords open `{` … `}` nests
-- `@tag { }` and `#[macro]` / `#[macro(args)]` are distinct line kinds
-- `def` bodies: field lists, prose, optional `modifier,`; macro bodies may include `@tag` / `#[macro]` lines directly
+- `@tag { }`, `@@modifier`, and `#macro` are distinct line kinds
+- Attach syntax: `module(name) { service(Name) { model(modelName) } }`
+- `def` bodies: field lists, prose; macro bodies may include `@tag` / `@@tag` / `#macro` lines
 - `${identifier}` in prose and macro bodies is a compile-time interpolation token
 
 ---
