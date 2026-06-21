@@ -20,6 +20,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 - **Removed stale references:** `pactia.package.json`, `[stack]` in product TOML, tarball fetch, pactia.io as sole registry.
 - **Stack binding:** product-level `#stack_macro` + stack `import` in source only — no `[stack].package` in `pactia.toml`.
 - **Removed:** `schemas/manifests/pactia-package.schema.json` — obsolete `pactia.package.json` format dropped in 1.2 crate model.
+- **IR schemas:** replaced legacy `stackId` / `stackVersion` / `stackDigest` with `stack` object matching pactiac output.
 
 ### Changed (1.2 baseline)
 
