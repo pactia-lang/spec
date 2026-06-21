@@ -27,8 +27,8 @@ body:
         - compilation.md
         - editor-support.md
         - CHANGELOG.md
-        - fixtures/
-        - other
+        - schemas/
+        - other (pactiac fixtures, examples repo, …)
     validations:
       required: true
   - type: input

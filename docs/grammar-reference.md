@@ -128,7 +128,7 @@ AssignmentLine    ::= Identifier ":" Value ","
 | `PACKAGE_NOT_FOUND` | Unknown package |
 | `PACKAGE_LOCK_MISMATCH` | Digest mismatch |
 | `LOCK_ENTRY_MISSING` | Missing lock pin |
-| `STACK_BINDING_MISMATCH` | Stack macro at product, `import`, and `[stack].package` disagree |
+| `UNKNOWN_SYMBOL` | Unresolved `@` / `#` / `@@` |
 
 Author-facing subset: [language-spec.md — Author errors](language-spec.md#author-errors).
 

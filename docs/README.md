@@ -13,13 +13,13 @@ Normative and supporting documents for **Pactia 1.2** — an AI-native, model-ag
 | [registry.md](registry.md) | Symbol resolution, tiers, precedence — **not** a tag catalog |
 | [packages.md](packages.md) | `pactia.toml`, imports, publish, `export def` |
 | [compilation.md](compilation.md) | Compiler pipeline, JSON IR layout, tag lowering, provenance |
-| [platform.md](platform.md) | Stack and protocol packages |
+| [platform.md](platform.md) | Stack packages |
 | [editor-support.md](editor-support.md) | VS Code / Cursor syntax highlighting |
 
-Tag and macro **names** (e.g. `@entity`, `#list`, `@@output`) live in packages such as **`@pactia/kernel`** on pactia.io — not in this spec tree.
+Tag and macro **names** (e.g. `@entity`, `#list`, `@@output`) live in packages such as **`@pactia/kernel`** ([pactia-lang/kernel](https://github.com/pactia-lang/kernel)) — not in this spec tree.
 
 ## Examples
 
 Runnable samples: [examples](https://github.com/pactia-lang/examples) repository.
 
-Normative snippets: [../fixtures/](../fixtures/)
+Normative `.pactia` snippets: [pactiac test/fixtures](https://github.com/pactia-lang/pactiac/tree/main/test/fixtures) (relay monolith, website, package index examples).

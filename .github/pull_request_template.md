@@ -21,16 +21,16 @@
 - [ ] `docs/editor-support.md`
 - [ ] `docs/grammar-reference.md`
 - [ ] `CHANGELOG.md`
-- [ ] `fixtures/` and/or `schemas/`
+- [ ] `schemas/`
 
-**Tag/macro names:** not in this repo — they belong to packages (e.g. `@pactia/kernel` on pactia.io).
+**Tag/macro names:** not in this repo — they belong to packages (e.g. `@pactia/kernel` on [pactia-lang/kernel](https://github.com/pactia-lang/kernel)).
 
 **Primary doc / section:**
 
 ## Coherence checklist
 
 - [ ] Examples use 1.2 syntax: `#macro`, `@@modifier`, import + attach (not `#[…]` or `modules/*` scan)
-- [ ] [relay.pactia](fixtures/kernel/relay.pactia) remains the canonical **monolith** 1.2 fixture in this repo
+- [ ] Examples link to [pactiac test/fixtures](https://github.com/pactia-lang/pactiac/tree/main/test/fixtures) (not a duplicate tree in spec)
 - [ ] Workspace attach examples point at [pactiac relay workspace](https://github.com/pactia-lang/pactiac/tree/main/test/fixtures/workspace/relay) when multi-file composition is shown
 - [ ] Cross-links updated (`language-spec` ↔ `registry` ↔ `packages` ↔ `compilation`)
 - [ ] `CHANGELOG.md` updated under `[Unreleased]` for user-visible changes
@@ -63,7 +63,7 @@ Pair normative language changes with compiler/editor PRs when behavior changes:
 ## Test plan
 
 - [ ] Read diff for internal contradictions (same concept named two ways)
-- [ ] [relay.pactia](fixtures/kernel/relay.pactia) still matches cited examples
+- [ ] Cited examples match [relay.pactia](https://github.com/pactia-lang/pactiac/blob/main/test/fixtures/kernel/relay.pactia) in pactiac
 - [ ] Fixture parses with pactiac smoke test when syntax changed
 - [ ] Schema files valid JSON where changed
 
