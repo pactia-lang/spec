@@ -31,6 +31,8 @@ Legacy `#[…]` bracket macros and folder-based module discovery may still be ac
 
 ### Altitude 0
 
+At least one `>` prose line in `product { }` must describe **what the product is**. Additional `>` lines are optional agent rules.
+
 ```pactia
 pactia 1.0
 
@@ -198,7 +200,16 @@ Package **`index.pactia`** has no `product` block — only `export def` at file 
 }
 ```
 
-**Modifier shorthand** — when the package `def @@` (or legacy `def @` with `modifier,`) registers a modifier, use `@@` on the line **before** the host:
+**Host-tag prefix shorthand** — when the package `export def @name` includes **`modifier,`** in the def body, the author may omit `{ }` and supply a single shorthand token on the same line:
+
+```pactia
+@auth Customer
+@auth(Admin)
+```
+
+The package def documents how shorthand maps to fields (e.g. `@auth Customer` → `roles: [Customer]`). Block form remains valid. Shorthand without `modifier,` in the package def is a **`TAG_BODY_MISSING_FIELD`** error when required fields are absent.
+
+**Modifier shorthand** — use `def @@name` (preferred in 1.2) or legacy `def @name` with **`modifier,`** for `@@`-style binding on the line **before** the host:
 
 ```pactia
 @@output VehicleListResponse
@@ -211,7 +222,7 @@ Package **`index.pactia`** has no `product` block — only `export def` at file 
 }
 ```
 
-Block form remains valid for host tags. Modifier tags never use `{ }` at the use site unless the def specifies block args.
+Block form remains valid for host tags. Modifier tags (`@@`) never use `{ }` at the use site unless the def specifies block args.
 
 ---
 
@@ -282,7 +293,7 @@ export def #cursor_paginated(arg1) in service, model {
 | `service` | `service { }` |
 | `field` | field line in `model { }` |
 
-`in service, product` — union. **Omit `in`** → all placements. **`export def` must declare `in`** in packages.
+`in service, product` — union of allowed enclosing blocks. A symbol may only appear where its `in` includes that block; it lowers to **that block's IR file** — see [compilation.md — Tag lowering](compilation.md#tag-lowering). **Omit `in`** on local defs → all placements. **`export def` must declare `in`** in packages.
 
 ### Field spec
 
@@ -291,7 +302,7 @@ export def #cursor_paginated(arg1) in service, model {
 | `name,` | required at use site |
 | `name: default,` | optional; default when omitted |
 | `name: { sub, },` | nested object |
-| `modifier,` | optional in `def @` only — allows prefix shorthand at use site |
+| `modifier,` | optional in `def @` only — allows **host-tag prefix shorthand** (`@name Token`) and legacy `@@`-style prefix on the next host |
 | `> …` / `>> … >>` | prose in def (tags and macros) |
 | `${param}` | compile-time interpolation |
 
@@ -464,7 +475,7 @@ Then run the full [compilation pipeline](compilation.md) on the assembled source
 | Provenance | Meaning |
 | --- | --- |
 | `Pactia` | Author-written |
-| `INFERRED` | Deterministic rule |
+| `INFERRED` | Deterministic rule (**planned** — BSC / future pactiac) |
 | `PACKAGE` | Import |
 | `MACRO` | Macro expansion |
 | `DEFINE` | Local template |
@@ -476,17 +487,12 @@ Then run the full [compilation pipeline](compilation.md) on the assembled source
 
 ## Compile pipeline (summary)
 
-1. Assemble workspace
-2. Parse source
-3. Resolve packages → effectiveRegistry
-4. Expand `#macro` until fixed point
-5. Validate every tag body against its `def` field spec (uniform — no tag-name-specific passes)
-6. Lower to JSON IR
-7. Infer gaps on lowered IR
-8. Write `workspace.json`, `manifest.json`, and slice files
-9. Optional BSC
+Phases **0–9** are **pactiac**; phase **10** is optional **BSC**. Full list: [compilation.md — Compile phases](compilation.md#compile-phases).
 
-Full phase list: [compilation.md](compilation.md).
+1. Assemble workspace → parse → resolve packages → bind → expand macros → validate → lower → emit IR
+2. Optional BSC render / expand
+
+**Inference** on lowered IR (provenance `INFERRED`) is **not** specified in 1.2 — planned for BSC or a future pactiac pass.
 
 ---
 
@@ -502,6 +508,8 @@ Normative spec vs **pactiac** ([feat/pactiac-1.2-compiler](https://github.com/pa
 | `${constant}` in prose | Required | Supported (v2 pipeline; imported + module constants) |
 | `export module` / fragment parse at root | Required | Supported (v2 parser; attach-merge for workspace assembly) |
 | Crate model (`pactia.toml` + `index.pactia` only) | Required | Supported (no `pactia.package.json`) |
+| Tag body + placement validation (phase 7) | Required | Partial — bind + expand wired; full validate pass in progress |
+| IR infer pass (`INFERRED`) | Planned (BSC / future pactiac) | Not wired |
 | Legacy `#[macro]`, `modules/*` scan | Deprecated | Accepted; `LEGACY_MACRO_SYNTAX` warning; folder scan still accepted |
 
 **Canonical 1.2:** [relay.pactia](https://github.com/pactia-lang/pactiac/blob/main/test/fixtures/kernel/relay.pactia). Compiler status: [pactiac CHANGELOG](https://github.com/pactia-lang/pactiac/blob/main/CHANGELOG.md).
@@ -522,6 +530,7 @@ Normative spec vs **pactiac** ([feat/pactiac-1.2-compiler](https://github.com/pa
 | `ATTACH_UNDEFINED` | Attach references symbol not imported |
 | `ATTACH_KIND_MISMATCH` | Attach expects `export module` but symbol is `export service`, etc. |
 | `IMPORT_UNUSED` | Partial import symbol never referenced |
+| `REGISTRY_COLLISION` | Duplicate unqualified name from any two registry sources |
 | `UNKNOWN_SYMBOL` | Unregistered `@name` / `#name` / `@@name` |
 
 Implementer codes: [grammar-reference.md](grammar-reference.md).
