@@ -19,7 +19,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 - **Spec coherence pass:** `README.md`, `docs/overview.md`, `docs/packages.md`, `docs/platform.md`, `docs/registry.md`, `docs/compilation.md`, `docs/language-spec.md`, `schemas/manifests/pactia-toml.schema.json` aligned to 1.2 crate model.
 - **Removed stale references:** `pactia.package.json`, `[stack]` in product TOML, tarball fetch, pactia.io as sole registry.
 - **Stack binding:** product-level `#stack_macro` + stack `import` in source only — no `[stack].package` in `pactia.toml`.
-- **`pactia-package.schema.json`:** marked deprecated (historical).
+- **Removed:** `schemas/manifests/pactia-package.schema.json` — obsolete `pactia.package.json` format dropped in 1.2 crate model.
 
 ### Changed (1.2 baseline)
 
