@@ -57,7 +57,8 @@ Pair normative language changes with compiler/editor PRs when behavior changes:
 
 **Known compiler gaps (update [language-spec.md — Compiler alignment](docs/language-spec.md#compiler-alignment-12) when closed):**
 
-- `${constant}` compile-time substitution in prose (utility exists; not wired in pactiac expand/bind)
+- v0.1 extract path still used for `-i` monolith and golden tests; full v2 cutover pending
+- vscode-pactia grammar for 1.2 sigils not yet updated
 
 ## Test plan
 
