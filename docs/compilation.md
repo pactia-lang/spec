@@ -39,7 +39,7 @@ Pactia compiles to **AI-neutral JSON IR** (`input/**/*.json`) — not vendor-spe
 8.  Lower @tags → JSON IR with provenance (scope + slot rules below)
 9.  Infer missing shapes on lowered IR per inference rules
 10. Validate output against IR JSON schemas (spec/schemas/ir/)
-11. Write manifest.json (compile metadata — emitted last)
+11. Write IR files: `workspace.json` (full bundle), `manifest.json`, slice files (emitted last)
 12. (optional) bsc render / expand from IR
 ```
 
@@ -118,7 +118,8 @@ Example output tree:
 
 ```text
 input/
-  manifest.json
+  workspace.json          # single-file bundle — start here (agents, BSC)
+  manifest.json           # compile index only
   product.json
   modules/
     trading/
@@ -130,11 +131,14 @@ input/
 
 | Path | Scope |
 | --- | --- |
-| `manifest.json` | Compile metadata, module index, cross-module references |
+| `workspace.json` | **Full IR in one file** — `manifest`, `product`, and all module/model/service slices inline |
+| `manifest.json` | Compile metadata and module file index (`pactiaVersion`, `entry`, `lockfileDigest`, `modules[]`, `references[]`) |
 | `product.json` | Product-level lowered facts |
 | `modules/<m>/<m>.module.json` | Module scope |
 | `modules/<m>/<m>.model.json` | Model scope |
 | `modules/<m>/services/<s>.service.json` | Service scope |
+
+**Agents and tools:** read `workspace.json` first — it is the entry point referenced by kernel `@pactia`. Use per-slice files when you only need one module or service, or when diffing a single scope.
 
 **Naming:** `<module>` kebab-case; `<service>` lowercased with optional `Service` suffix stripped (`OrderService` → `order.service.json`).
 
@@ -142,9 +146,19 @@ IR shape is validated by [spec/schemas/ir/](../schemas/ir/).
 
 ---
 
-## `manifest.json`
+## `workspace.json` and `manifest.json`
 
-Phase 11. Records language version, entry file, lock digest, module file tree, and cross-module `references[]` from resolved model links. Not product intent.
+**`workspace.json`** — single-file bundle of the entire compile output. Top-level keys:
+
+| Key | Contents |
+| --- | --- |
+| `manifest` | Same object as `manifest.json` — compile metadata and file index |
+| `product` | Same object as `product.json` — product-level intent |
+| `modules` | Array of `{ module, model, services[] }` slices — same data as the per-file JSON under `modules/` |
+
+Emitted for agents and BSC: one read gives the full product without chasing paths. Validated by [ir-workspace.schema.json](../schemas/ir/ir-workspace.schema.json).
+
+**`manifest.json`** — the `manifest` slice alone. Records language version, entry file, lock digest, module file tree (`modules[].name`, `path`, `module`, `model`, `services[].file`), and cross-module `references[]`. Not product intent — navigation metadata only.
 
 ---
 

@@ -96,11 +96,11 @@ Pactia does **not** replace Rust, React, or Swift. It sits above them as a durab
 
 ### AI-native — and AI model agnostic
 
-**AI-native** means the language is built for how software is authored now: permanent `.pactia` files instead of ephemeral chat, scoped context per `module` / `service`, and [packages](packages.md) as **shareable prompts** on pactia.io.
+**AI-native** means the language is built for how software is authored now: permanent `.pactia` files instead of ephemeral chat, scoped context per `module` / `service`, and [packages](packages.md) as **shareable, git-pinned intent** (Go-style module coordinates).
 
 **AI model agnostic** means Pactia is **not** tied to any specific model (GPT, Claude, Gemini, …) or coding platform (Cursor, Claude Code, Copilot, custom agents). The same compiled output must work everywhere.
 
-That is why `pactiac` lowers Pactia to **AI-neutral JSON IR** (`input/**/*.json`) — structured facts with provenance, not vendor prompt templates. **BSC** then:
+That is why `pactiac` lowers Pactia to **AI-neutral JSON IR** (`workspace.json` plus per-scope slice files under `out/` or `input/`) — structured facts with provenance, not vendor prompt templates. **BSC** then:
 
 1. **Renders** that IR into each target’s file conventions (`.cursor/rules`, `CLAUDE.md`, Copilot instructions, …).
 2. **Optionally expands** it with an LLM — grounded in JSON IR, not free-form — to produce richer agent context.
@@ -108,7 +108,7 @@ That is why `pactiac` lowers Pactia to **AI-neutral JSON IR** (`input/**/*.json`
 The LLM step does **not** re-parse `.pactia` or change enforceable facts. It elaborates **guidance**: module overviews, happy-path scenarios, stack-aligned coding notes, gaps marked `NOT_DERIVABLE`. Formal tags in JSON remain the source of truth for conformance.
 
 ```
-.pactia  ──pactiac──▶  input/modules/*/     (*.module.json, *.model.json, *.service.json)
+.pactia  ──pactiac──▶  workspace.json (+ slice files)     (*.module.json, *.model.json, *.service.json)
                               │
                               └── bsc render ──▶  agent briefs (target profile)
                                         │
@@ -142,7 +142,7 @@ When you formalize something, Pactia is strict about **how** (tags and macros) s
 
 ### Shareable prompts (packages)
 
-Chat prompts die in history. `pactia.toml` + `pactia.lock` pin package versions; `import @scope/name;` imports paths only — same intent in every repo and session.
+Chat prompts die in history. `pactia.toml` + `pactia.lock` pin package versions from **git tags**; `import @scope/name;` imports coordinates only — same intent in every repo and session. See [packages.md — Go modules](packages.md#go-modules-distribution).
 
 ### What Pactia is not
 
@@ -177,7 +177,7 @@ A Pactia program is not executed. It is **compiled to module-scoped JSON IR** (`
 - **Model and platform agnostic** — same `.pactia` → same JSON IR; BSC adapts to Cursor, Claude Code, Copilot, or custom agents
 - A **shareable product spec** — backend, web, mobile, desktop in one file or [workspace](language-spec.md#workspace-layout)
 - **Keywords** — `product`, `module`, `service`, `model`, `import`, `export`, `def`, `in`; `@` / `@@` / `#` sigils, prose — [language-spec.md](language-spec.md)
-- Composable via [packages](packages.md) on pactia.io
+- Composable via [packages](packages.md) — git repos with semver tags ([kernel](https://github.com/pactia-lang/kernel), [pactia-io](https://github.com/pactia-lang/pactia-io))
 - Extensible via **`export def`** in packages — not new language keywords
 - Stack-aware via product-level `#stack_macro` (e.g. `#rust_anb`) + `import` of the stack package ([platform.md](platform.md#selecting-a-stack))
 - [Role-based](language-spec.md#authorization) at two layers: application roles and party roles
@@ -204,7 +204,7 @@ Pactia deliberately describes **less than the full system** when you want it to.
 3. **Fixed skeleton, open content** — block keywords + `def`; symbols from imported packages.
 4. **AI-native artifact** — durable `.pactia`, not disposable chat.
 5. **AI model and platform agnostic** — compile to neutral JSON; BSC renders and optionally LLM-expands per consumer.
-6. **Share through packages** — reuse intent via pactia.io, not copy-paste.
+6. **Share through packages** — reuse intent via git-pinned imports, not copy-paste.
 7. **Strict when structured** — tags lower deterministically; conformance can hold them.
 8. **Free when prose** — guidance for agents and humans unless linked to `@test` / `@must`.
 9. **Small kernel, rich composition** — [packages](packages.md) add verticals; extend libraries, not grammar.
@@ -216,10 +216,10 @@ Pactia deliberately describes **less than the full system** when you want it to.
 ┌─────────────────────────────────────────────────────────────┐
 │  Pactia (.pactia) + packages       ← humans author intent       │
 ├─────────────────────────────────────────────────────────────┤
-│  input/manifest.json, product.json, modules/*/*.json          │
-│  (AI-neutral IR)              ← pactiac compile               │
+│  workspace.json + slice IR         ← pactiac compile               │
+│  (start with workspace.json)                                      │
 ├─────────────────────────────────────────────────────────────┤
-│  Stack package (pactia.io)      ← platform law (read-only)   │
+│  Stack / protocol packages (GitHub)  ← platform + wire law       │
 ├─────────────────────────────────────────────────────────────┤
 │  bsc render + optional LLM expand (per target)                │
 ├─────────────────────────────────────────────────────────────┤
@@ -235,10 +235,10 @@ Pactia is how humans **author**. `pactiac` produces **vendor-neutral IR**. BSC *
 | ---------------------------- | --------------------------------------------------------- |
 | Product / domain expert      | Prose, `> rules`, `@actor { }`                          |
 | Senior architect / tech lead | `model`, `service`, `@api { }`, `@tag { }`, `#macro`, `@@modifier`, `@surface { }`, `@test { }` |
-| Platform team                | Stack packages on pactia.io — not Pactia                   |
+| Platform team                | Stack packages on [pactia-io](https://github.com/pactia-lang/pactia-io) |
 | Frontend / mobile leads      | `@surface { }`, `@bind { }` in same `.pactia` file |
-| Community / vendors          | Pactia packages (`import @pactia/*` on pactia.io)            |
-| AI coding agent              | **Never** edits Pactia — implements from IR (`*.module.json`, `*.model.json`, `*.service.json`) |
+| Community / vendors          | Pactia packages (`import @scope/name` from git)            |
+| AI coding agent              | **Never** edits Pactia — implements from IR (`workspace.json` or slice files) |
 
 ## Language version
 
@@ -333,10 +333,10 @@ When you need **enforceable** state edges, add `@transition { from, to }` on `@a
 
 ## Next steps (implementation)
 
-1. `pactiac compile` → BSC `input/` ([compilation.md](compilation.md))
+1. `pactiac compile` / `pactia build` → IR ([compilation.md](compilation.md))
 2. `bsc compile-workspace` → agent briefs from IR (BSC render)
-3. pactia.io package registry ([packages.md](packages.md))
-4. Web UI: Pactia editor at pactia.io / local
+3. Git-hosted packages + lockfile ([packages.md](packages.md))
+4. Web UI / editor (vscode-pactia, future pactia.io tooling)
 
 ---
 
@@ -403,7 +403,7 @@ The compiler (`@pactia/pactiac`) tags every lowered fact with a provenance:
 1. **Above the line is deterministic.** No LLM decides anything above the line. Same Pactia, same contract, byte for byte.
 2. **Below the line is free.** AI and humans choose logic, topology, and structure however they like.
 3. **The contract never describes behavior.** No numbered `flow {}` blocks. Use `@must` for enforceable outcomes; use `@guide` or `implementation_hint` for suggested patterns (below the line).
-4. **The IR is the contract, not the system.** `input/manifest.json`, `input/product.json`, and `input/modules/*/` (`*.module.json`, `*.model.json`, `*.service.json`) carry only above-the-line facts.
+4. **The IR is the contract, not the system.** `workspace.json` (full bundle) and slice files (`product.json`, `*.module.json`, `*.model.json`, `*.service.json`) carry only above-the-line facts. Agents read **`workspace.json` first** — see kernel `@pactia` and [compilation.md](compilation.md#ir-layout).
 5. **The line is crossed only by conformance.** The sole connection between the two halves is the conformance gate: it checks the implementation against the contract and fails the build otherwise (static surface checks today; runtime enforcement planned).
 
 ### Worked example (fleet)

@@ -17,7 +17,7 @@ This document describes **how symbols resolve** at compile time. It is **not** a
 | Modifier tag | `export def @@name in … { }` | `@@name` / `@@name(Shorthand)` on next host or field |
 | Macro | `export def #name(…) in … { }` | `#name` / `#name(args)` |
 
-Validation uses the **field spec** parsed from each `def` body (required fields, defaults, open extensions). There is no separate JSON Schema file per tag in a package tarball.
+Validation uses the **field spec** parsed from each `def` body (required fields, defaults, open extensions). Protocol packages may additionally ship a **wire JSON Schema** (`[protocol].wire-schema` in `pactia.toml`) — see [packages.md](packages.md). There is no separate JSON Schema file per kernel tag.
 
 ---
 
@@ -27,7 +27,7 @@ All symbols come from **packages** resolved through `pactia.toml` and `pactia.lo
 
 | Tier | Source | When symbols load |
 | --- | --- | --- |
-| **dependency** | Package in `[dependencies]` **and** `import`ed in source | Parsed `export def` from tarball `index.pactia` |
+| **dependency** | Package in `[dependencies]` **and** `import`ed in source | Parsed `export def` from vendored `index.pactia` |
 | **stack** | Stack-kind package: `import` + product-level `#stack_macro` (see [platform.md](platform.md)) | Same as dependency; wins on name collision (see precedence) |
 | **local** | Non-exported `def @` / `def #` inside `module { }` in the product | Module scope only; not published |
 

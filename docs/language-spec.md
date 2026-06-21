@@ -486,7 +486,7 @@ Then run the full [compilation pipeline](compilation.md) on the assembled source
 6. Cross-checks (wire, states, protocol policy)
 7. Lower to JSON IR
 8. Infer gaps on lowered IR
-9. Validate IR schemas; write `manifest.json`
+9. Validate IR schemas; write `workspace.json`, `manifest.json`, and slice files
 10. Optional BSC
 
 Full phase list: [compilation.md](compilation.md).
@@ -539,7 +539,7 @@ Implementer codes: [grammar-reference.md](grammar-reference.md).
 - Prefix `#macro` above `@api` — use in-block `#name` invocation.
 - Using `modules/*` folder scan for new products — use export + attach.
 - Putting semver in `import` — use `pactia.toml`.
-- Expecting the language spec to list every package tag — read the package source (e.g. `@pactia/kernel` on pactia.io).
+- Expecting the language spec to list every package tag — read the package source (e.g. `@pactia/kernel` on [pactia-lang/kernel](https://github.com/pactia-lang/kernel)).
 
 ---
 

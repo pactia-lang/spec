@@ -23,7 +23,7 @@
 - [ ] `CHANGELOG.md`
 - [ ] `fixtures/` and/or `schemas/`
 
-**Tag/macro names:** not in this repo — they belong to packages (e.g. `@pactia/kernel` on pactia.io).
+**Tag/macro names:** not in this repo — they belong to packages (e.g. `@pactia/kernel` on [pactia-lang/kernel](https://github.com/pactia-lang/kernel)).
 
 **Primary doc / section:**
 

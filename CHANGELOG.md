@@ -11,13 +11,15 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 - **Crate model:** packages are `pactia.toml` + `index.pactia` only — no `pactia.package.json`; IR slots derived at product compile.
 - **Protocol wire schema:** `[protocol] wire-schema` in package `pactia.toml` (e.g. `@pactia/protocol-rest` → `schemas/api-wire-v1.json`); `WIRE_INVALID` on `@api` wire fields.
 - **Official package repos:** [pactia-lang/kernel](https://github.com/pactia-lang/kernel), [pactia-lang/pactia-io](https://github.com/pactia-lang/pactia-io).
+- **Go-style distribution:** packages resolve from **git remote + semver tag**; lockfile digest; vendored under `.pactia/packages/` — see [packages.md](docs/packages.md#go-modules-distribution).
+- **`workspace.json`:** documented as single-file IR bundle for agents; slice files remain for per-scope use.
 
 ### Changed
 
-- **packages.md, platform.md, registry.md, compilation.md:** rewritten for Rust-crate mental model; removed `[stack]` in product TOML and manifest build pipeline.
+- **Spec coherence pass:** `README.md`, `docs/overview.md`, `docs/packages.md`, `docs/platform.md`, `docs/registry.md`, `docs/compilation.md`, `docs/language-spec.md`, `schemas/manifests/pactia-toml.schema.json` aligned to 1.2 crate model.
+- **Removed stale references:** `pactia.package.json`, `[stack]` in product TOML, tarball fetch, pactia.io as sole registry.
 - **Stack binding:** product-level `#stack_macro` + stack `import` in source only — no `[stack].package` in `pactia.toml`.
-- **Fixtures README:** removed deleted fleet fixtures; relay remains canonical 1.2.
-- **Grammar reference:** optional `VersionLine` on fragment files; `LEGACY_MACRO_SYNTAX` and `CONSTANT_UNDEFINED` codes; named `export model`.
+- **`pactia-package.schema.json`:** marked deprecated (historical).
 
 ### Changed (1.2 baseline)
 

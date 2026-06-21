@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://pactia.io/schemas/manifests/pactia-package.schema.json",
-  "title": "pactia.package.json",
-  "description": "Publishable package manifest. See spec/docs/packages.md.",
+  "title": "pactia.package.json (deprecated)",
+  "description": "Removed in 1.2 crate model. Packages ship pactia.toml + index.pactia only; IR slots are derived at product compile. Retained for historical reference.",
   "type": "object",
   "required": ["name", "version", "kind"],
   "properties": {

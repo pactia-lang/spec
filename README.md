@@ -4,7 +4,7 @@
 
 **You write what must stay true. AI writes how it works.**
 
-Pactia is an **AI-native intent language** — compiled by **pactiac** to AI-neutral JSON IR; BSC renders for any model or coding platform. Packages ship on **pactia.io**.
+Pactia is an **AI-native intent language** — compiled by **pactiac** to AI-neutral JSON IR; BSC renders for any model or coding platform. Packages publish as **git repos with semver tags** (Go-style); official libraries live on GitHub ([kernel](https://github.com/pactia-lang/kernel), [pactia-io](https://github.com/pactia-lang/pactia-io)).
 
 **Current version:** 1.2  
 **Status:** Specification
@@ -92,18 +92,20 @@ Full index: [docs/README.md](docs/README.md)
 ## The stack
 
 ```
-*.pactia  ──pactiac──▶  AI-neutral IR  ──▶  agent context + specifications
+*.pactia  ──pactiac──▶  workspace.json + slice IR  ──▶  agent context + specifications
               ▲
-         pactia + pactia.io — resolve, lock, publish packages
+         pactia — vendor git deps, lockfile, build (Go-style module fetch)
 ```
 
 | | Repo | Role |
 | --- | --- | --- |
 | Language | **spec** (this repo) | Pactia 1.2 — grammar, JSON IR, packages |
 | Compiler | [pactiac](https://github.com/pactia-lang/pactiac) | Deterministic compile to module-scoped IR |
-| Packages | [pactia](https://github.com/pactia-lang/pactia) | `pactia add`, lockfiles, publish *(in progress)* |
+| Package manager | [pactia](https://github.com/pactia-lang/pactia) | `pactia build`, lockfiles, fetch from git |
+| Kernel packages | [kernel](https://github.com/pactia-lang/kernel) | `@pactia/kernel`, `@pactia/kernel-*` |
+| Stack / protocol / surface | [pactia-io](https://github.com/pactia-lang/pactia-io) | Platform and wire packages |
 | Editor | [vscode-pactia](https://github.com/pactia-lang/vscode-pactia) | Syntax, tags, diagnostics |
-| Examples | [examples](https://github.com/pactia-lang/examples) | Canonical workspaces *(planned)* |
+| Examples | [examples](https://github.com/pactia-lang/examples) | Canonical workspaces |
 
 **Model-agnostic by design.** Switch Cursor, Claude Code, or Copilot — your `.pactia` files and lockfile stay the same.
 

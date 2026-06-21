@@ -16,7 +16,7 @@ Normative and supporting documents for **Pactia 1.2** — an AI-native, model-ag
 | [platform.md](platform.md) | Stack and protocol packages |
 | [editor-support.md](editor-support.md) | VS Code / Cursor syntax highlighting |
 
-Tag and macro **names** (e.g. `@entity`, `#list`, `@@output`) live in packages such as **`@pactia/kernel`** on pactia.io — not in this spec tree.
+Tag and macro **names** (e.g. `@entity`, `#list`, `@@output`) live in packages such as **`@pactia/kernel`** ([pactia-lang/kernel](https://github.com/pactia-lang/kernel)) — not in this spec tree.
 
 ## Examples
 
