@@ -6,10 +6,10 @@ Pactia programs compose from **packages**. Each package is **`pactia.toml` + `in
 
 Part of: [language-spec.md](language-spec.md) | [registry.md](registry.md) | [platform.md](platform.md)
 
-| Repo | Packages |
-| --- | --- |
-| [pactia-lang/kernel](https://github.com/pactia-lang/kernel) | `@pactia/kernel`, `@pactia/kernel-*` |
-| [pactia-lang/pactia-io](https://github.com/pactia-lang/pactia-io) | `@pactia/rust-anb`, `@pactia/html-css-js`, … |
+| Repo                                                              | Packages                                       |
+| ----------------------------------------------------------------- | ---------------------------------------------- |
+| [pactia-lang/kernel](https://github.com/pactia-lang/kernel)       | `@pactia/kernel`, `@pactia/kernel-*`           |
+| [pactia-lang/pactia-io](https://github.com/pactia-lang/pactia-io) | `@pactia/rust-stack`, `@pactia/html-css-js`, … |
 
 ---
 
@@ -17,23 +17,23 @@ Part of: [language-spec.md](language-spec.md) | [registry.md](registry.md) | [pl
 
 ### Rust crate (authoring)
 
-| Rust | Pactia |
-| --- | --- |
-| `Cargo.toml` | `pactia.toml` — name, version, optional description, dependencies |
-| `lib.rs` | `index.pactia` — `export def @…` / `#…` |
-| `cargo build` | `pactia build` → invokes `pactiac compile` |
+| Rust          | Pactia                                                            |
+| ------------- | ----------------------------------------------------------------- |
+| `Cargo.toml`  | `pactia.toml` — name, version, optional description, dependencies |
+| `lib.rs`      | `index.pactia` — `export def @…` / `#…`                           |
+| `cargo build` | `pactia build` → invokes `pactiac compile`                        |
 
 Authors edit **`index.pactia`**. The compiler parses export defs at product compile time and **derives IR slot metadata** from `in` placement and modifier flag only — no tag-name routing table (see [compilation.md](compilation.md#tag-lowering)).
 
 ### Go modules (distribution)
 
-| Go | Pactia |
-| --- | --- |
-| Module path | Package coordinate (`@pactia/kernel`) |
-| Version = git tag | Same |
-| `go.sum` | `digest` in `pactia.lock` |
-| Vendor cache | `.pactia/packages/@scope--name@version/` |
-| `go get` | `pactia fetch` / `pactia add` (planned) |
+| Go                | Pactia                                   |
+| ----------------- | ---------------------------------------- |
+| Module path       | Package coordinate (`@pactia/kernel`)    |
+| Version = git tag | Same                                     |
+| `go.sum`          | `digest` in `pactia.lock`                |
+| Vendor cache      | `.pactia/packages/@scope--name@version/` |
+| `go get`          | `pactia fetch` / `pactia add` (planned)  |
 
 **Import in source** uses the coordinate only:
 
@@ -51,7 +51,7 @@ Cargo-style — **no `kind` field**. What a package exports lives in `index.pact
 
 ```toml
 [package]
-name = "@pactia/rust-anb"
+name = "@pactia/rust-stack"
 version = "1.0.0"
 description = "Rust / Actix platform macros"
 
@@ -68,15 +68,15 @@ version = "0.1.0"
 
 [dependencies]
 "@pactia/kernel" = "^1.0"
-"@pactia/rust-anb" = "^1.0"
+"@pactia/rust-stack" = "^1.0"
 ```
 
-| Rule | Detail |
-| --- | --- |
-| No module list | Import + attach in `product.pactia` |
-| No `[stack]` in TOML | Platform binding is `#macro` in source — [platform.md](platform.md) |
-| No `kind` | Unlike old drafts — all packages are equal crates; `@stack` is a tag in source |
-| No extra TOML sections | Only `[package]` and `[dependencies]` |
+| Rule                   | Detail                                                                         |
+| ---------------------- | ------------------------------------------------------------------------------ |
+| No module list         | Import + attach in `product.pactia`                                            |
+| No `[stack]` in TOML   | Platform binding is `#macro` in source — [platform.md](platform.md)            |
+| No `kind`              | Unlike old drafts — all packages are equal crates; `@stack` is a tag in source |
+| No extra TOML sections | Only `[package]` and `[dependencies]`                                          |
 
 ### `pactia.lock`
 
@@ -131,13 +131,13 @@ import { orders, OrderService } from ./fragments/orders.pactia;
 
 All imported packages merge with the same rules. `@stack` lowers as a normal product-scope tag; `#rust_anb` expands as a normal product-scope macro.
 
-| Code | Condition |
-| --- | --- |
-| `PACKAGE_NOT_FOUND` | Unknown coordinate |
-| `PACKAGE_LOCK_MISMATCH` | Digest mismatch |
+| Code                      | Condition                          |
+| ------------------------- | ---------------------------------- |
+| `PACKAGE_NOT_FOUND`       | Unknown coordinate                 |
+| `PACKAGE_LOCK_MISMATCH`   | Digest mismatch                    |
 | `DEPENDENCY_NOT_DECLARED` | Import without `pactia.toml` entry |
-| `VERSION_IN_IMPORT` | Semver in import line |
-| `UNKNOWN_SYMBOL` | `@` / `#` not in effectiveRegistry |
+| `VERSION_IN_IMPORT`       | Semver in import line              |
+| `UNKNOWN_SYMBOL`          | `@` / `#` not in effectiveRegistry |
 
 ---
 

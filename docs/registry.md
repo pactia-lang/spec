@@ -11,11 +11,11 @@ This document describes **how symbols resolve** at compile time. It is **not** a
 
 ## Symbols
 
-| Form | Registered by | Invoked as |
-| --- | --- | --- |
-| Host tag | `export def @name in … { }` | `@name { }` or `@name Shorthand` when `modifier,` is in the def |
-| Modifier tag | `export def @@name in … { }` | `@@name` / `@@name(Shorthand)` on next host or field |
-| Macro | `export def #name(…) in … { }` | `#name` / `#name(args)` |
+| Form         | Registered by                  | Invoked as                                                      |
+| ------------ | ------------------------------ | --------------------------------------------------------------- |
+| Host tag     | `export def @name in … { }`    | `@name { }` or `@name Shorthand` when `modifier,` is in the def |
+| Modifier tag | `export def @@name in … { }`   | `@@name` / `@@name(Shorthand)` on next host or field            |
+| Macro        | `export def #name(…) in … { }` | `#name` / `#name(args)`                                         |
 
 Validation uses the **field spec** parsed from each `def` body (required fields, defaults, open extensions). **Every tag name uses the same validation path** — placement + field spec only. There is no separate JSON Schema sidecar per package and no tag-name-specific validation in the compiler.
 
@@ -25,12 +25,12 @@ Validation uses the **field spec** parsed from each `def` body (required fields,
 
 All symbols come from **packages** resolved through `pactia.toml` and `pactia.lock`. There is no bundled sysroot, stack tier, or always-loaded kernel in the compiler.
 
-| Tier | Source | When symbols load |
-| --- | --- | --- |
-| **dependency** | Package in `[dependencies]` **and** `import`ed in source | Parsed `export def` from vendored `index.pactia` |
-| **local** | Non-exported `def @` / `def #` inside `module { }` in the product | Module scope only; not published |
+| Tier           | Source                                                            | When symbols load                                |
+| -------------- | ----------------------------------------------------------------- | ------------------------------------------------ |
+| **dependency** | Package in `[dependencies]` **and** `import`ed in source          | Parsed `export def` from vendored `index.pactia` |
+| **local**      | Non-exported `def @` / `def #` inside `module { }` in the product | Module scope only; not published                 |
 
-`@pactia/kernel`, `@pactia/rust-anb`, and every other package resolve the same way — declare in `pactia.toml`, pin in `pactia.lock`, `import` in source. No symbol gets a special compiler branch.
+`@pactia/kernel`, `@pactia/rust-stack`, and every other package resolve the same way — declare in `pactia.toml`, pin in `pactia.lock`, `import` in source. No symbol gets a special compiler branch.
 
 Transitive package dependencies (packages listed only in a dependency's `pactia.toml`, not imported by the product) **never** contribute symbols to `effectiveRegistry`.
 
@@ -56,11 +56,11 @@ Every `@name`, `@@name`, and `#name` must resolve to an entry or the compiler em
 
 **Duplicate unqualified names are always an error** — there is no shadowing or precedence winner.
 
-| Situation | Code |
-| --- | --- |
+| Situation                                                   | Code                 |
+| ----------------------------------------------------------- | -------------------- |
 | Two imported packages export the same `@` / `@@` / `#` name | `REGISTRY_COLLISION` |
-| Local `def @` / `def #` collides with an imported symbol | `REGISTRY_COLLISION` |
-| Two local defs in the same module share a name | `REGISTRY_COLLISION` |
+| Local `def @` / `def #` collides with an imported symbol    | `REGISTRY_COLLISION` |
+| Two local defs in the same module share a name              | `REGISTRY_COLLISION` |
 
 Rename or use partial imports so only one package supplies a given symbol. Partial imports filter which defs load from a package; they do not allow the same unqualified name from two packages.
 
@@ -70,11 +70,11 @@ Rename or use partial imports so only one package supplies a given symbol. Parti
 
 Each registry entry lists **`in`** targets (`product`, `module`, `model`, `service`, `field`). The compiler checks the **enclosing block at each use site**. Mismatch → **`PLACEMENT_VIOLATION`**.
 
-| Def `in` | Meaning |
-| --- | --- |
-| `product` | May appear only inside `product { }` |
+| Def `in`           | Meaning                                                                                 |
+| ------------------ | --------------------------------------------------------------------------------------- |
+| `product`          | May appear only inside `product { }`                                                    |
 | `service, product` | May appear inside `product { }` **or** `service { }` — not in `module` or `model` alone |
-| (all five targets) | May appear in any block that accepts tags |
+| (all five targets) | May appear in any block that accepts tags                                               |
 
 A tag used in an allowed block is **lowered into that block's IR file** — see [compilation.md — Tag lowering](compilation.md#tag-lowering).
 
@@ -110,11 +110,11 @@ Macro **def body** may contain `@tag { }`, `@@tag`, nested `#macro`, field lines
 
 ## Product compile
 
-| | Product compile |
-| --- | --- |
-| Input | `product.pactia`, workspace fragments, vendored package `index.pactia` files |
-| Output | JSON IR under the compile output directory (default layout: `input/**/*.json`; override with `-o`) |
-| `export def` | Forbidden in product; required in package `index.pactia` |
+|              | Product compile                                                                                    |
+| ------------ | -------------------------------------------------------------------------------------------------- |
+| Input        | `product.pactia`, workspace fragments, vendored package `index.pactia` files                       |
+| Output       | JSON IR under the compile output directory (default layout: `input/**/*.json`; override with `-o`) |
+| `export def` | Forbidden in product; required in package `index.pactia`                                           |
 
 Package publish ships **`pactia.toml` + `index.pactia`** only — see [packages.md](packages.md).
 

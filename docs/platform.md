@@ -5,7 +5,7 @@ Status: **Specification**
 
 Part of: [packages.md](packages.md) | [language-spec.md](language-spec.md)
 
-Platform crates (e.g. `@pactia/rust-anb`, `@pactia/html-css-js`) are **ordinary packages** — same `pactia.toml` shape, resolution, registry rules, and lowering as `@pactia/kernel`. They publish **`export def @`** tags and **`export def #`** macros in `index.pactia`.
+Platform crates (e.g. `@pactia/rust-stack`, `@pactia/html-css-js`) are **ordinary packages** — same `pactia.toml` shape, resolution, registry rules, and lowering as `@pactia/kernel`. They publish **`export def @`** tags and **`export def #`** macros in `index.pactia`.
 
 Platform defaults arrive through **macros and tags** from imported packages, not through compiler stack binding. `@stack`, `@guide`, `@topology`, and every other name are ordinary package symbols — same validation and lowering as all tags.
 
@@ -17,7 +17,7 @@ Wire-shaped fields such as `method` and `path` are **optional fields on a tag bo
 
 ```pactia
 import @pactia/kernel;
-import @pactia/rust-anb;
+import @pactia/rust-stack;
 
 product Relay {
   > B2B order relay between suppliers and retailers
@@ -28,13 +28,13 @@ product Relay {
 }
 ```
 
-| Piece | Role |
-| --- | --- |
-| `import @pactia/rust-anb;` | Brings that package's `export def` symbols into effectiveRegistry |
-| `#rust_anb` | Product-scope **macro** — splices `@stack { … }` and other defs from the package body |
-| `pactia.toml` `[dependencies]` | Semver range — same as any dependency |
-| `pactia.lock` | Pinned version + digest |
-| `@stack { … }` | Optional product-scope tag body — lowers like any other `@` host tag |
+| Piece                          | Role                                                                                  |
+| ------------------------------ | ------------------------------------------------------------------------------------- |
+| `import @pactia/rust-stack;`   | Brings that package's `export def` symbols into effectiveRegistry                     |
+| `#rust_anb`                    | Product-scope **macro** — splices `@stack { … }` and other defs from the package body |
+| `pactia.toml` `[dependencies]` | Semver range — same as any dependency                                                 |
+| `pactia.lock`                  | Pinned version + digest                                                               |
+| `@stack { … }`                 | Optional product-scope tag body — lowers like any other `@` host tag                  |
 
 Product `pactia.toml`:
 
@@ -45,7 +45,7 @@ version = "0.1.0"
 
 [dependencies]
 "@pactia/kernel" = "^1.0"
-"@pactia/rust-anb" = "^1.0"
+"@pactia/rust-stack" = "^1.0"
 ```
 
 `#rust_anb` must resolve to a `export def #rust_anb` from an imported package. Unknown macro → `UNKNOWN_SYMBOL`.
@@ -70,7 +70,7 @@ Author with **`export def`** in `index.pactia` — same as any crate's `lib.rs`:
 
 ```pactia
 pactia 1.0
-// Package: @pactia/rust-anb
+// Package: @pactia/rust-stack
 
 export def #rust_anb in product {
   >> Rust / Actix / Node backend — primary APIs on actix-web and tokio. >>
@@ -92,7 +92,7 @@ export def #list in service {
 }
 ```
 
-Products invoke `#rust_anb` in `product { }` after `import @pactia/rust-anb;`. Registry merge follows [registry.md](registry.md).
+Products invoke `#rust_anb` in `product { }` after `import @pactia/rust-stack;`. Registry merge follows [registry.md](registry.md).
 
 ---
 
@@ -117,8 +117,8 @@ service OrderService {
 
 ## Versions
 
-| File | Role |
-| --- | --- |
+| File          | Role                               |
+| ------------- | ---------------------------------- |
 | `pactia.toml` | Semver **ranges** for dependencies |
 | `pactia.lock` | **Pinned** version + digest (TOML) |
 

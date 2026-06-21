@@ -9,13 +9,13 @@ Tag and macro **names** (e.g. `@api`, `#list`, `@@output`) come from **imported 
 
 ### Migration from 1.1
 
-| 1.1 (removed) | 1.2 |
-| --- | --- |
-| `#[list]` | `#list` |
-| `@output Type` before `@api` | `@@output Type` or `@@output(Type)` |
-| `@pk` on field lines | `@@pk` |
-| `modules/*/module.pactia` auto-scan | `import { … } from ./fragments/…` + `module(name) { … }` attach |
-| `#[rust_anb]` inside `@stack { }` | `#rust_anb` at product level after `import @pactia/rust-anb` (no `[stack]` in TOML) |
+| 1.1 (removed)                       | 1.2                                                                                   |
+| ----------------------------------- | ------------------------------------------------------------------------------------- |
+| `#[list]`                           | `#list`                                                                               |
+| `@output Type` before `@api`        | `@@output Type` or `@@output(Type)`                                                   |
+| `@pk` on field lines                | `@@pk`                                                                                |
+| `modules/*/module.pactia` auto-scan | `import { … } from ./fragments/…` + `module(name) { … }` attach                       |
+| `#[rust_anb]` inside `@stack { }`   | `#rust_anb` at product level after `import @pactia/rust-stack` (no `[stack]` in TOML) |
 
 Legacy `#[…]` bracket macros and folder-based module discovery may still be accepted by older compilers during transition; new products should use 1.2 syntax only.
 
@@ -23,11 +23,11 @@ Legacy `#[…]` bracket macros and folder-based module discovery may still be ac
 
 ## Three altitudes
 
-| Altitude | What you write | When |
-| --- | --- | --- |
-| **0** | `> prose` in `product { }` | Smallest legal program |
-| **1** | Product prose + light `@tag` | One fact at a time |
-| **2** | Full tag + macro surface | Deterministic IR, conformance |
+| Altitude | What you write               | When                          |
+| -------- | ---------------------------- | ----------------------------- |
+| **0**    | `> prose` in `product { }`   | Smallest legal program        |
+| **1**    | Product prose + light `@tag` | One fact at a time            |
+| **2**    | Full tag + macro surface     | Deterministic IR, conformance |
 
 ### Altitude 0
 
@@ -97,17 +97,17 @@ Pactia is a **shareable standard for AI-native product intent**:
 
 ### Active
 
-| Keyword | Purpose |
-| --- | --- |
-| `pactia` | Version line: `pactia 1.0` |
-| `product` | Root block |
-| `module` | Capability group |
-| `service` | Deployable API/logic unit |
-| `model` | Data shapes |
-| `import` | Package or file import |
-| `export` | Export defs from package source only |
-| `def` | Register `@tag` or `#macro` |
-| `in` | Placement on `def` |
+| Keyword   | Purpose                              |
+| --------- | ------------------------------------ |
+| `pactia`  | Version line: `pactia 1.0`           |
+| `product` | Root block                           |
+| `module`  | Capability group                     |
+| `service` | Deployable API/logic unit            |
+| `model`   | Data shapes                          |
+| `import`  | Package or file import               |
+| `export`  | Export defs from package source only |
+| `def`     | Register `@tag` or `#macro`          |
+| `in`      | Placement on `def`                   |
 
 ### Reserved (no syntax in 1.2)
 
@@ -119,12 +119,12 @@ Pactia is a **shareable standard for AI-native product intent**:
 
 Inside blocks, every line is exactly one of:
 
-| Sigil | Kind | Syntax |
-| --- | --- | --- |
-| `@` | **Host tag** | `@identifier { … }` |
-| `@@` | **Modifier tag** | `@@identifier` or `@@identifier(Shorthand)` — binds **only** to the next `@` host tag or model field line |
-| `#` | **Macro** | `#identifier` or `#identifier(args)` at a statement position |
-| (none) | **Prose** | `> …` or `>> … >>` |
+| Sigil  | Kind             | Syntax                                                                                                    |
+| ------ | ---------------- | --------------------------------------------------------------------------------------------------------- |
+| `@`    | **Host tag**     | `@identifier { … }`                                                                                       |
+| `@@`   | **Modifier tag** | `@@identifier` or `@@identifier(Shorthand)` — binds **only** to the next `@` host tag or model field line |
+| `#`    | **Macro**        | `#identifier` or `#identifier(args)` at a statement position                                              |
+| (none) | **Prose**        | `> …` or `>> … >>`                                                                                        |
 
 **Modifier binding:** stacked `@@` lines apply to the same target. `#` macros do **not** sit between `@@` and their `@` host — put `#` lines **above** `@@`, then the `@` tag:
 
@@ -148,9 +148,9 @@ Comments: `//` and `/* */` — stripped before IR.
 
 ## Prose
 
-| Form | Use |
-| --- | --- |
-| `> single line` | Agent guidance, descriptions |
+| Form               | Use                             |
+| ------------------ | ------------------------------- |
+| `> single line`    | Agent guidance, descriptions    |
 | `>> multi line >>` | Delimited block; may span lines |
 
 Interpolation: `${name}` in prose or macro bodies — compile-time only (macro parameters or module `def` constants).
@@ -255,11 +255,11 @@ See [macros.md](macros.md) — unified `def` for tags and macros; **no `expands`
 
 Tags and macros share **one** registration form. Full rules: [macros.md](macros.md).
 
-| Sigil | Def | Use |
-| --- | --- | --- |
-| `@` | `def @name(…)? in …? { … }` | `@name { }` |
-| `@@` | `def @@name(…)? in …? { … }` | `@@name` / `@@name(Shorthand)` on next host or field |
-| `#` | `def #name(…)? in …? { … }` | `#name` / `#name(args)` |
+| Sigil | Def                          | Use                                                  |
+| ----- | ---------------------------- | ---------------------------------------------------- |
+| `@`   | `def @name(…)? in …? { … }`  | `@name { }`                                          |
+| `@@`  | `def @@name(…)? in …? { … }` | `@@name` / `@@name(Shorthand)` on next host or field |
+| `#`   | `def #name(…)? in …? { … }`  | `#name` / `#name(args)`                              |
 
 The **`def` body** holds fields, defaults, nested shapes, prose, and — for macros — lines to splice (`@tag`, `@@tag`, `#nested`, assignments). **There is no `expands` keyword.**
 
@@ -285,26 +285,26 @@ export def #cursor_paginated(arg1) in service, model {
 
 ### Placement (`in`)
 
-| Target | Invoke inside |
-| --- | --- |
-| `product` | `product { }` |
-| `module` | `module { }` |
-| `model` | `model { }` |
-| `service` | `service { }` |
-| `field` | field line in `model { }` |
+| Target    | Invoke inside             |
+| --------- | ------------------------- |
+| `product` | `product { }`             |
+| `module`  | `module { }`              |
+| `model`   | `model { }`               |
+| `service` | `service { }`             |
+| `field`   | field line in `model { }` |
 
 `in service, product` — union of allowed enclosing blocks. A symbol may only appear where its `in` includes that block; it lowers to **that block's IR file** — see [compilation.md — Tag lowering](compilation.md#tag-lowering). **Omit `in`** on local defs → all placements. **`export def` must declare `in`** in packages.
 
 ### Field spec
 
-| Syntax | Meaning |
-| --- | --- |
-| `name,` | required at use site |
-| `name: default,` | optional; default when omitted |
-| `name: { sub, },` | nested object |
-| `modifier,` | optional in `def @` only — allows **host-tag prefix shorthand** (`@name Token`) and legacy `@@`-style prefix on the next host |
-| `> …` / `>> … >>` | prose in def (tags and macros) |
-| `${param}` | compile-time interpolation |
+| Syntax            | Meaning                                                                                                                       |
+| ----------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| `name,`           | required at use site                                                                                                          |
+| `name: default,`  | optional; default when omitted                                                                                                |
+| `name: { sub, },` | nested object                                                                                                                 |
+| `modifier,`       | optional in `def @` only — allows **host-tag prefix shorthand** (`@name Token`) and legacy `@@`-style prefix on the next host |
+| `> …` / `>> … >>` | prose in def (tags and macros)                                                                                                |
+| `${param}`        | compile-time interpolation                                                                                                    |
 
 **Validation:** required fields only; extra fields at use site allowed (`TAG_BODY_UNKNOWN_FIELD` warning).
 
@@ -345,7 +345,7 @@ Field lines in `model` follow the same literal grammar plus registered field-lev
 ### Package imports
 
 ```pactia
-import @pactia/rust-anb;
+import @pactia/rust-stack;
 ```
 
 Full import — all exports from the package. No semver in `import` — ranges in `pactia.toml`, pins in `pactia.lock` (TOML).
@@ -354,14 +354,14 @@ Full import — all exports from the package. No semver in `import` — ranges i
 
 ```pactia
 import { @api, @@output, #list, max_page } from @pactia/kernel;
-import { #rust_anb, #list } from @pactia/rust-anb;
+import { #rust_anb, #list } from @pactia/rust-stack;
 ```
 
-| List entry | Meaning |
-| --- | --- |
-| `@name` | Host tag def |
-| `@@name` | Modifier tag def |
-| `#name` | Macro def |
+| List entry | Meaning                      |
+| ---------- | ---------------------------- |
+| `@name`    | Host tag def                 |
+| `@@name`   | Modifier tag def             |
+| `#name`    | Macro def                    |
 | `max_page` | Exported constant (no sigil) |
 
 One style per package coordinate per file (full **or** partial, not both for the same package).
@@ -472,16 +472,16 @@ Then run the full [compilation pipeline](compilation.md) on the assembled source
 
 ## Provenance
 
-| Provenance | Meaning |
-| --- | --- |
-| `Pactia` | Author-written |
-| `INFERRED` | Deterministic rule (**planned** — BSC / future pactiac) |
-| `PACKAGE` | Import |
-| `MACRO` | Macro expansion |
-| `DEFINE` | Local template |
-| `GUIDANCE` | Prose |
-| `GENERATED` | BSC LLM expand |
-| `NOT_DERIVABLE` | Slot without source fact |
+| Provenance      | Meaning                                                 |
+| --------------- | ------------------------------------------------------- |
+| `Pactia`        | Author-written                                          |
+| `INFERRED`      | Deterministic rule (**planned** — BSC / future pactiac) |
+| `PACKAGE`       | Import                                                  |
+| `MACRO`         | Macro expansion                                         |
+| `DEFINE`        | Local template                                          |
+| `GUIDANCE`      | Prose                                                   |
+| `GENERATED`     | BSC LLM expand                                          |
+| `NOT_DERIVABLE` | Slot without source fact                                |
 
 ---
 
@@ -500,17 +500,17 @@ Phases **0–9** are **pactiac**; phase **10** is optional **BSC**. Full list: [
 
 Normative spec vs **pactiac** ([feat/pactiac-1.2-compiler](https://github.com/pactia-lang/pactiac/tree/feat/pactiac-1.2-compiler)):
 
-| Feature | Spec | pactiac |
-| --- | --- | --- |
-| `#macro`, `@@modifier` | Required | Supported (v2 pipeline + extract path) |
-| Import + attach workspace | Required | Supported (`attach-merge`; relay fixture) |
-| Partial package imports `{ @api, #list }` | Required | Supported (parse + registry filtering) |
-| `${constant}` in prose | Required | Supported (v2 pipeline; imported + module constants) |
-| `export module` / fragment parse at root | Required | Supported (v2 parser; attach-merge for workspace assembly) |
-| Crate model (`pactia.toml` + `index.pactia` only) | Required | Supported (no `pactia.package.json`) |
-| Tag body + placement validation (phase 7) | Required | Partial — bind + expand wired; full validate pass in progress |
-| IR infer pass (`INFERRED`) | Planned (BSC / future pactiac) | Not wired |
-| Legacy `#[macro]`, `modules/*` scan | Deprecated | Accepted; `LEGACY_MACRO_SYNTAX` warning; folder scan still accepted |
+| Feature                                           | Spec                           | pactiac                                                             |
+| ------------------------------------------------- | ------------------------------ | ------------------------------------------------------------------- |
+| `#macro`, `@@modifier`                            | Required                       | Supported (v2 pipeline + extract path)                              |
+| Import + attach workspace                         | Required                       | Supported (`attach-merge`; relay fixture)                           |
+| Partial package imports `{ @api, #list }`         | Required                       | Supported (parse + registry filtering)                              |
+| `${constant}` in prose                            | Required                       | Supported (v2 pipeline; imported + module constants)                |
+| `export module` / fragment parse at root          | Required                       | Supported (v2 parser; attach-merge for workspace assembly)          |
+| Crate model (`pactia.toml` + `index.pactia` only) | Required                       | Supported (no `pactia.package.json`)                                |
+| Tag body + placement validation (phase 7)         | Required                       | Partial — bind + expand wired; full validate pass in progress       |
+| IR infer pass (`INFERRED`)                        | Planned (BSC / future pactiac) | Not wired                                                           |
+| Legacy `#[macro]`, `modules/*` scan               | Deprecated                     | Accepted; `LEGACY_MACRO_SYNTAX` warning; folder scan still accepted |
 
 **Canonical 1.2:** [relay.pactia](https://github.com/pactia-lang/pactiac/blob/main/test/fixtures/kernel/relay.pactia). Compiler status: [pactiac CHANGELOG](https://github.com/pactia-lang/pactiac/blob/main/CHANGELOG.md).
 
@@ -518,20 +518,20 @@ Normative spec vs **pactiac** ([feat/pactiac-1.2-compiler](https://github.com/pa
 
 ## Author errors
 
-| Code | Condition |
-| --- | --- |
-| `PLACEMENT_VIOLATION` | Symbol used outside its `in` targets |
-| `TAG_BODY_MISSING_FIELD` | Required def field missing |
-| `TAG_BODY_UNKNOWN_FIELD` | Extra field (warning) |
-| `MACRO_UNKNOWN` | Unknown `#name` |
-| `MACRO_ARGS_INVALID` | Bad macro arity |
-| `DEF_IN_PRODUCT` | `export def` in consumer product |
-| `DEF_PLACEMENT_REQUIRED` | `export def` missing `in` |
-| `ATTACH_UNDEFINED` | Attach references symbol not imported |
-| `ATTACH_KIND_MISMATCH` | Attach expects `export module` but symbol is `export service`, etc. |
-| `IMPORT_UNUSED` | Partial import symbol never referenced |
-| `REGISTRY_COLLISION` | Duplicate unqualified name from any two registry sources |
-| `UNKNOWN_SYMBOL` | Unregistered `@name` / `#name` / `@@name` |
+| Code                     | Condition                                                           |
+| ------------------------ | ------------------------------------------------------------------- |
+| `PLACEMENT_VIOLATION`    | Symbol used outside its `in` targets                                |
+| `TAG_BODY_MISSING_FIELD` | Required def field missing                                          |
+| `TAG_BODY_UNKNOWN_FIELD` | Extra field (warning)                                               |
+| `MACRO_UNKNOWN`          | Unknown `#name`                                                     |
+| `MACRO_ARGS_INVALID`     | Bad macro arity                                                     |
+| `DEF_IN_PRODUCT`         | `export def` in consumer product                                    |
+| `DEF_PLACEMENT_REQUIRED` | `export def` missing `in`                                           |
+| `ATTACH_UNDEFINED`       | Attach references symbol not imported                               |
+| `ATTACH_KIND_MISMATCH`   | Attach expects `export module` but symbol is `export service`, etc. |
+| `IMPORT_UNUSED`          | Partial import symbol never referenced                              |
+| `REGISTRY_COLLISION`     | Duplicate unqualified name from any two registry sources            |
+| `UNKNOWN_SYMBOL`         | Unregistered `@name` / `#name` / `@@name`                           |
 
 Implementer codes: [grammar-reference.md](grammar-reference.md).
 
