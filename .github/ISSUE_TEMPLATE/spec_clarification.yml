@@ -1,5 +1,5 @@
 name: Spec clarification
-description: Question or fix for normative Pactia 1.0 specification text
+description: Question or fix for normative Pactia 1.2 specification text
 title: "[spec]: "
 labels:
   - spec
@@ -10,7 +10,8 @@ body:
       label: Pactia language version
       description: Normative spec version this issue applies to
       options:
-        - "1.0"
+        - "1.2"
+        - "1.0 (legacy)"
     validations:
       required: true
   - type: dropdown
@@ -25,6 +26,8 @@ body:
         - packages.md
         - platform.md
         - compilation.md
+        - macros.md
+        - grammar-reference.md
         - editor-support.md
         - CHANGELOG.md
         - schemas/

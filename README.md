@@ -86,9 +86,11 @@ Full index: [docs/README.md](docs/README.md)
 
 ## Tooling
 
-| Pactia spec | pactiac | pactia |
-| --- | --- | --- |
-| 1.0 | `>=1.0.0` | `>=1.0.0` |
+| Pactia spec | Language declaration | pactiac | pactia |
+| --- | --- | --- | --- |
+| **1.2** | `pactia 1.0` on the version line | `>=1.0.0` | `>=1.0.0` |
+
+Spec **1.2** documents syntax and IR for products that declare **`pactia 1.0`** in source.
 
 ## The stack
 

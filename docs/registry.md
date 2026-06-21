@@ -17,7 +17,7 @@ This document describes **how symbols resolve** at compile time. It is **not** a
 | Modifier tag | `export def @@name in … { }` | `@@name` / `@@name(Shorthand)` on next host or field |
 | Macro | `export def #name(…) in … { }` | `#name` / `#name(args)` |
 
-Validation uses the **field spec** parsed from each `def` body (required fields, defaults, open extensions). There is no separate JSON Schema sidecar per package — only `index.pactia` export defs.
+Validation uses the **field spec** parsed from each `def` body (required fields, defaults, open extensions). **Every tag name uses the same validation path** — placement + field spec only. There is no separate JSON Schema sidecar per package and no tag-name-specific validation in the compiler.
 
 ---
 
@@ -30,7 +30,7 @@ All symbols come from **packages** resolved through `pactia.toml` and `pactia.lo
 | **dependency** | Package in `[dependencies]` **and** `import`ed in source | Parsed `export def` from vendored `index.pactia` |
 | **local** | Non-exported `def @` / `def #` inside `module { }` in the product | Module scope only; not published |
 
-`@pactia/kernel`, `@pactia/rust-anb`, and every other package resolve the same way — declare in `pactia.toml`, pin in `pactia.lock`, `import` in source. `@stack` is a normal kernel tag (`export def @stack in product`); it has no special compiler path.
+`@pactia/kernel`, `@pactia/rust-anb`, and every other package resolve the same way — declare in `pactia.toml`, pin in `pactia.lock`, `import` in source. No symbol gets a special compiler branch.
 
 Transitive package dependencies do not add symbols unless re-exported by a direct dependency.
 
@@ -82,7 +82,7 @@ Missing `in` on `export def` → **`DEF_PLACEMENT_REQUIRED`**.
 - `export def …` — package `index.pactia` only
 - `export module` / `export service` / `export model` — fragment files
 
-Errors: `DEPENDENCY_NOT_DECLARED`, `VERSION_IN_IMPORT`, `EXPORT_COLLISION`, `DEF_IN_PRODUCT`, `IMPORT_UNUSED`, `ATTACH_UNDEFINED`, `ATTACH_KIND_MISMATCH`.
+Errors: `DEPENDENCY_NOT_DECLARED`, `VERSION_IN_IMPORT`, `REGISTRY_COLLISION`, `DEF_IN_PRODUCT`, `IMPORT_UNUSED`, `ATTACH_UNDEFINED`, `ATTACH_KIND_MISMATCH`.
 
 ---
 

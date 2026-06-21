@@ -186,7 +186,7 @@ service OrderService {
 }
 ```
 
-Service-scoped macros (e.g. `#database`, `#cache`, `#events` from `@pactia/kernel`) splice inside `service { }`. They lower to service `flags.*` in IR — not endpoint `modifiers.*`.
+Service-scoped macros (e.g. `#database`, `#cache`, `#events` from `@pactia/kernel`) splice inside `service { }`. Their def bodies may assign dot-path fields such as `flags.*` or `modifiers.*` — merged via generic lowering rules in [compilation.md](compilation.md#tag-lowering), not a tag-name routing table.
 
 **Invalid** — macro outside the host block:
 

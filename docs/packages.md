@@ -23,7 +23,7 @@ Part of: [language-spec.md](language-spec.md) | [registry.md](registry.md) | [pl
 | `lib.rs` | `index.pactia` — `export def @…` / `#…` |
 | `cargo build` | `pactia build` → invokes `pactiac compile` |
 
-Authors edit **`index.pactia`**. The compiler parses export defs at product compile time and **derives IR slot metadata** from tag name + `in` placement (see [compilation.md](compilation.md#tag-lowering)).
+Authors edit **`index.pactia`**. The compiler parses export defs at product compile time and **derives IR slot metadata** from `in` placement and modifier flag only — no tag-name routing table (see [compilation.md](compilation.md#tag-lowering)).
 
 ### Go modules (distribution)
 

@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://pactia.io/schemas/manifests/pactia-lock.schema.json",
   "title": "pactia.lock",
-  "description": "Committed dependency pins for a Pactia product workspace. See spec/docs/packages.md.",
+  "description": "Logical shape after parsing pactia.lock. On disk, TOML uses Cargo-style [[package]] tables; see spec/docs/packages.md.",
   "type": "object",
   "required": ["packages"],
   "properties": {
