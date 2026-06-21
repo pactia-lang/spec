@@ -44,7 +44,7 @@ Add structure **where enforcement or reuse helps**. Keep the product story in pr
 pactia 1.0
 
 import @pactia/kernel;
-import @pactia/rust-anb;
+import @pactia/rust-stack;
 
 product MyApp {
   > A mobile app for tracking personal fitness goals and sharing progress with friends.
@@ -53,7 +53,7 @@ product MyApp {
   > Friends see shared workouts in a feed — read-only across users, no cross-account writes.
   > List endpoints use cursor pagination. Never commit secrets; use our error envelope.
 
-  #rust_anb
+  #rust-stack
 
   module fitness {
     > Workouts and social feed — one bounded context. All APIs are customer-scoped unless noted.
@@ -80,7 +80,7 @@ product MyApp {
 }
 ```
 
-Notice what stayed prose: feed rules, pagination policy, error envelope, stack choice (`#rust_anb` only pins platform law). Tags mark **auth**, **response shapes**, and **operation identity** — the facts you might want BSC to check later. Altitude 1 may omit `method` / `path`; add them when you need wire-level IR.
+Notice what stayed prose: feed rules, pagination policy, error envelope, stack choice (`#rust-stack` only pins platform law). Tags mark **auth**, **response shapes**, and **operation identity** — the facts you might want BSC to check later. Altitude 1 may omit `method` / `path`; add them when you need wire-level IR.
 
 ### Altitude 2 — fully specified
 
@@ -90,13 +90,13 @@ Full enforcement surface — same file shape as [relay.pactia](https://github.co
 pactia 1.0
 
 import @pactia/kernel;
-import @pactia/rust-anb;
+import @pactia/rust-stack;
 
 product Fleet {
   > B2B fleet management — customers manage their own vehicles; admins see all tenants.
   > List endpoints are cursor-paginated. Mutations are audit-logged.
 
-  #rust_anb
+  #rust-stack
 
   module fleet {
     service FleetService {
@@ -122,13 +122,13 @@ Same language, same compiler, your chosen density. See [language-spec.md — Thr
 
 ### Same story, less syntax
 
-| Concern | Altitude 0 (prose) | Tag when you need… |
-| --- | --- | --- |
-| Who may call an API | `> Auth: bearer JWT; owner rows only` | `@auth Customer` — conformance on roles |
-| List behavior | `> Cursor pagination, default 20` | `#list` / `#paginated` — macro defaults in IR |
-| Response shape | `> Return workout list + optional nextCursor` | `@@output WorkoutListResponse` — schema checks |
-| Wire route | `> GET /workouts for history` | `@api { method, path }` — OpenAPI / route gates |
-| Payment states | `>` lines inside `@states { }` or plain module prose | `@transition { }` — enforceable state graph |
+| Concern             | Altitude 0 (prose)                                   | Tag when you need…                              |
+| ------------------- | ---------------------------------------------------- | ----------------------------------------------- |
+| Who may call an API | `> Auth: bearer JWT; owner rows only`                | `@auth Customer` — conformance on roles         |
+| List behavior       | `> Cursor pagination, default 20`                    | `#list` / `#paginated` — macro defaults in IR   |
+| Response shape      | `> Return workout list + optional nextCursor`        | `@@output WorkoutListResponse` — schema checks  |
+| Wire route          | `> GET /workouts for history`                        | `@api { method, path }` — OpenAPI / route gates |
+| Payment states      | `>` lines inside `@states { }` or plain module prose | `@transition { }` — enforceable state graph     |
 
 Start with the left column. Move right only when a gate or package reuse justifies the syntax.
 
@@ -142,15 +142,15 @@ Start with the left column. Move right only when a gate or package reuse justifi
 
 ### A new paradigm
 
-Classic languages answer: *how does the machine compute this?*
+Classic languages answer: _how does the machine compute this?_
 
-Pactia answers: *what should stay true about this product — and what context should every AI session inherit?*
+Pactia answers: _what should stay true about this product — and what context should every AI session inherit?_
 
-| Era | You write | Machine / AI does |
-| --- | --- | --- |
-| 3GL (C, Java) | Algorithms, types | Execute |
-| 4GL / config (SQL, Terraform) | Desired state | Reconcile |
-| **Pactia** | Intent (prose + structured facts) | Implement; optional gates verify what you chose to formalize |
+| Era                           | You write                         | Machine / AI does                                            |
+| ----------------------------- | --------------------------------- | ------------------------------------------------------------ |
+| 3GL (C, Java)                 | Algorithms, types                 | Execute                                                      |
+| 4GL / config (SQL, Terraform) | Desired state                     | Reconcile                                                    |
+| **Pactia**                    | Intent (prose + structured facts) | Implement; optional gates verify what you chose to formalize |
 
 Pactia does **not** replace Rust, React, or Swift. It sits above them as a durable, versioned layer between humans, AI agents, and generated code.
 
@@ -176,11 +176,11 @@ The LLM step does **not** re-parse `.pactia` or change enforceable facts. It ela
                                               grounded in JSON · provenance: GENERATED
 ```
 
-| Phase | Deterministic? | Role |
-| --- | --- | --- |
-| `pactiac compile` | Yes | Lower intent to neutral IR |
-| `bsc render` (templates) | Yes | Map IR → target file layout |
-| `bsc expand` (LLM) | Optional / cacheable | Enrich for readability; never override `Pactia` / `MACRO` facts |
+| Phase                    | Deterministic?       | Role                                                            |
+| ------------------------ | -------------------- | --------------------------------------------------------------- |
+| `pactiac compile`        | Yes                  | Lower intent to neutral IR                                      |
+| `bsc render` (templates) | Yes                  | Map IR → target file layout                                     |
+| `bsc expand` (LLM)       | Optional / cacheable | Enrich for readability; never override `Pactia` / `MACRO` facts |
 
 Humans author once. The pipeline adapts to the consumer — and can make a 50-line Pactia file feel like a 200-page spec in your agent’s inbox, without bloating the source.
 
@@ -188,11 +188,11 @@ Humans author once. The pipeline adapts to the consumer — and can make a 50-li
 
 See [Three altitudes](#three-altitudes) above. In short:
 
-| Always | Your choice |
-| --- | --- |
-| `pactia 1.0` + `product { }` | `module`, `service`, `model` |
+| Always                                                       | Your choice                                  |
+| ------------------------------------------------------------ | -------------------------------------------- |
+| `pactia 1.0` + `product { }`                                 | `module`, `service`, `model`                 |
 | Altitude 0 `>` prose in `product` — what it is + agent rules | Altitude 1: same product line + light `@tag` |
-| Inside blocks: tag, macro, or prose | How much structure vs narrative |
+| Inside blocks: tag, macro, or prose                          | How much structure vs narrative              |
 
 **Heavy** reference: [relay.pactia](https://github.com/pactia-lang/pactiac/blob/main/test/fixtures/kernel/relay.pactia).
 
@@ -225,11 +225,11 @@ Chat prompts die in history. `pactia.toml` + `pactia.lock` pin package versions 
 
 Pactia is an **intent language**, not a replacement for code. Authors declare what must stay true (when they choose to tag it) and what AI should know (prose and guidance) — across APIs, roles, data, UI intent, and policy. BSC checks implementations against the **enforceable** part of that intent (static surface checks today; runtime enforcement is planned).
 
-| Generation | Program | Machine guarantee |
-| --- | --- | --- |
-| 3GL (C, Java) | Algorithms + types | Type checker rejects ill-typed programs |
-| 4GL / config (SQL, Terraform) | Desired state | Reconciler converges actual to desired |
-| **Pactia + BSC** | **Product intent** | **Conformance flags violations of facts you chose to formalize** |
+| Generation                    | Program            | Machine guarantee                                                |
+| ----------------------------- | ------------------ | ---------------------------------------------------------------- |
+| 3GL (C, Java)                 | Algorithms + types | Type checker rejects ill-typed programs                          |
+| 4GL / config (SQL, Terraform) | Desired state      | Reconciler converges actual to desired                           |
+| **Pactia + BSC**              | **Product intent** | **Conformance flags violations of facts you chose to formalize** |
 
 A Pactia program is not executed. It is **compiled to module-scoped JSON IR** (`*.module.json`, `*.model.json`, `*.service.json`); BSC then **renders** and may **LLM-expand** agent briefs for your chosen toolchain — richer agent context without re-authoring `.pactia`. Conformance checks only the formalized facts in IR.
 
@@ -243,21 +243,21 @@ A Pactia program is not executed. It is **compiled to module-scoped JSON IR** (`
 - **Keywords** — `product`, `module`, `service`, `model`, `import`, `export`, `def`, `in`; `@` / `@@` / `#` sigils, prose — [language-spec.md](language-spec.md)
 - Composable via [packages](packages.md) — git repos with semver tags ([kernel](https://github.com/pactia-lang/kernel), [pactia-io](https://github.com/pactia-lang/pactia-io))
 - Extensible via **`export def`** in packages — not new language keywords
-- Platform macros via product-level `#rust_anb` + `import @pactia/rust-anb` ([platform.md](platform.md))
+- Platform macros via product-level `#rust-stack` + `import @pactia/rust-stack` ([platform.md](platform.md))
 - [Role-based](language-spec.md#authorization) at two layers: application roles and party roles
 
 ## What Pactia is not
 
-| Pactia is | Pactia is not |
-| --- | --- |
-| An intent language for whole products | A replacement for Rust, React, or Swift |
-| Graded precision (prose to full spec) | A mandate to specify everything |
-| AI-neutral JSON + optional conformance | A Cursor-only or Claude-only prompt format |
-| Shareable prompt standard | Ephemeral ChatGPT one-offs |
-| Prose + `@` / `@@` / `#` | 50-keyword classic DSL |
-| `> prose` + `//` / `/* */` comments | Bare sentences or undocumented notes in source |
-| Turing-incomplete by design | A general-purpose language |
-| Outcomes via `@test` (and `@must` when defined in kernel) | Imperative `flow {}` scripts |
+| Pactia is                                                 | Pactia is not                                  |
+| --------------------------------------------------------- | ---------------------------------------------- |
+| An intent language for whole products                     | A replacement for Rust, React, or Swift        |
+| Graded precision (prose to full spec)                     | A mandate to specify everything                |
+| AI-neutral JSON + optional conformance                    | A Cursor-only or Claude-only prompt format     |
+| Shareable prompt standard                                 | Ephemeral ChatGPT one-offs                     |
+| Prose + `@` / `@@` / `#`                                  | 50-keyword classic DSL                         |
+| `> prose` + `//` / `/* */` comments                       | Bare sentences or undocumented notes in source |
+| Turing-incomplete by design                               | A general-purpose language                     |
+| Outcomes via `@test` (and `@must` when defined in kernel) | Imperative `flow {}` scripts                   |
 
 Pactia deliberately describes **less than the full system** when you want it to. Logic, topology, and tuning live [below the intent line](overview.md#the-intent-line). Numbered implementation steps belong in code or optional `implementation_hint` files.
 
@@ -295,14 +295,14 @@ Pactia is how humans **author**. `pactiac` produces **vendor-neutral IR**. BSC *
 
 ## Who writes Pactia
 
-| Role                         | Writes                                                    |
-| ---------------------------- | --------------------------------------------------------- |
-| Product / domain expert      | Prose, `> rules`, `@actor { }`                          |
+| Role                         | Writes                                                                                          |
+| ---------------------------- | ----------------------------------------------------------------------------------------------- |
+| Product / domain expert      | Prose, `> rules`, `@actor { }`                                                                  |
 | Senior architect / tech lead | `model`, `service`, `@api { }`, `@tag { }`, `#macro`, `@@modifier`, `@surface { }`, `@test { }` |
-| Platform team                | Stack packages on [pactia-io](https://github.com/pactia-lang/pactia-io) |
-| Frontend / mobile leads      | `@surface { }`, `@bind { }` in same `.pactia` file |
-| Community / vendors          | Pactia packages (`import @scope/name` from git)            |
-| AI coding agent              | **Never** edits Pactia — implements from IR (`workspace.json` or slice files) |
+| Platform team                | Stack packages on [pactia-io](https://github.com/pactia-lang/pactia-io)                         |
+| Frontend / mobile leads      | `@surface { }`, `@bind { }` in same `.pactia` file                                              |
+| Community / vendors          | Pactia packages (`import @scope/name` from git)                                                 |
+| AI coding agent              | **Never** edits Pactia — implements from IR (`workspace.json` or slice files)                   |
 
 ## Language version
 
@@ -330,7 +330,7 @@ product P2PExchange {
 
   // One line pins Rust/actix, cursor pagination, error envelope, CI, and crate policy in IR
   // so agents inherit platform law without repeating it in prose or hand-copying package defs.
-  #rust_stack
+  #rust-stack
   @topology { mode: microservices, }
 
   module exchange {
@@ -407,14 +407,14 @@ When you need **enforceable** state edges, add structured fields on the relevant
 
 ## Coherence with BSC goals
 
-| Goal               | Pactia contribution                   | BSC contribution                                     |
-| ------------------ | ------------------------------------- | ---------------------------------------------------- |
-| No ambiguous APIs  | `@@input`, `@@output`, `#macro` on endpoints | Schema validation, OpenAPI render                    |
-| No auth guesswork  | `@actor { }`, `@auth { }`, `#owner` / `#buyer` | `security.md`, route rules                           |
-| No stack drift     | Product-level `#macro` (e.g. `#rust_anb`) + stack `import` + `pactia.lock` | Stack package merge + [lockfile pins](platform.md#versions) |
-| Reproducible specs | `pactia.lock`, packages                | Deterministic `bsc render`                           |
-| No surface drift   | `@surface { }`, `@bind { }` in same `.pactia` | Surface IR + linked API specs                      |
-| AI-ready output    | Compiles to IR (services + surfaces)  | Templates + agent rules per surface                  |
+| Goal               | Pactia contribution                                                          | BSC contribution                                            |
+| ------------------ | ---------------------------------------------------------------------------- | ----------------------------------------------------------- |
+| No ambiguous APIs  | `@@input`, `@@output`, `#macro` on endpoints                                 | Schema validation, OpenAPI render                           |
+| No auth guesswork  | `@actor { }`, `@auth { }`, `#owner` / `#buyer`                               | `security.md`, route rules                                  |
+| No stack drift     | Product-level `#macro` (e.g. `#rust-stack`) + stack `import` + `pactia.lock` | Stack package merge + [lockfile pins](platform.md#versions) |
+| Reproducible specs | `pactia.lock`, packages                                                      | Deterministic `bsc render`                                  |
+| No surface drift   | `@surface { }`, `@bind { }` in same `.pactia`                                | Surface IR + linked API specs                               |
+| AI-ready output    | Compiles to IR (services + surfaces)                                         | Templates + agent rules per surface                         |
 
 ## Next steps (implementation)
 
@@ -448,17 +448,17 @@ Everything above the line is **what must stay true**. Everything below the line 
 
 ### What lives where
 
-| Concern       | Above (contract)                                      | Below (implementation)                                |
-| ------------- | ----------------------------------------------------- | ----------------------------------------------------- |
-| Data          | Entities, fields, types, enums, relations, invariants | Indexes, partitioning, query plans                    |
-| UI / surfaces | Screens, routes, nav, `@bind { }` links to APIs            | Component code, animations, local state              |
-| API           | Operations, DTOs, params, method/path, status family  | Handler code, validation order, serialization details |
-| Authorization | `@actor { }`, `@auth { }`, `#owner` / `#buyer` party macros | Middleware wiring, claim extraction code              |
-| Lifecycle     | State machines, legal transitions                     | Transition side effects, retries, compensation        |
-| Async         | Event names, producers, consumers, payload identity   | Delivery mechanics, batching, dead-lettering          |
-| Policy        | Retention, residency, forbidden/required tech         | Backup scripts, key rotation jobs                     |
-| Behavior      | (none — not expressible)                              | Business logic, algorithms, edge cases, numbered `flow` steps |
-| Structure     | Service/module/feature file layout (organizational)   | Service topology, coupling, file layout                       |
+| Concern       | Above (contract)                                            | Below (implementation)                                        |
+| ------------- | ----------------------------------------------------------- | ------------------------------------------------------------- |
+| Data          | Entities, fields, types, enums, relations, invariants       | Indexes, partitioning, query plans                            |
+| UI / surfaces | Screens, routes, nav, `@bind { }` links to APIs             | Component code, animations, local state                       |
+| API           | Operations, DTOs, params, method/path, status family        | Handler code, validation order, serialization details         |
+| Authorization | `@actor { }`, `@auth { }`, `#owner` / `#buyer` party macros | Middleware wiring, claim extraction code                      |
+| Lifecycle     | State machines, legal transitions                           | Transition side effects, retries, compensation                |
+| Async         | Event names, producers, consumers, payload identity         | Delivery mechanics, batching, dead-lettering                  |
+| Policy        | Retention, residency, forbidden/required tech               | Backup scripts, key rotation jobs                             |
+| Behavior      | (none — not expressible)                                    | Business logic, algorithms, edge cases, numbered `flow` steps |
+| Structure     | Service/module/feature file layout (organizational)         | Service topology, coupling, file layout                       |
 
 If you cannot state a fact as something that must remain true regardless of implementation, it is below the line.
 
@@ -472,16 +472,16 @@ The contract line is the fix. We deliberately keep the contract **smaller than t
 
 The compiler (**pactiac**) tags every lowered fact with a provenance:
 
-| Provenance      | Meaning                                                | Side of the line |
-| --------------- | ------------------------------------------------------ | ---------------- |
-| `Pactia`        | Written by the author                                  | Above            |
+| Provenance      | Meaning                                                                         | Side of the line |
+| --------------- | ------------------------------------------------------------------------------- | ---------------- |
+| `Pactia`        | Written by the author                                                           | Above            |
 | `INFERRED`      | Derived by a documented deterministic rule (**planned** — BSC / future pactiac) | Above            |
-| `PACKAGE`       | Supplied by an imported package                        | Above            |
-| `MACRO`         | Supplied by `#macro` expansion                         | Above            |
-| `DEFINE`        | Supplied by local `def #` template expansion           | Above            |
-| `GUIDANCE`      | Author wrote `@guide` or best-practice prose           | Below (AI only)  |
-| `GENERATED`     | Optional `bsc expand` (LLM) narrative from IR        | Below (AI only)  |
-| `NOT_DERIVABLE` | The target IR wants it, but Pactia does not contain it | **Below**        |
+| `PACKAGE`       | Supplied by an imported package                                                 | Above            |
+| `MACRO`         | Supplied by `#macro` expansion                                                  | Above            |
+| `DEFINE`        | Supplied by local `def #` template expansion                                    | Above            |
+| `GUIDANCE`      | Author wrote `@guide` or best-practice prose                                    | Below (AI only)  |
+| `GENERATED`     | Optional `bsc expand` (LLM) narrative from IR                                   | Below (AI only)  |
+| `NOT_DERIVABLE` | The target IR wants it, but Pactia does not contain it                          | **Below**        |
 
 `NOT_DERIVABLE` is not a defect. It is the line, made measurable. When the fleet contract compiles, the report lists exactly what an implementer (human or AI) must decide below the line — logic steps, error catalogs, indexes, summaries, payload internals. A hand-authored "golden" that fills those in is not a richer contract; it is the contract line leaking — see [rule 2 below](#rules-of-the-line).
 
@@ -510,17 +510,17 @@ From [relay.pactia](https://github.com/pactia-lang/pactiac/blob/main/test/fixtur
 }
 ```
 
-| Fact                                               | Provenance              | Side  |
-| -------------------------------------------------- | ----------------------- | ----- |
-| Operation exists at `GET /api/v1/vehicles`         | Pactia (`@api { }`)    | Above |
-| Roles `Customer`, `Admin`                          | Pactia (`@auth { }`)    | Above |
-| Ownership scope `OWN_ROWS` on `Vehicle.customerId` | MACRO (`#owner`)      | Above |
-| Response shape `VehicleListResponse`               | Pactia (`@@output`) | Above |
-| Cursor pagination defaults (20/100)                | MACRO (`#paginated`)    | Above |
-| Error catalog (when `@errors { }` declared)          | Pactia                  | Above |
-| The SQL query, the index it uses, the handler code | —                       | Below |
-| Human narrative summaries                          | NOT_DERIVABLE           | Below |
-| Error catalog (when `@errors { }` omitted on route)  | NOT_DERIVABLE           | Below |
+| Fact                                                | Provenance           | Side  |
+| --------------------------------------------------- | -------------------- | ----- |
+| Operation exists at `GET /api/v1/vehicles`          | Pactia (`@api { }`)  | Above |
+| Roles `Customer`, `Admin`                           | Pactia (`@auth { }`) | Above |
+| Ownership scope `OWN_ROWS` on `Vehicle.customerId`  | MACRO (`#owner`)     | Above |
+| Response shape `VehicleListResponse`                | Pactia (`@@output`)  | Above |
+| Cursor pagination defaults (20/100)                 | MACRO (`#paginated`) | Above |
+| Error catalog (when `@errors { }` declared)         | Pactia               | Above |
+| The SQL query, the index it uses, the handler code  | —                    | Below |
+| Human narrative summaries                           | NOT_DERIVABLE        | Below |
+| Error catalog (when `@errors { }` omitted on route) | NOT_DERIVABLE        | Below |
 
 The contract guarantees the operation, its roles, its ownership rule, and its response shape. Conformance later checks that the running endpoint matches all of those. How the endpoint is actually coded is the implementer's business.
 
@@ -530,13 +530,11 @@ The contract guarantees the operation, its roles, its ownership rule, and its re
 
 ### The core tradeoff
 
-
 | Approach                        | Result                                                                       |
 | ------------------------------- | ---------------------------------------------------------------------------- |
 | Put everything in Pactia        | Language explodes; only infra engineers can write it; defeats "super simple" |
 | Put everything in stack package | Products cannot express real differences (SLOs, scale, compliance)           |
 | **Split by ownership**          | Pactia stays small; output is still comprehensive                            |
-
 
 **Principle: Pactia is comprehensive in BSC output, selective in input.**
 
@@ -561,33 +559,31 @@ A senior architect using Pactia should finish in **one session** (~100–200 lin
 
 ### Product concern matrix
 
-
-| Concern                       | Architect writes in Pactia?                       | Stack package                         | BSC derives (planned)              |
-| ----------------------------- | ------------------------------------------------- | ------------------------------------- | ---------------------------------- |
-| Web / mobile / desktop UI     | **Yes** — `@surface { … }` on `@api` or `@bind { }` | surface std packages              | `@bind` cross-links to `@api`        |
-| Product & domain              | **Yes** — core                                    | —                                     | —                                  |
-| Services & APIs               | **Yes** — core                                    | pagination defaults                   | DTOs, OpenAPI, route rules         |
-| Error catalog                 | **Yes** — `@errors { }`                           | fallback `[401, 403]`                 | endpoint error list from `@errors` |
+| Concern                       | Architect writes in Pactia?                                   | Stack package                         | BSC derives (planned)                                   |
+| ----------------------------- | ------------------------------------------------------------- | ------------------------------------- | ------------------------------------------------------- |
+| Web / mobile / desktop UI     | **Yes** — `@surface { … }` on `@api` or `@bind { }`           | surface std packages                  | `@bind` cross-links to `@api`                           |
+| Product & domain              | **Yes** — core                                                | —                                     | —                                                       |
+| Services & APIs               | **Yes** — core                                                | pagination defaults                   | DTOs, OpenAPI, route rules                              |
+| Error catalog                 | **Yes** — `@errors { }`                                       | fallback `[401, 403]`                 | endpoint error list from `@errors`                      |
 | Integrations & events         | **Yes** — `@event { }` (incl. `handler`) + `@integration { }` | Kafka naming, DLQ                     | producers from `@emit`; consumers from `@event` handler |
-| Auth & roles                  | **Yes** — `@actor { }` + `@auth { }` + `#owner` | JWT baseline, claims                  | route guard table                  |
-| Config / secrets              | **Yes** — `@config { }`                           | 12-factor startup template            | env manifest, secrets list         |
-| Security / PII / retention    | **Overrides** — `@policy { }`, field `@pii { }` `@retain { }` | OWASP, encryption, default retention  | PII list from model tags            |
-| Best practices / coding style | `@guide` + stack defaults | full patterns | module / service JSON for AI |
-| Observability (SLOs, alerts)  | `@observe` when non-default                   | trace sampling, metric types          | counters from `@emit` events       |
-| Scalability                   | `@deploy` environment replicas                | HPA defaults, replica baselines       | per-service flags from `service`   |
-| Deployment / environments     | `@deploy` when non-default                    | K8s, Helm, ports, health paths        | namespaces from env names          |
-| CI/CD                         | `@deploy gate` overrides                      | provider, deploy tool, branch mapping | —                                  |
-| Testing                       | **Critical scenarios** — `@test`                  | framework, coverage target            | stubs from `@test` blocks          |
-| Implementation order          | **Optional** — `roadmap` (planned)                | phase templates                       | from service deps (planned)        |
-| Coding standards              | `@guide` or stack package                     | full patterns                         | —                                  |
-| Module structure              | **No**                                            | clean architecture layers             | modules from `module` blocks       |
-
+| Auth & roles                  | **Yes** — `@actor { }` + `@auth { }` + `#owner`               | JWT baseline, claims                  | route guard table                                       |
+| Config / secrets              | **Yes** — `@config { }`                                       | 12-factor startup template            | env manifest, secrets list                              |
+| Security / PII / retention    | **Overrides** — `@policy { }`, field `@pii { }` `@retain { }` | OWASP, encryption, default retention  | PII list from model tags                                |
+| Best practices / coding style | `@guide` + stack defaults                                     | full patterns                         | module / service JSON for AI                            |
+| Observability (SLOs, alerts)  | `@observe` when non-default                                   | trace sampling, metric types          | counters from `@emit` events                            |
+| Scalability                   | `@deploy` environment replicas                                | HPA defaults, replica baselines       | per-service flags from `service`                        |
+| Deployment / environments     | `@deploy` when non-default                                    | K8s, Helm, ports, health paths        | namespaces from env names                               |
+| CI/CD                         | `@deploy gate` overrides                                      | provider, deploy tool, branch mapping | —                                                       |
+| Testing                       | **Critical scenarios** — `@test`                              | framework, coverage target            | stubs from `@test` blocks                               |
+| Implementation order          | **Optional** — `roadmap` (planned)                            | phase templates                       | from service deps (planned)                             |
+| Coding standards              | `@guide` or stack package                                     | full patterns                         | —                                                       |
+| Module structure              | **No**                                                        | clean architecture layers             | modules from `module` blocks                            |
 
 ### CI and deployment overrides
 
 **Yes — but as overrides, not as primary definition.**
 
-CI/CD tool choice (GitHub Actions, ArgoCD, branch → environment mapping) belongs in the **stack package**. A fleet product on `rust-anb` should not re-specify that unless it diverges.
+CI/CD tool choice (GitHub Actions, ArgoCD, branch → environment mapping) belongs in the **stack package**. A fleet product on `rust-stack` should not re-specify that unless it diverges.
 
 The architect **does** sometimes need to say:
 
@@ -661,7 +657,6 @@ What **BSC render** produces from IR + stack defaults (not emitted by `pactiac c
 | Each `@integration`     | outbound call latency histogram                  |
 | Stack package           | trace propagation on HTTP and Kafka              |
 
-
 ### Scalability
 
 Replica counts and autoscaling overrides use `@deploy` — not a separate keyword:
@@ -710,33 +705,29 @@ Architect adds `@test` blocks only for **business-critical** paths; BSC may gene
 
 Even when Pactia is minimal, the **BSC specification package** should include everything an AI implementer needs — for **every surface** (API handlers, web routes, mobile screens, ops):
 
-
-| Output file                            | Primary sources                                      |
-| -------------------------------------- | ---------------------------------------------------- |
-| `project-overview.md`                  | `product`, `@actor { }`, prose rules               |
-| `model.md`                             | `model { @entity @enum @relation @states }`         |
-| `api-spec.md`                          | `@api { }` + nested `@tag { }` + `#macro`       |
-| `surfaces/*.json` / UI intent docs     | `@surface { }`, `@bind { }`                  |
-| `module-design.md`                     | services + stack layers                              |
-| `integrations.md`                      | `@integration { }` / integration prose                   |
-| `security.md`                          | stack policy + `@policy { }` + `@auth { }`                   |
-| `testing-strategy.md`                  | stack + derived scenarios + `@test`                  |
-| `deployment-strategy.md`               | stack deploy + `@deploy` overrides                   |
-| `implementation-roadmap.md`            | inferred or optional `roadmap` (planned)           |
-| observe sections in deployment/testing | stack + `@observe`                                   |
-
+| Output file                            | Primary sources                             |
+| -------------------------------------- | ------------------------------------------- |
+| `project-overview.md`                  | `product`, `@actor { }`, prose rules        |
+| `model.md`                             | `model { @entity @enum @relation @states }` |
+| `api-spec.md`                          | `@api { }` + nested `@tag { }` + `#macro`   |
+| `surfaces/*.json` / UI intent docs     | `@surface { }`, `@bind { }`                 |
+| `module-design.md`                     | services + stack layers                     |
+| `integrations.md`                      | `@integration { }` / integration prose      |
+| `security.md`                          | stack policy + `@policy { }` + `@auth { }`  |
+| `testing-strategy.md`                  | stack + derived scenarios + `@test`         |
+| `deployment-strategy.md`               | stack deploy + `@deploy` overrides          |
+| `implementation-roadmap.md`            | inferred or optional `roadmap` (planned)    |
+| observe sections in deployment/testing | stack + `@observe`                          |
 
 The architect reads the **generated** deployment and testing docs to verify; they do not write them by hand.
 
 ### Language tiers (evolution)
 
-
-| Tier         | Audience               | Pactia size | Contents                                      |
-| ------------ | ---------------------- | ----------- | --------------------------------------------- |
-| **Express**  | PM + tech lead         | ~50 lines   | `product`, `model`, `@api { }`, `>` rules, `@auth` |
-| **Standard** | Senior architect       | ~150 lines  | + `@event`, `@integration`, `@policy`, key `@test` |
+| Tier         | Audience               | Pactia size | Contents                                             |
+| ------------ | ---------------------- | ----------- | ---------------------------------------------------- |
+| **Express**  | PM + tech lead         | ~50 lines   | `product`, `model`, `@api { }`, `>` rules, `@auth`   |
+| **Standard** | Senior architect       | ~150 lines  | + `@event`, `@integration`, `@policy`, key `@test`   |
 | **Extended** | Regulated / high-scale | ~250 lines  | + `@observe`, `@deploy`, `@security`, pipeline gates |
-
 
 All tiers produce the **same pactiac JSON IR** from what the author wrote. Richer agent briefs (markdown specs, derived scenarios, OpenAPI prose) come from **BSC render** and optional expand — planned inference rules, not `pactiac compile` today.
 
@@ -753,16 +744,16 @@ CI tool vendor → (1). Metrics per event → (2). SLO targets → (3). Entity r
 
 ### Coverage summary
 
-| Construct | Expression |
-| --- | --- |
-| Product, model, services | `product`, `model { @entity … }`, `@api { }` in `service` |
-| State machines, party roles | `@states { }` + `#buyer` / `#owner` + `@transition { }` |
-| Request/response shapes | `@@input` `@@output` |
-| Packages | `import @scope/name`, local `def @` / `def #` in `module { }` |
-| Integration, events, policy | `@event { }`, `@policy { }`, `@integration { }`, prose |
-| Observability, deploy gates | `@observe { }`, `@deploy { }` |
-| Acceptance tests | `@test { }` + When/Then |
-| Multi-surface UI | `@surface { … }` on `@api` + `@bind { }` |
+| Construct                   | Expression                                                    |
+| --------------------------- | ------------------------------------------------------------- |
+| Product, model, services    | `product`, `model { @entity … }`, `@api { }` in `service`     |
+| State machines, party roles | `@states { }` + `#buyer` / `#owner` + `@transition { }`       |
+| Request/response shapes     | `@@input` `@@output`                                          |
+| Packages                    | `import @scope/name`, local `def @` / `def #` in `module { }` |
+| Integration, events, policy | `@event { }`, `@policy { }`, `@integration { }`, prose        |
+| Observability, deploy gates | `@observe { }`, `@deploy { }`                                 |
+| Acceptance tests            | `@test { }` + When/Then                                       |
+| Multi-surface UI            | `@surface { … }` on `@api` + `@bind { }`                      |
 
 Platform overrides use registered tags from imported packages (e.g. `@pactia/kernel`, stack packages).
 
@@ -782,4 +773,3 @@ See: [language-spec.md](language-spec.md), [compilation.md](compilation.md), [pa
 - [packages.md](packages.md) — composition
 - [platform.md](platform.md) — stack packages
 - [compilation.md](compilation.md) — compiler pipeline
-

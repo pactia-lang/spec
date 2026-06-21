@@ -68,13 +68,13 @@ Lowering uses the **enclosing block at the use site** (which must match the symb
 
 When a tag is used, the compiler maps the **enclosing block** to an IR file. The symbol's `in` must include that block; otherwise compile fails with `PLACEMENT_VIOLATION`.
 
-| Enclosing block at use site | IR file |
-| --- | --- |
-| `product { }` | `product.json` |
-| `module { }` | `modules/<m>/<m>.module.json` |
-| `model { }` | `modules/<m>/<m>.model.json` |
-| `service { }` | `modules/<m>/services/<s>.service.json` |
-| field line in `model { }` | same model file — under the owning field |
+| Enclosing block at use site | IR file                                  |
+| --------------------------- | ---------------------------------------- |
+| `product { }`               | `product.json`                           |
+| `module { }`                | `modules/<m>/<m>.module.json`            |
+| `model { }`                 | `modules/<m>/<m>.model.json`             |
+| `service { }`               | `modules/<m>/services/<s>.service.json`  |
+| field line in `model { }`   | same model file — under the owning field |
 
 Example: `export def @auth in service, product` may appear in `product { }` or `service { }`. Used in a service block → lowered to that service's `.service.json`. Used at product scope → lowered to `product.json`.
 
@@ -82,21 +82,21 @@ A def with `in product` only **cannot** appear inside `service { }` — placemen
 
 ### Slot — generic paths (no tag-name table)
 
-| Tag kind | `ir.path` | `ir.merge` |
-| --- | --- | --- |
-| Host tag (`@name { }` or `@name Shorthand`) | `extensions[]` | `append_host` |
-| Modifier (`@@name`) | `modifiers` | `merge_into_host` |
-| Field modifier on model line | `fields[]` | `field_annotation` |
-| Local non-exported `def @` in `module { }` | per local def | `merge_fields` |
+| Tag kind                                    | `ir.path`      | `ir.merge`         |
+| ------------------------------------------- | -------------- | ------------------ |
+| Host tag (`@name { }` or `@name Shorthand`) | `extensions[]` | `append_host`      |
+| Modifier (`@@name`)                         | `modifiers`    | `merge_into_host`  |
+| Field modifier on model line                | `fields[]`     | `field_annotation` |
+| Local non-exported `def @` in `module { }`  | per local def  | `merge_fields`     |
 
 Each appended host object carries the tag body fields (and `id` / `name` when the tag declares a host id). There is **no** compiler table that routes `@api` → `endpoints[]` or `@entity` → `entities[]`.
 
-| `ir.merge` | Meaning |
-| --- | --- |
-| `append_host` | Tag block becomes one object pushed at `path` |
-| `merge_into_host` | Modifier merges into the pending host (e.g. `@@output` before `@api`) |
-| `merge_fields` | Body fields merge as a nested object at `path` (local module defs) |
-| `field_annotation` | Field-level tag merges under the model field |
+| `ir.merge`         | Meaning                                                               |
+| ------------------ | --------------------------------------------------------------------- |
+| `append_host`      | Tag block becomes one object pushed at `path`                         |
+| `merge_into_host`  | Modifier merges into the pending host (e.g. `@@output` before `@api`) |
+| `merge_fields`     | Body fields merge as a nested object at `path` (local module defs)    |
+| `field_annotation` | Field-level tag merges under the model field                          |
 
 Modifier shorthand (`@@output VehicleListResponse` before `@api`) uses **`merge_into_host`** — see [language-spec.md — Tags](language-spec.md#tags).
 
@@ -112,11 +112,11 @@ Prose (`>`, `>>`) lowers with provenance **`GUIDANCE`** into the nearest applica
 
 IR file names mirror structural blocks: `<target>.<block>.json`.
 
-| Pactia block | IR file |
-| --- | --- |
-| `module trading { }` | `trading.module.json` |
-| `model { }` in module `trading` | `trading.model.json` |
-| `service OrderService { }` | `order.service.json` |
+| Pactia block                    | IR file               |
+| ------------------------------- | --------------------- |
+| `module trading { }`            | `trading.module.json` |
+| `model { }` in module `trading` | `trading.model.json`  |
+| `service OrderService { }`      | `order.service.json`  |
 
 Example output tree (default `-o` layout):
 
@@ -133,14 +133,14 @@ input/
         order.service.json
 ```
 
-| Path | Scope |
-| --- | --- |
-| `workspace.json` | **Full IR in one file** — `manifest`, `product`, and all module/model/service slices inline |
-| `manifest.json` | Compile metadata and module file index (`pactiaVersion`, `entry`, `lockfileDigest`, `modules[]`, `references[]`) |
-| `product.json` | Product-level lowered facts |
-| `modules/<m>/<m>.module.json` | Module scope |
-| `modules/<m>/<m>.model.json` | Model scope |
-| `modules/<m>/services/<s>.service.json` | Service scope |
+| Path                                    | Scope                                                                                                            |
+| --------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| `workspace.json`                        | **Full IR in one file** — `manifest`, `product`, and all module/model/service slices inline                      |
+| `manifest.json`                         | Compile metadata and module file index (`pactiaVersion`, `entry`, `lockfileDigest`, `modules[]`, `references[]`) |
+| `product.json`                          | Product-level lowered facts                                                                                      |
+| `modules/<m>/<m>.module.json`           | Module scope                                                                                                     |
+| `modules/<m>/<m>.model.json`            | Model scope                                                                                                      |
+| `modules/<m>/services/<s>.service.json` | Service scope                                                                                                    |
 
 **Agents and tools:** read `workspace.json` first — it is the entry point referenced by kernel `@pactia`. Use per-slice files when you only need one module or service, or when diffing a single scope.
 
@@ -154,11 +154,11 @@ There is no JSON Schema for IR in the spec repo — only prose rules here and pa
 
 **`workspace.json`** — single-file bundle of the entire compile output. Top-level keys:
 
-| Key | Contents |
-| --- | --- |
-| `manifest` | Same object as `manifest.json` — compile metadata and file index |
-| `product` | Same object as `product.json` — product-level intent |
-| `modules` | Array of `{ module, model, services[] }` slices — same data as the per-file JSON under `modules/` |
+| Key        | Contents                                                                                          |
+| ---------- | ------------------------------------------------------------------------------------------------- |
+| `manifest` | Same object as `manifest.json` — compile metadata and file index                                  |
+| `product`  | Same object as `product.json` — product-level intent                                              |
+| `modules`  | Array of `{ module, model, services[] }` slices — same data as the per-file JSON under `modules/` |
 
 Emitted for agents and BSC: one read gives the full product without chasing paths.
 
@@ -185,7 +185,7 @@ Example attach:
 import { orders, orders_model, OrderService } from ./fragments/…;
 
 product Relay {
-  #rust_anb
+  #rust-stack
   module(orders) {
     service(OrderService) {
       model(orders_model)
@@ -214,16 +214,16 @@ Merge order (both paths):
 
 ## Provenance model
 
-| Source | Meaning |
-| --- | --- |
-| `Pactia` | Written directly by the author |
-| `INFERRED` | Derived by a deterministic rule (**planned** — BSC or future pactiac pass; no normative inference rules in spec 1.2) |
-| `PACKAGE` | Supplied by an import |
-| `MACRO` | Supplied by `#macro` expansion |
-| `DEFINE` | Supplied by local `def #` template expansion |
-| `GUIDANCE` | Prose (`>`, `>>`) or non-enforced hints |
-| `GENERATED` | Optional `bsc expand` (LLM) |
-| `NOT_DERIVABLE` | IR slot exists but source does not contain the fact |
+| Source          | Meaning                                                                                                              |
+| --------------- | -------------------------------------------------------------------------------------------------------------------- |
+| `Pactia`        | Written directly by the author                                                                                       |
+| `INFERRED`      | Derived by a deterministic rule (**planned** — BSC or future pactiac pass; no normative inference rules in spec 1.2) |
+| `PACKAGE`       | Supplied by an import                                                                                                |
+| `MACRO`         | Supplied by `#macro` expansion                                                                                       |
+| `DEFINE`        | Supplied by local `def #` template expansion                                                                         |
+| `GUIDANCE`      | Prose (`>`, `>>`) or non-enforced hints                                                                              |
+| `GENERATED`     | Optional `bsc expand` (LLM)                                                                                          |
+| `NOT_DERIVABLE` | IR slot exists but source does not contain the fact                                                                  |
 
 ---
 
