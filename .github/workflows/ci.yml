@@ -1,0 +1,83 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  validate-schemas:
+    name: validate JSON schemas
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+
+      - name: Verify schema files parse as JSON
+        run: |
+          node <<'SCRIPT'
+          import { readFileSync, readdirSync, statSync } from "node:fs";
+          import { join } from "node:path";
+
+          const schemaRoot = join(process.cwd(), "schemas");
+          const files: string[] = [];
+
+          function walk(dir: string): void {
+            for (const entry of readdirSync(dir)) {
+              const path = join(dir, entry);
+              if (statSync(path).isDirectory()) {
+                walk(path);
+              } else if (entry.endsWith(".json")) {
+                files.push(path);
+              }
+            }
+          }
+
+          walk(schemaRoot);
+          for (const file of files) {
+            JSON.parse(readFileSync(file, "utf8"));
+            console.log("ok", file);
+          }
+          SCRIPT
+
+      - name: Validate example lock against schema
+        run: |
+          node <<'SCRIPT'
+          import { readFileSync } from "node:fs";
+          import { join } from "node:path";
+
+          const schema = JSON.parse(
+            readFileSync(join("schemas", "manifests", "pactia-lock.schema.json"), "utf8"),
+          );
+
+          const example = {
+            lockVersion: 1,
+            packages: [
+              {
+                name: "@pactia/kernel",
+                version: "1.0.0",
+                digest: "sha256:8c1e2f3a4b5c6d7e8f901234567890abcdef1234567890abcdef1234567890ab",
+              },
+            ],
+          };
+
+          if (schema.properties?.lockVersion?.minimum > example.lockVersion) {
+            throw new Error("example lockVersion below schema minimum");
+          }
+          for (const entry of example.packages) {
+            if (!/^@[\w-]+\/[\w-]+$/.test(entry.name)) throw new Error("invalid name");
+            if (!/^sha256:[0-9a-f]{64}$/.test(entry.digest)) throw new Error("invalid digest");
+          }
+          console.log("ok example lock shape");
+          SCRIPT
