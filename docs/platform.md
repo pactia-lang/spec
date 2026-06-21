@@ -1,6 +1,6 @@
 # Pactia Platform — Stacks, Versions, and Protocols
 
-Version: **1.1**  
+Version: **1.2**  
 Status: **Specification**
 
 Part of: [packages.md](packages.md) | [language-spec.md](language-spec.md)
@@ -11,16 +11,31 @@ Wire tags (`@grpc`, REST wire fields) and stack symbols are defined in **package
 
 ## Selecting a stack
 
-```pactia
-product FleetManagement {
-  > Fleet tracking platform
+Stack packages are **imported** like any dependency. The product binds the stack with a **product-level stack macro** (e.g. `#rust_anb`) — not by nesting a macro inside `@stack { }`.
 
-  @stack rust-anb { }
+```pactia
+import @pactia/kernel;
+import @pactia/protocol-rest;
+import @pactia/rust-anb;
+
+product Relay {
+  > B2B order relay between suppliers and retailers
+
+  #rust_anb
+
   @topology { mode: microservices, }
 }
 ```
 
-`@stack` is a package tag on `product` (from `@pactia/kernel` or the stack package). Bare id resolves to `@pactia/<id>`. Version comes from `pactia.toml` / `pactia.lock` — never from the tag body.
+| Piece | Role |
+| --- | --- |
+| `import @pactia/rust-anb;` | Brings stack `export def` symbols into the registry |
+| `#rust_anb` | Stack-package macro at **product** scope — activates `@pactia/rust-anb` law |
+| `[stack].package` in `pactia.toml` | Declares which stack coordinate the product binds |
+| `pactia.lock` | Pins semver + digest |
+| `@stack platform { … }` | **Optional** kernel tag — profile label + extra fields; **not** the binding mechanism |
+
+Version ranges live in `pactia.toml` / `pactia.lock` — never in the tag body. Do **not** put `package: "@pactia/…"` fields inside `@stack`.
 
 ```toml
 [stack]
@@ -28,10 +43,23 @@ package = "@pactia/rust-anb"
 
 [dependencies]
 "@pactia/kernel" = "^1.0"
+"@pactia/protocol-rest" = "^1.0"
 "@pactia/rust-anb" = "^1.0"
 ```
 
-Mismatch between `@stack` target, optional `import`, and `[stack].package` → `STACK_BINDING_MISMATCH`.
+Mismatch between `#rust_anb` (or equivalent stack macro), `import @pactia/rust-anb`, and `[stack].package` → `STACK_BINDING_MISMATCH`.
+
+Canonical example: [relay.pactia](../fixtures/kernel/relay.pactia).
+
+### Legacy 1.1 binding (deprecated)
+
+```pactia
+@stack platform {
+  #[rust_anb]
+}
+```
+
+Compilers may accept this during transition. New products use product-level `#rust_anb` only.
 
 ---
 
@@ -47,10 +75,21 @@ Authoring: **`export def`** at file root in `index.pactia` — not YAML fragment
 pactia 1.0
 // Package: @pactia/rust-anb
 
-export def #paginated_defaults in service {
-  @cursor { default: 20, max: 100, }
+export def #rust_anb in product {
+  > Rust / Actix / Node stack profile
+}
+
+export def #paginated in service {
+  modifiers.pageSize: 50,
+  modifiers.paginated: true,
+}
+
+export def #list in service {
+  #paginated
 }
 ```
+
+Products activate the stack with `#rust_anb` in `product { }` after `import @pactia/rust-anb;`.
 
 `pactia package build` emits the manifest; `pactia publish` uploads the tarball.
 
@@ -87,8 +126,10 @@ import @pactia/kernel;
 import @pactia/protocol-rest;
 
 service OrderService {
-  @api create_order {
-    method: POST,
+  #list
+  @@output OrderListResponse
+  @api list_orders {
+    method: GET,
     path: "/api/v1/orders",
   }
 }

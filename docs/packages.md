@@ -1,6 +1,6 @@
 # Pactia Packages & pactia.io
 
-Version: **1.1**
+Version: **1.2**
 
 Pactia programs compose from **packages** published to **pactia.io** (or a private registry). Stacks, verticals, and protocol wire formats are all packages.
 
@@ -23,7 +23,7 @@ Tag and macro catalogs live in **package source** (`index.pactia`) — not in th
 
 | `kind` | Example | Role |
 | --- | --- | --- |
-| `stack` | `@pactia/rust-anb` | Platform law — bound on `product` via `@stack` |
+| `stack` | `@pactia/rust-anb` | Platform law — `import` + product-level `#stack_macro` (e.g. `#rust_anb`) |
 | `vertical` | `@pactia/kyc-compliance` | Domain patterns merged into product |
 | `protocol` | `@pactia/protocol-rest` | Wire tags nested in `@api` |
 | `surface` | `@pactia/surface-react` | UI registration tags |
@@ -35,10 +35,6 @@ Tag and macro catalogs live in **package source** (`index.pactia`) — not in th
 ### `pactia.toml`
 
 ```toml
-[workspace]
-entry = "product.pactia"
-members = ["modules/commerce", "modules/identity"]
-
 [stack]
 package = "@pactia/rust-anb"
 
@@ -48,7 +44,7 @@ package = "@pactia/rust-anb"
 "@pactia/rust-anb" = "^1.0"
 ```
 
-`[workspace]` is optional — omit for single-file products (discovery via `product.pactia` + imports).
+No module list in `pactia.toml`. Multi-file products compose via **partial imports + attach** in `product.pactia` (see [language-spec.md](language-spec.md#imports-exports-and-attach)). Legacy `modules/*` folder scan is deprecated.
 
 ### `pactia.lock` (TOML)
 
@@ -145,12 +141,14 @@ pactia add @pactia/kyc-compliance@^1.0
 
 ## Package resolution
 
-Same resolver for `import @scope/name` and `@stack` target on `product`:
+Same resolver for `import @scope/name` and the stack coordinate in `[stack].package`:
 
 1. Read range from `pactia.toml`
 2. Pin from `pactia.lock`
 3. Fetch tarball; verify digest
 4. Load `pactia.package.json` + parse `index.pactia` defs into effectiveRegistry
+
+The stack tier is the package whose macro is invoked at product scope (e.g. `#rust_anb` → `@pactia/rust-anb`). That coordinate must match `import` and `[stack].package`.
 
 | Code | Condition |
 | --- | --- |
@@ -158,7 +156,7 @@ Same resolver for `import @scope/name` and `@stack` target on `product`:
 | `PACKAGE_LOCK_MISMATCH` | Digest mismatch |
 | `DEPENDENCY_NOT_DECLARED` | Import without `pactia.toml` entry |
 | `VERSION_IN_IMPORT` | Semver in import line |
-| `STACK_BINDING_MISMATCH` | `@stack`, import, and `[stack].package` disagree |
+| `STACK_BINDING_MISMATCH` | Product-level `#stack_macro`, stack `import`, and `[stack].package` disagree |
 
 ---
 
@@ -187,7 +185,7 @@ pactia build          # resolve lock, compile product
 pactiac compile -w . -o input/
 ```
 
-Imported defs merge into [effectiveRegistry](registry.md). Product files use `@tag` and `#[macro]` — never `export def`.
+Imported defs merge into [effectiveRegistry](registry.md). Product files use `@`, `@@`, and `#` — never `export def`.
 
 ---
 

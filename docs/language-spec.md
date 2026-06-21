@@ -1,11 +1,23 @@
 # Pactia Language Specification
 
-Version: **1.1**  
+Version: **1.2**  
 Status: **Specification**
 
 Part of: [overview.md](overview.md) | [registry.md](registry.md) | [packages.md](packages.md) | [grammar-reference.md](grammar-reference.md)
 
-Tag and macro **names** (e.g. `@api`, `#[paginated]`) come from **imported packages** (typically `@pactia/kernel`). This document specifies **syntax and semantics** only.
+Tag and macro **names** (e.g. `@api`, `#list`, `@@output`) come from **imported packages** (typically `@pactia/kernel`). This document specifies **syntax and semantics** only.
+
+### Migration from 1.1
+
+| 1.1 (removed) | 1.2 |
+| --- | --- |
+| `#[list]` | `#list` |
+| `@output Type` before `@api` | `@@output Type` or `@@output(Type)` |
+| `@pk` on field lines | `@@pk` |
+| `modules/*/module.pactia` auto-scan | `import { … } from ./fragments/…` + `module(name) { … }` attach |
+| `#[rust_anb]` inside `@stack { }` | `#rust_anb` at product level (+ `[stack].package` in `pactia.toml`) |
+
+Legacy `#[…]` bracket macros and folder-based module discovery may still be accepted by older compilers during transition; new products should use 1.2 syntax only.
 
 ---
 
@@ -42,7 +54,7 @@ product MyApp {
   module fitness {
     service WorkoutService {
       @auth Customer
-      @output WorkoutListResponse
+      @@output WorkoutListResponse
       @api list_workouts {
         > Customers browse their workout history.
       }
@@ -55,7 +67,7 @@ Names like `@auth`, `@api`, and `@output` are package-defined symbols — not la
 
 ### Altitude 2
 
-See [fixtures](../fixtures/kernel/fleet-management-v2.pactia) for a dense example product. The language is the same; only the number of registered symbols increases.
+See [fixtures](../fixtures/kernel/relay.pactia) for a dense 1.2 example product. Legacy 1.1 altitude-2 examples (fleet) live in pactiac `test/fixtures` until refreshed to 1.2.
 
 ---
 
@@ -72,7 +84,7 @@ Pactia is a **shareable standard for AI-native product intent**:
 ## Design laws
 
 1. **Small fixed keyword set** — structure, imports, `def`, prose — not a catalog of domain tags.
-2. **Tags + macros + prose** — structured facts are `@tag { }`; patterns are `#[macro]`; narrative is prose.
+2. **Three sigils** — host `@tag { }`; modifier `@@tag` on the **next** `@` host or field line only; macro `#name` splices at call site.
 3. **Still compilable** — tags lower deterministically; macros expand before lower.
 4. **Packages on disk** — `@pactia/kernel` and other libraries are normal packages (`index.pactia`), not spec tables or compiler sysroot.
 5. **Shareable** — `pactia.toml` + `pactia.lock` pin packages.
@@ -96,21 +108,38 @@ Pactia is a **shareable standard for AI-native product intent**:
 | `def` | Register `@tag` or `#macro` |
 | `in` | Placement on `def` |
 
-### Reserved (no syntax in 1.1)
+### Reserved (no syntax in 1.2)
 
 `view`, `interface`, `class`, `function`, `field` — `field` is also an **`in`** placement target.
 
 ---
 
-## Three line kinds
+## Three sigils (line kinds)
 
 Inside blocks, every line is exactly one of:
 
-| Kind | Syntax |
-| --- | --- |
-| **Tag** | `@identifier { … }` or prefix modifier `@identifier` on the next host line |
-| **Macro** | `#[identifier]` or `#[identifier(args)]` at a statement position |
-| **Prose** | `> …` or `>> … >>` |
+| Sigil | Kind | Syntax |
+| --- | --- | --- |
+| `@` | **Host tag** | `@identifier { … }` |
+| `@@` | **Modifier tag** | `@@identifier` or `@@identifier(Shorthand)` — binds **only** to the next `@` host tag or model field line |
+| `#` | **Macro** | `#identifier` or `#identifier(args)` at a statement position |
+| (none) | **Prose** | `> …` or `>> … >>` |
+
+**Modifier binding:** stacked `@@` lines apply to the same target. `#` macros do **not** sit between `@@` and their `@` host — put `#` lines **above** `@@`, then the `@` tag:
+
+```pactia
+#list
+@@output(OrderListResponse)
+@api list_orders { … }
+```
+
+Invalid — `@@` does not skip `#` to reach `@api`:
+
+```pactia
+@@output(OrderListResponse)
+#list
+@api list_orders { … }
+```
 
 Comments: `//` and `/* */` — stripped before IR.
 
@@ -170,14 +199,20 @@ Package **`index.pactia`** has no `product` block — only `export def` at file 
 }
 ```
 
-**Prefix shorthand** — when the package `def @` includes `modifier,`, the tag may appear on the line **before** its host without `{ }`:
+**Modifier shorthand** — when the package `def @@` (or legacy `def @` with `modifier,`) registers a modifier, use `@@` on the line **before** the host:
 
 ```pactia
-@output VehicleListResponse
+@@output VehicleListResponse
 @api list_vehicles { … }
+
+@entity Order {
+  @@pk
+  @@nullable
+  nextCursor: string,
+}
 ```
 
-Shorthand is invalid for tags whose `def @` omits `modifier,`. Block form remains valid for all tags.
+Block form remains valid for host tags. Modifier tags never use `{ }` at the use site unless the def specifies block args.
 
 ---
 
@@ -187,7 +222,7 @@ C-style **call-site substitution** — not prefix decorators above the next line
 
 ```pactia
 service OrderService {
-  #[paginated_defaults]
+  #paginated_defaults
   @api list_orders {
     method: GET,
     path: "/api/v1/orders",
@@ -198,7 +233,7 @@ service OrderService {
 Invalid:
 
 ```pactia
-#[paginated_defaults]
+#paginated_defaults
 @api list_orders { … }   // prefix decorator — PLACEMENT_VIOLATION / parse error
 ```
 
@@ -213,9 +248,10 @@ Tags and macros share **one** registration form. Full rules: [macros.md](macros.
 | Sigil | Def | Use |
 | --- | --- | --- |
 | `@` | `def @name(…)? in …? { … }` | `@name { }` |
-| `#` | `def #name(…)? in …? { … }` | `#[name]` / `#[name(args)]` |
+| `@@` | `def @@name(…)? in …? { … }` | `@@name` / `@@name(Shorthand)` on next host or field |
+| `#` | `def #name(…)? in …? { … }` | `#name` / `#name(args)` |
 
-The **`def` body** holds fields, defaults, nested shapes, prose, and — for macros — lines to splice (`@tag`, `#[nested]`, assignments). **There is no `expands` keyword.**
+The **`def` body** holds fields, defaults, nested shapes, prose, and — for macros — lines to splice (`@tag`, `@@tag`, `#nested`, assignments). **There is no `expands` keyword.**
 
 ### Example (from package source)
 
@@ -276,7 +312,7 @@ module commerce {
   def hint = > Validate all inputs.
 
   service OrderService {
-    #[paginated(max_page)]
+    #paginated(max_page)
     @api list { … }
   }
 }
@@ -294,15 +330,79 @@ Field lines in `model` follow the same literal grammar plus registered field-lev
 
 ---
 
-## Imports and exports
+## Imports, exports, and attach
+
+### Package imports
 
 ```pactia
 import @pactia/protocol-rest;
-import "./entities/vehicle.pactia";
 ```
 
-- No semver in `import` — ranges in `pactia.toml`, pins in `pactia.lock` (TOML).
-- `export def …` only in package `index.pactia`.
+Full import — all exports from the package. No semver in `import` — ranges in `pactia.toml`, pins in `pactia.lock` (TOML).
+
+**Partial import** — symbols only:
+
+```pactia
+import { @api, @@output, #list, max_page } from @pactia/kernel;
+import { #rust_anb, #list } from @pactia/rust-anb;
+```
+
+| List entry | Meaning |
+| --- | --- |
+| `@name` | Host tag def |
+| `@@name` | Modifier tag def |
+| `#name` | Macro def |
+| `max_page` | Exported constant (no sigil) |
+
+One style per package coordinate per file (full **or** partial, not both for the same package).
+
+### Fragment exports and attach
+
+Fragment files export hosts by name — no `product` block:
+
+```pactia
+export module orders { … }
+export model orders_model { … }
+export service OrderService { … }
+export def max_page = 100
+```
+
+Import symbols, then **attach** in the product shell:
+
+```pactia
+import { orders } from ./fragments/orders.module.pactia;
+import { orders_model } from ./fragments/orders.model.pactia;
+import { OrderService } from ./fragments/order.service.pactia;
+
+product Relay {
+  #rust_anb
+
+  module(orders) {
+    service(OrderService) {
+      model(orders_model)
+    }
+  }
+}
+```
+
+Attach names must match imported export symbols. Diagnostics: `IMPORT_UNUSED`, `ATTACH_UNDEFINED`, `ATTACH_KIND_MISMATCH`.
+
+**Monolith** — all `module { }` / `service { }` / `model { }` inline in one file; attach optional.
+
+**Inline modules** — still valid alongside attach:
+
+```pactia
+product P {
+  module(orders) { service(OrderService) { model(orders_model) } }
+  module platform {
+    service HealthService { @api health { method: GET, path: "/health", } }
+  }
+}
+```
+
+**Nested modules:** not supported. `module { }` or `module(name) { }` appears only as a direct child of `product { }`.
+
+- `export def …` only in package `index.pactia` or fragment exports — never in consumer `product.pactia` body.
 
 ---
 
@@ -325,44 +425,38 @@ Products may declare UI intent with registered product-scoped tags and bind them
 
 ## Workspace layout
 
-Multi-file repos split by zoom level:
+Multi-file repos compose by **import + attach** — not by scanning a `modules/` tree.
 
 ```text
 my-product/
   pactia.toml
   pactia.lock
-  product.pactia
-  modules/
-    commerce/
-      module.pactia
-      order-service/
-        service.pactia
-        features/*.pactia
-        entities/*.pactia
+  product.pactia              # product shell: imports, attach, product-level tags
+  fragments/
+    orders.module.pactia      # export module orders { … }
+    orders.model.pactia       # export model orders_model { … }
+    order.service.pactia      # export service OrderService { … }
 ```
 
-Optional monorepo hint in **`pactia.toml`** (no separate workspace file):
+Canonical example: [relay workspace](../../pactiac/test/fixtures/workspace/relay/) (attach) and [relay.pactia](../fixtures/kernel/relay.pactia) (monolith).
 
-```toml
-[workspace]
-entry = "product.pactia"
-members = ["modules/commerce", "modules/identity"]
-```
+### Legacy folder merge (deprecated)
 
-If `[workspace]` is omitted, `pactiac compile` discovers `product.pactia` and follows `import` edges.
+Older compilers merged `modules/<dir>/module.pactia` + `services/*.service.pactia` by directory scan. New products should use **export + attach**. The compiler may still support folder merge during transition.
 
 ### Compile merge order
 
-Workspace **assembly** (compilation phase 0) merges fragments only — no macro expansion or lowering yet:
+Workspace **assembly** (compilation phase 0):
 
 ```
-1. Load pactia.toml ([workspace] if present)
-2. Resolve import paths (lockfile pins)
-3. Merge module.pactia per module path
-4. Merge service.pactia + entities + features
+1. Load pactia.toml (stack + dependencies)
+2. Resolve package import paths (lockfile pins)
+3. Resolve partial imports → load export module / service / model fragments
+4. Splice attach tree (module(name) { service(…) { model(…) } }) into product { }
+5. Emit one assembled product AST (package imports only in merged text)
 ```
 
-Then run the full [compilation pipeline](compilation.md) on the assembled AST (phases 1–12).
+Then run the full [compilation pipeline](compilation.md) on the assembled source (phases 1–12).
 
 ---
 
@@ -387,7 +481,7 @@ Then run the full [compilation pipeline](compilation.md) on the assembled AST (p
 1. Assemble workspace
 2. Parse source
 3. Resolve packages → effectiveRegistry
-4. Expand `#[macro]` until fixed point
+4. Expand `#macro` until fixed point
 5. Validate tag bodies against defs
 6. Cross-checks (wire, states, protocol policy)
 7. Lower to JSON IR
@@ -399,6 +493,24 @@ Full phase list: [compilation.md](compilation.md).
 
 ---
 
+## Compiler alignment (1.2)
+
+Normative spec vs **pactiac** ([feat/pactiac-1.2-compiler](https://github.com/pactia-lang/pactiac/tree/feat/pactiac-1.2-compiler)):
+
+| Feature | Spec | pactiac |
+| --- | --- | --- |
+| `#macro`, `@@modifier` | Required | Supported (v2 pipeline + extract path) |
+| Import + attach workspace | Required | Supported (`attach-merge`; relay fixture) |
+| Partial package imports `{ @api, #list }` | Required | Supported (parse + registry filtering) |
+| `${constant}` in prose | Required | Not wired at compile time (substitution utility only) |
+| `export module` / fragment parse at root | Required | Supported (v2 parser; attach-merge for workspace assembly) |
+| `pactia package build` | Required | Supported (`index.pactia` → `pactia.package.json`) |
+| Legacy `#[macro]`, `modules/*` scan | Deprecated | Accepted; `LEGACY_MACRO_SYNTAX` warning; folder scan still accepted |
+
+Fleet fixtures in pactiac retain 1.1 syntax until refreshed. **Canonical 1.2:** [relay.pactia](../fixtures/kernel/relay.pactia).
+
+---
+
 ## Author errors
 
 | Code | Condition |
@@ -406,11 +518,15 @@ Full phase list: [compilation.md](compilation.md).
 | `PLACEMENT_VIOLATION` | Symbol used outside its `in` targets |
 | `TAG_BODY_MISSING_FIELD` | Required def field missing |
 | `TAG_BODY_UNKNOWN_FIELD` | Extra field (warning) |
-| `MACRO_UNKNOWN` | Unknown `#[name]` |
+| `MACRO_UNKNOWN` | Unknown `#name` |
 | `MACRO_ARGS_INVALID` | Bad macro arity |
 | `DEF_IN_PRODUCT` | `export def` in consumer product |
 | `DEF_PLACEMENT_REQUIRED` | `export def` missing `in` |
-| `UNKNOWN_SYMBOL` | Unregistered `@name` |
+| `ATTACH_UNDEFINED` | Attach references symbol not imported |
+| `ATTACH_KIND_MISMATCH` | Attach expects `export module` but symbol is `export service`, etc. |
+| `IMPORT_UNUSED` | Partial import symbol never referenced |
+
+| `UNKNOWN_SYMBOL` | Unregistered `@name` / `#name` / `@@name` |
 
 Implementer codes: [grammar-reference.md](grammar-reference.md).
 
@@ -419,7 +535,8 @@ Implementer codes: [grammar-reference.md](grammar-reference.md).
 ## Anti-patterns
 
 - Using `export def` in a product file — publish a package instead.
-- Prefix `#[macro]` above `@api` — use in-block invocation.
+- Prefix `#macro` above `@api` — use in-block `#name` invocation.
+- Using `modules/*` folder scan for new products — use export + attach.
 - Putting semver in `import` — use `pactia.toml`.
 - Expecting the language spec to list every package tag — read the package source (e.g. `@pactia/kernel` on pactia.io).
 

@@ -1,6 +1,6 @@
 # Pactia Compilation Guide
 
-Status: **Specification** — Pactia 1.1 compiler pipeline.
+Status: **Specification** — Pactia 1.2 compiler pipeline.
 
 Part of: [language-spec.md](language-spec.md) | [overview.md](overview.md#philosophy)
 
@@ -25,14 +25,14 @@ Pactia compiles to **AI-neutral JSON IR** (`input/**/*.json`) — not vendor-spe
 ## Compile phases
 
 ```
-0.  Assemble workspace: optional pactia.toml [workspace]; merge product.pactia,
-    module.pactia, service.pactia, features/*.pactia, entities/*.pactia
+0.  Assemble workspace: resolve partial imports + attach (module(name) { service(…) { model(…) } }),
+    or legacy merge of modules/*/module.pactia + services, into one product AST
 1.  Read and validate version declaration (pactia 1.0)
 2.  Lex: strip comments (never in IR)
 3.  Resolve packages via pactia.toml / pactia.lock (TOML); build effectiveRegistry from
     every declared dependency's pactia.package.json + parsed export def bodies
 4.  Merge declarations (local fragments → imported fragments → entry file)
-5.  Expand #[macro] until fixed point — splice def # bodies in-place (package + local);
+5.  Expand #macro until fixed point — splice def # bodies in-place (package + local);
     check in against enclosing block at each invocation
 6.  Validate @tag { } bodies against def field specs (required fields; open extensions)
 7.  Cross-check wire fields, protocol policy, state graphs (see below)
@@ -92,11 +92,11 @@ Example registry entry (manifest excerpt):
 | `ir.merge` | Meaning |
 | --- | --- |
 | `append_host` | Tag opens a new host object at `path` (e.g. `@api list { }` → one endpoint) |
-| `merge_into_host` | Prefix/shorthand lines merge into the nearest host at `path` (e.g. `@auth`, `@output` on an `@api` block) |
+| `merge_into_host` | Modifier `@@` lines merge into the nearest host at `path` (e.g. `@@output`, `@@auth` on an `@api` block) |
 | `merge_fields` | Tag body fields merge at `path` as a nested object |
 | `field_annotation` | Field-level tag on a model line merges under that field |
 
-Prefix shorthand (`@output VehicleListResponse` before `@api`) merges with **`merge_into_host`** when the tag's registry entry allows **`modifier`** invocation — see [language-spec.md — Tags](language-spec.md#tags).
+Modifier shorthand (`@@output VehicleListResponse` before `@api`) merges with **`merge_into_host`** when the tag's registry entry is a modifier — see [language-spec.md — Tags](language-spec.md#tags).
 
 ### Prose
 
@@ -150,23 +150,45 @@ Phase 11. Records language version, entry file, lock digest, module file tree, a
 
 ## Workspace assembly
 
-Optional in `pactia.toml`:
+Compile from the project root (directory containing `product.pactia`).
 
-```toml
-[workspace]
-entry = "product.pactia"
-members = ["modules/commerce", "modules/identity"]
+### Import + attach (1.2)
+
+1. Read `product.pactia` (imports, product-level tags, attach tree).
+2. Resolve `import { symbols } from ./path.pactia` — load `export module`, `export service`, `export model` bodies.
+3. Splice attach references into inline `module { }` / `service { }` / `model { }` blocks.
+4. Merged source contains **package imports only** (not fragment import lines).
+
+Example attach:
+
+```pactia
+import { orders, orders_model, OrderService } from ./fragments/…;
+
+product Relay {
+  #rust_anb
+  module(orders) {
+    service(OrderService) {
+      model(orders_model)
+    }
+  }
+}
 ```
 
-If omitted, `pactiac` discovers `product.pactia` and follows `import` edges.
+Diagnostics: `IMPORT_UNUSED`, `ATTACH_UNDEFINED`, `ATTACH_KIND_MISMATCH`.
 
-Merge order for multi-file workspaces:
+No module list in `pactia.toml`. Single-file products declare all blocks inline (see [relay.pactia](../fixtures/kernel/relay.pactia)).
 
-1. Load `[workspace]` from `pactia.toml` if present
-2. Resolve imports (lockfile pins)
-3. Merge `module.pactia` per module path
-4. Merge `service.pactia` + imported entities + features
-5. Continue compile phases 1–12 (parse through manifest)
+### Legacy folder merge (deprecated)
+
+1. For each `modules/<dir>/module.pactia`, merge into `product { }`.
+2. Merge each `modules/<dir>/services/*.service.pactia`; resolve `import "./…"` for features under that module.
+
+Merge order (both paths):
+
+1. Load `pactia.toml` (stack + dependencies only)
+2. Resolve package imports (lockfile pins)
+3. Assemble product AST (attach or legacy folder merge)
+4. Continue compile phases 1–12 (parse through manifest)
 
 ---
 
@@ -178,7 +200,7 @@ Merge order for multi-file workspaces:
 | `INFERRED` | Derived by a documented deterministic rule |
 | `STACK_DEFAULT` | Supplied by the stack package |
 | `PACKAGE` | Supplied by an import |
-| `MACRO` | Supplied by `#[macro]` expansion |
+| `MACRO` | Supplied by `#macro` expansion |
 | `DEFINE` | Supplied by local `def #` template expansion |
 | `GUIDANCE` | Prose (`>`, `>>`) or non-enforced hints |
 | `GENERATED` | Optional `bsc expand` (LLM) |

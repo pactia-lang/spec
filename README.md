@@ -6,7 +6,7 @@
 
 Pactia is an **AI-native intent language** — compiled by **pactiac** to AI-neutral JSON IR; BSC renders for any model or coding platform. Packages ship on **pactia.io**.
 
-**Current version:** 1.1  
+**Current version:** 1.2  
 **Status:** Specification
 
 ---
@@ -60,10 +60,10 @@ Almost pure prose — same product, **`@stack` only**, no model or API tags (**3
 
 [![Pactia 1.0 fleet-management-prose example](https://raw.githubusercontent.com/pactia-lang/.github/main/profile/assets/fleet-management-prose-example.png)](https://raw.githubusercontent.com/pactia-lang/.github/main/profile/assets/fleet-management-prose-example.png)
 
-[Mini fixture](fixtures/kernel/fleet-management-mini.pactia)
-· [Prose fixture](fixtures/kernel/fleet-management-prose.pactia)
-· [Full fixture](fixtures/kernel/fleet-management-v2.pactia)
+[Relay fixture (1.2 canonical)](fixtures/kernel/relay.pactia)
 · [Language spec](docs/language-spec.md)
+
+Legacy fleet mini/prose/full fixtures were removed from this repo; see pactiac `test/fixtures` for 1.1 copies until refreshed.
 
 ---
 
@@ -99,7 +99,7 @@ Full index: [docs/README.md](docs/README.md)
 
 | | Repo | Role |
 | --- | --- | --- |
-| Language | **spec** (this repo) | Pactia 1.1 — grammar, JSON IR, packages |
+| Language | **spec** (this repo) | Pactia 1.2 — grammar, JSON IR, packages |
 | Compiler | [pactiac](https://github.com/pactia-lang/pactiac) | Deterministic compile to module-scoped IR |
 | Packages | [pactia](https://github.com/pactia-lang/pactia) | `pactia add`, lockfiles, publish *(in progress)* |
 | Editor | [vscode-pactia](https://github.com/pactia-lang/vscode-pactia) | Syntax, tags, diagnostics |
