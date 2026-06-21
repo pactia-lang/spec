@@ -18,7 +18,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 - **Editorial coherence pass:** README tooling table (spec 1.2 vs `pactia 1.0` version line), broken links, error-code alignment (`REGISTRY_COLLISION`), provenance table (`DEFINE`), lockfile schema note, cross-repo links, **removed tag-name-specific validation (state-graph codes and pass)**.
 - **Spec coherence pass:** `README.md`, `docs/overview.md`, `docs/packages.md`, `docs/platform.md`, `docs/registry.md`, `docs/compilation.md`, `docs/language-spec.md`, `schemas/manifests/pactia-toml.schema.json` aligned to 1.2 crate model.
 - **Removed stale references:** `pactia.package.json`, `[stack]` in product TOML, tarball fetch, pactia.io as sole registry.
-- **Stack binding:** product-level `#macro` (e.g. `#rust_anb`) + stack `import` in source only — no `[stack].package` in `pactia.toml`.
+- **Stack binding:** product-level `#macro` (e.g. `#rust-stack`) + stack `import` in source only — no `[stack].package` in `pactia.toml`.
 - **Removed:** `schemas/manifests/pactia-package.schema.json` — obsolete `pactia.package.json` format dropped in 1.2 crate model.
 - **Removed IR JSON Schema:** no `schemas/ir/` in this repo; compiler IR shape is prose in [compilation.md](docs/compilation.md) only.
 - **Removed:** per-tag JSON Schema sidecars and tag-name routing tables — all tag bodies validate from package `export def` field specs only; lowering uses generic placement rules (`extensions[]`, `modifiers`, `fields[]`).
@@ -36,7 +36,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 ### Deprecated
 
 - `#[macro]` bracket syntax — use `#macro`.
-- `@stack { #[rust_anb] }` stack binding — use `#rust_anb` at product level.
+- `@stack { #[rust-stack] }` stack binding — use `#rust-stack` at product level.
 - `modules/*/module.pactia` directory scan — use export + attach.
 
 ### Added (1.1 baseline)

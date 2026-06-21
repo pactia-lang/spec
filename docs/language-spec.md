@@ -9,13 +9,13 @@ Tag and macro **names** (e.g. `@api`, `#list`, `@@output`) come from **imported 
 
 ### Migration from 1.1
 
-| 1.1 (removed)                       | 1.2                                                                                   |
-| ----------------------------------- | ------------------------------------------------------------------------------------- |
-| `#[list]`                           | `#list`                                                                               |
-| `@output Type` before `@api`        | `@@output Type` or `@@output(Type)`                                                   |
-| `@pk` on field lines                | `@@pk`                                                                                |
-| `modules/*/module.pactia` auto-scan | `import { … } from ./fragments/…` + `module(name) { … }` attach                       |
-| `#[rust_anb]` inside `@stack { }`   | `#rust_anb` at product level after `import @pactia/rust-stack` (no `[stack]` in TOML) |
+| 1.1 (removed)                       | 1.2                                                                                     |
+| ----------------------------------- | --------------------------------------------------------------------------------------- |
+| `#[list]`                           | `#list`                                                                                 |
+| `@output Type` before `@api`        | `@@output Type` or `@@output(Type)`                                                     |
+| `@pk` on field lines                | `@@pk`                                                                                  |
+| `modules/*/module.pactia` auto-scan | `import { … } from ./fragments/…` + `module(name) { … }` attach                         |
+| `#[rust-stack]` inside `@stack { }` | `#rust-stack` at product level after `import @pactia/rust-stack` (no `[stack]` in TOML) |
 
 Legacy `#[…]` bracket macros and folder-based module discovery may still be accepted by older compilers during transition; new products should use 1.2 syntax only.
 
@@ -354,7 +354,7 @@ Full import — all exports from the package. No semver in `import` — ranges i
 
 ```pactia
 import { @api, @@output, #list, max_page } from @pactia/kernel;
-import { #rust_anb, #list } from @pactia/rust-stack;
+import { #rust-stack, #list } from @pactia/rust-stack;
 ```
 
 | List entry | Meaning                      |
@@ -385,7 +385,7 @@ import { orders_model } from ./fragments/orders.model.pactia;
 import { OrderService } from ./fragments/order.service.pactia;
 
 product Relay {
-  #rust_anb
+  #rust-stack
 
   module(orders) {
     service(OrderService) {

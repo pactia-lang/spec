@@ -53,7 +53,7 @@ product MyApp {
   > Friends see shared workouts in a feed — read-only across users, no cross-account writes.
   > List endpoints use cursor pagination. Never commit secrets; use our error envelope.
 
-  #rust_anb
+  #rust-stack
 
   module fitness {
     > Workouts and social feed — one bounded context. All APIs are customer-scoped unless noted.
@@ -80,7 +80,7 @@ product MyApp {
 }
 ```
 
-Notice what stayed prose: feed rules, pagination policy, error envelope, stack choice (`#rust_anb` only pins platform law). Tags mark **auth**, **response shapes**, and **operation identity** — the facts you might want BSC to check later. Altitude 1 may omit `method` / `path`; add them when you need wire-level IR.
+Notice what stayed prose: feed rules, pagination policy, error envelope, stack choice (`#rust-stack` only pins platform law). Tags mark **auth**, **response shapes**, and **operation identity** — the facts you might want BSC to check later. Altitude 1 may omit `method` / `path`; add them when you need wire-level IR.
 
 ### Altitude 2 — fully specified
 
@@ -96,7 +96,7 @@ product Fleet {
   > B2B fleet management — customers manage their own vehicles; admins see all tenants.
   > List endpoints are cursor-paginated. Mutations are audit-logged.
 
-  #rust_anb
+  #rust-stack
 
   module fleet {
     service FleetService {
@@ -243,7 +243,7 @@ A Pactia program is not executed. It is **compiled to module-scoped JSON IR** (`
 - **Keywords** — `product`, `module`, `service`, `model`, `import`, `export`, `def`, `in`; `@` / `@@` / `#` sigils, prose — [language-spec.md](language-spec.md)
 - Composable via [packages](packages.md) — git repos with semver tags ([kernel](https://github.com/pactia-lang/kernel), [pactia-io](https://github.com/pactia-lang/pactia-io))
 - Extensible via **`export def`** in packages — not new language keywords
-- Platform macros via product-level `#rust_anb` + `import @pactia/rust-stack` ([platform.md](platform.md))
+- Platform macros via product-level `#rust-stack` + `import @pactia/rust-stack` ([platform.md](platform.md))
 - [Role-based](language-spec.md#authorization) at two layers: application roles and party roles
 
 ## What Pactia is not
@@ -330,7 +330,7 @@ product P2PExchange {
 
   // One line pins Rust/actix, cursor pagination, error envelope, CI, and crate policy in IR
   // so agents inherit platform law without repeating it in prose or hand-copying package defs.
-  #rust_stack
+  #rust-stack
   @topology { mode: microservices, }
 
   module exchange {
@@ -407,14 +407,14 @@ When you need **enforceable** state edges, add structured fields on the relevant
 
 ## Coherence with BSC goals
 
-| Goal               | Pactia contribution                                                        | BSC contribution                                            |
-| ------------------ | -------------------------------------------------------------------------- | ----------------------------------------------------------- |
-| No ambiguous APIs  | `@@input`, `@@output`, `#macro` on endpoints                               | Schema validation, OpenAPI render                           |
-| No auth guesswork  | `@actor { }`, `@auth { }`, `#owner` / `#buyer`                             | `security.md`, route rules                                  |
-| No stack drift     | Product-level `#macro` (e.g. `#rust_anb`) + stack `import` + `pactia.lock` | Stack package merge + [lockfile pins](platform.md#versions) |
-| Reproducible specs | `pactia.lock`, packages                                                    | Deterministic `bsc render`                                  |
-| No surface drift   | `@surface { }`, `@bind { }` in same `.pactia`                              | Surface IR + linked API specs                               |
-| AI-ready output    | Compiles to IR (services + surfaces)                                       | Templates + agent rules per surface                         |
+| Goal               | Pactia contribution                                                          | BSC contribution                                            |
+| ------------------ | ---------------------------------------------------------------------------- | ----------------------------------------------------------- |
+| No ambiguous APIs  | `@@input`, `@@output`, `#macro` on endpoints                                 | Schema validation, OpenAPI render                           |
+| No auth guesswork  | `@actor { }`, `@auth { }`, `#owner` / `#buyer`                               | `security.md`, route rules                                  |
+| No stack drift     | Product-level `#macro` (e.g. `#rust-stack`) + stack `import` + `pactia.lock` | Stack package merge + [lockfile pins](platform.md#versions) |
+| Reproducible specs | `pactia.lock`, packages                                                      | Deterministic `bsc render`                                  |
+| No surface drift   | `@surface { }`, `@bind { }` in same `.pactia`                                | Surface IR + linked API specs                               |
+| AI-ready output    | Compiles to IR (services + surfaces)                                         | Templates + agent rules per surface                         |
 
 ## Next steps (implementation)
 

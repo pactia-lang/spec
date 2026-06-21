@@ -129,7 +129,7 @@ import { orders, OrderService } from ./fragments/orders.pactia;
 3. Load vendored package from `.pactia/packages/` (or `PACTIA_VENDOR_ROOT`)
 4. Parse **`index.pactia`** export defs into effectiveRegistry
 
-All imported packages merge with the same rules. `@stack` lowers as a normal product-scope tag; `#rust_anb` expands as a normal product-scope macro.
+All imported packages merge with the same rules. `@stack` lowers as a normal product-scope tag; `#rust-stack` expands as a normal product-scope macro.
 
 | Code                      | Condition                          |
 | ------------------------- | ---------------------------------- |
