@@ -502,12 +502,12 @@ Normative spec vs **pactiac** ([feat/pactiac-1.2-compiler](https://github.com/pa
 | `#macro`, `@@modifier` | Required | Supported (v2 pipeline + extract path) |
 | Import + attach workspace | Required | Supported (`attach-merge`; relay fixture) |
 | Partial package imports `{ @api, #list }` | Required | Supported (parse + registry filtering) |
-| `${constant}` in prose | Required | Not wired at compile time (substitution utility only) |
+| `${constant}` in prose | Required | Supported (v2 pipeline; imported + module constants) |
 | `export module` / fragment parse at root | Required | Supported (v2 parser; attach-merge for workspace assembly) |
-| `pactia package build` | Required | Supported (`index.pactia` → `pactia.package.json`) |
+| `pactia package build` | Required | Supported (`index.pactia` → `pactia.package.json` with derived `ir`) |
 | Legacy `#[macro]`, `modules/*` scan | Deprecated | Accepted; `LEGACY_MACRO_SYNTAX` warning; folder scan still accepted |
 
-Fleet fixtures in pactiac retain 1.1 syntax until refreshed. **Canonical 1.2:** [relay.pactia](../fixtures/kernel/relay.pactia).
+Fleet fixtures in pactiac retain 1.1 syntax until refreshed. **Canonical 1.2:** [relay.pactia](../fixtures/kernel/relay.pactia). Status: [plans/1.2-status.md](../../plans/1.2-status.md).
 
 ---
 
