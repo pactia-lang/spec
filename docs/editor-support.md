@@ -46,6 +46,6 @@ Highlighting follows [language-spec.md](language-spec.md) and [grammar-reference
 
 When the language spec changes:
 
-1. Update [vscode-pactia/syntaxes/pactia.tmLanguage.json](../../vscode-pactia/syntaxes/pactia.tmLanguage.json)
+1. Update [vscode-pactia/syntaxes/pactia.tmLanguage.json](https://github.com/pactia-lang/vscode-pactia/blob/main/syntaxes/pactia.tmLanguage.json)
 2. Run extension grammar tests if present
 3. Adjust [grammar-reference.md](grammar-reference.md) in the same change

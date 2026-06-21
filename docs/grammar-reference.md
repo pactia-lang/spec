@@ -111,15 +111,9 @@ AssignmentLine    ::= Identifier ":" Value ","
 | `TAG_BODY_MISSING_FIELD` | Required def field missing |
 | `TAG_BODY_UNKNOWN_FIELD` | Extra field (warning) |
 | `TAG_BODY_INVALID` | Unparseable body |
-| `CLAUSE_DUPLICATE_KEY` | Duplicate assignment key |
+| `CLAUSE_DUPLICATE_KEY` | Duplicate assignment key in any tag body |
 
-### State graphs
-
-| Code | Condition |
-| --- | --- |
-| `STATE_BINDING_INVALID` | Invalid `@states` binding |
-| `STATE_DUPLICATE_TRANSITION` | Duplicate edge |
-| `STATE_TRANSITION_UNDEFINED` | `@transition` not in graph |
+All tags use this table only — **no tag-name-specific error codes** in pactiac.
 
 ### Package resolution
 
@@ -128,7 +122,6 @@ AssignmentLine    ::= Identifier ":" Value ","
 | `PACKAGE_NOT_FOUND` | Unknown package |
 | `PACKAGE_LOCK_MISMATCH` | Digest mismatch |
 | `LOCK_ENTRY_MISSING` | Missing lock pin |
-| `UNKNOWN_SYMBOL` | Unresolved `@` / `#` / `@@` |
 
 Author-facing subset: [language-spec.md — Author errors](language-spec.md#author-errors).
 

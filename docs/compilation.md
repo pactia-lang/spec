@@ -34,23 +34,28 @@ Pactia compiles to **AI-neutral JSON IR** (`input/**/*.json`) — not vendor-spe
 4.  Merge declarations (local fragments → imported fragments → entry file)
 5.  Expand #macro until fixed point — splice def # bodies in-place (package + local);
     check in against enclosing block at each invocation
-6.  Validate @tag { } bodies against def field specs (required fields; open extensions)
-7.  Cross-check tag bodies, state graphs (see below)
-8.  Lower @tags → JSON IR with provenance (generic slot rules below)
-9.  Infer missing shapes on lowered IR per inference rules
-10. Write IR files: `workspace.json` (full bundle), `manifest.json`, slice files (emitted last)
-11. (optional) bsc render / expand from IR
+6.  Validate every `@tag { }` body against its `export def` field spec (required fields; open extensions) — **same rules for all tag names**; no tag-name-specific validation pass
+7.  Lower @tags → JSON IR with provenance (generic slot rules below)
+8.  Infer missing shapes on lowered IR per inference rules
+9.  Write IR files: `workspace.json` (full bundle), `manifest.json`, slice files (emitted last)
+10. (optional) bsc render / expand from IR
 ```
 
 See [language-spec.md — Workspace layout](language-spec.md#workspace-layout) for multi-file merge order.
 
-### State graph validation
+### Tag validation (uniform)
 
-Phase 7: when `@states` / `@transition` are in the effective registry, validate each module's state graphs — enum membership, duplicate edges, binding to `@entity` fields, and `@transition` edges declared on `@api` hosts.
+Every host tag, modifier, and macro invocation is checked the same way:
+
+1. Symbol resolves in effectiveRegistry (`UNKNOWN_SYMBOL` if not)
+2. Enclosing block matches `in` placement (`PLACEMENT_VIOLATION`)
+3. Tag body satisfies the parsed `def` field spec — required fields present; extra fields allowed (`TAG_BODY_*`, `CLAUSE_DUPLICATE_KEY`)
+
+There is **no** compiler pass that special-cases particular tag names (no state-graph pass, no `@api` wire pass, no kernel catalog). Cross-module or cross-host consistency beyond field specs is **out of scope for pactiac** — downstream tools (e.g. BSC conformance) may interpret lowered IR.
 
 ### Inference
 
-Phase 9: after lowering, deterministic rules fill documented IR gaps. Explicit author tags always win. Inference reads **lowered IR**, not macro decoration metadata.
+Phase 8: after lowering, deterministic rules fill documented IR gaps. Explicit author tags always win. Inference reads **lowered IR**, not macro decoration metadata.
 
 ---
 
@@ -193,7 +198,7 @@ Merge order (both paths):
 1. Load `pactia.toml` (dependencies only)
 2. Resolve package imports (lockfile pins)
 3. Assemble product AST (attach or legacy folder merge)
-4. Continue compile phases 1–11 (parse through emit)
+4. Continue compile phases 0–10 (parse through emit)
 
 ---
 

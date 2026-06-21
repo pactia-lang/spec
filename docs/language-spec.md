@@ -1,6 +1,6 @@
 # Pactia Language Specification
 
-Version: **1.2**  
+Version: **1.2** (spec) — source files declare **`pactia 1.0`** on the version line.  
 Status: **Specification**
 
 Part of: [overview.md](overview.md) | [registry.md](registry.md) | [packages.md](packages.md) | [grammar-reference.md](grammar-reference.md)
@@ -62,7 +62,7 @@ product MyApp {
 }
 ```
 
-Names like `@auth`, `@api`, and `@output` are package-defined symbols — not language keywords.
+Names like `@auth`, `@api`, and `@@output` are package-defined symbols — not language keywords.
 
 ### Altitude 2
 
@@ -84,7 +84,7 @@ Pactia is a **shareable standard for AI-native product intent**:
 
 1. **Small fixed keyword set** — structure, imports, `def`, prose — not a catalog of domain tags.
 2. **Three sigils** — host `@tag { }`; modifier `@@tag` on the **next** `@` host or field line only; macro `#name` splices at call site.
-3. **Still compilable** — tags lower deterministically; macros expand before lower.
+3. **Still compilable** — tags lower deterministically; macros expand before lower. **All tag names share one validation and lowering path** — field spec + `in` placement only.
 4. **Packages on disk** — `@pactia/kernel` and other libraries are normal packages (`index.pactia`), not spec tables or compiler sysroot.
 5. **Shareable** — `pactia.toml` + `pactia.lock` pin packages.
 6. **No behavior scripts** — use registered outcome tags from packages when you need enforceable acceptance criteria.
@@ -455,7 +455,7 @@ Workspace **assembly** (compilation phase 0):
 5. Emit one assembled product AST (package imports only in merged text)
 ```
 
-Then run the full [compilation pipeline](compilation.md) on the assembled source (phases 1–12).
+Then run the full [compilation pipeline](compilation.md) on the assembled source (phases 0–10).
 
 ---
 
@@ -480,12 +480,11 @@ Then run the full [compilation pipeline](compilation.md) on the assembled source
 2. Parse source
 3. Resolve packages → effectiveRegistry
 4. Expand `#macro` until fixed point
-5. Validate tag bodies against defs
-6. Cross-checks (states, tag field specs)
-7. Lower to JSON IR
-8. Infer gaps on lowered IR
-9. Write `workspace.json`, `manifest.json`, and slice files
-10. Optional BSC
+5. Validate every tag body against its `def` field spec (uniform — no tag-name-specific passes)
+6. Lower to JSON IR
+7. Infer gaps on lowered IR
+8. Write `workspace.json`, `manifest.json`, and slice files
+9. Optional BSC
 
 Full phase list: [compilation.md](compilation.md).
 
@@ -505,7 +504,7 @@ Normative spec vs **pactiac** ([feat/pactiac-1.2-compiler](https://github.com/pa
 | Crate model (`pactia.toml` + `index.pactia` only) | Required | Supported (no `pactia.package.json`) |
 | Legacy `#[macro]`, `modules/*` scan | Deprecated | Accepted; `LEGACY_MACRO_SYNTAX` warning; folder scan still accepted |
 
-**Canonical 1.2:** [relay.pactia](https://github.com/pactia-lang/pactiac/blob/main/test/fixtures/kernel/relay.pactia). Status: [plans/1.2-status.md](../../plans/1.2-status.md).
+**Canonical 1.2:** [relay.pactia](https://github.com/pactia-lang/pactiac/blob/main/test/fixtures/kernel/relay.pactia). Compiler status: [pactiac CHANGELOG](https://github.com/pactia-lang/pactiac/blob/main/CHANGELOG.md).
 
 ---
 
@@ -523,7 +522,6 @@ Normative spec vs **pactiac** ([feat/pactiac-1.2-compiler](https://github.com/pa
 | `ATTACH_UNDEFINED` | Attach references symbol not imported |
 | `ATTACH_KIND_MISMATCH` | Attach expects `export module` but symbol is `export service`, etc. |
 | `IMPORT_UNUSED` | Partial import symbol never referenced |
-
 | `UNKNOWN_SYMBOL` | Unregistered `@name` / `#name` / `@@name` |
 
 Implementer codes: [grammar-reference.md](grammar-reference.md).

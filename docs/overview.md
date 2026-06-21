@@ -144,17 +144,6 @@ When you formalize something, Pactia is strict about **how** (tags and macros) s
 
 Chat prompts die in history. `pactia.toml` + `pactia.lock` pin package versions from **git tags**; `import @scope/name;` imports coordinates only — same intent in every repo and session. See [packages.md — Go modules](packages.md#go-modules-distribution).
 
-### What Pactia is not
-
-| Not | Because |
-| --- | --- |
-| A replacement programming language | No execution, no general computation |
-| Bound to one AI vendor | BSC renders neutral JSON for any consumer |
-| A mandatory full spec | Skeleton required; precision is optional |
-| A non-deterministic language | Parse and compile are deterministic; implementation is free |
-| Ephemeral prompt engineering | Versioned, diffable, composable, lockfile-pinned |
-| LLM rewriting your `.pactia` | LLM may only **expand** BSC output from JSON IR — not mutate source or IR law |
-
 ---
 
 ## The idea
@@ -242,7 +231,7 @@ Pactia is how humans **author**. `pactiac` produces **vendor-neutral IR**. BSC *
 
 ## Language version
 
-**Pactia 1.2** — three sigils: `@` host tags, `@@` modifier tags (next `@` or field only), `#` macros. Keywords: `product`, `module`, `service`, `model`, `import`, `export`, `def`, `in`. Multi-file workspaces: **import + attach** (`export module` fragments, `module(name) { service(…) { model(…) } }`). Monoliths inline all blocks in one file. See [language-spec.md](language-spec.md#migration-from-11).
+**Spec 1.2** — three sigils: `@` host tags, `@@` modifier tags (next `@` or field only), `#` macros. Keywords: `product`, `module`, `service`, `model`, `import`, `export`, `def`, `in`. Multi-file workspaces: **import + attach** (`export module` fragments, `module(name) { service(…) { model(…) } }`). Monoliths inline all blocks in one file. Source files declare **`pactia 1.0`** on the version line. See [language-spec.md](language-spec.md#migration-from-11).
 
 Grammar: [language-spec.md](language-spec.md)
 
@@ -317,7 +306,7 @@ product P2PExchange {
 }
 ```
 
-When you need **enforceable** state edges, add `@transition { from, to }` on `@api` and a `transitions: [...]` array on `@states` — same IR path as prose, but conformance-checked. See [relay.pactia](https://github.com/pactia-lang/pactiac/blob/main/test/fixtures/kernel/relay.pactia) for altitude 2.
+When you need **enforceable** state edges, add structured fields on the relevant tags (e.g. `transitions` on one host tag, `@transition`-style modifiers on another) — same validation as any other tag body; BSC conformance interprets the lowered IR. See [relay.pactia](https://github.com/pactia-lang/pactiac/blob/main/test/fixtures/kernel/relay.pactia) for altitude 2.
 
 ## Coherence with BSC goals
 
@@ -325,7 +314,7 @@ When you need **enforceable** state edges, add `@transition { from, to }` on `@a
 | ------------------ | ------------------------------------- | ---------------------------------------------------- |
 | No ambiguous APIs  | `@@input`, `@@output`, `#macro` on endpoints | Schema validation, OpenAPI render                    |
 | No auth guesswork  | `@actor { }`, `@auth { }`, `#owner` / `#buyer` | `security.md`, route rules                           |
-| No stack drift     | `#stack_macro` + stack `import` + `pactia.lock` | Stack package merge + [pactia.lock](platform.md#stack-versions) |
+| No stack drift     | Product-level `#macro` (e.g. `#rust_anb`) + stack `import` + `pactia.lock` | Stack package merge + [lockfile pins](platform.md#versions) |
 | Reproducible specs | `pactia.lock`, packages                | Deterministic `bsc render`                           |
 | No surface drift   | `@surface { }`, `@bind { }` in same `.pactia` | Surface IR + linked API specs                      |
 | AI-ready output    | Compiles to IR (services + surfaces)  | Templates + agent rules per surface                  |
@@ -341,7 +330,7 @@ When you need **enforceable** state edges, add `@transition { from, to }` on `@a
 
 ## The intent line
 
-The **intent line** (also called the contract line in BSC) divides every software product into **formalized intent** vs **free implementation** — across backend, web, mobile, and desktop. Cross-cutting tags (policy, deploy, observe) are registered in packages like any other `@tag`. Multi-file workspaces may split endpoints across `features/*.pactia` under a service — see [language-spec.md — Workspace layout](language-spec.md#workspace-layout).
+The **intent line** (also called the contract line in BSC) divides every software product into **formalized intent** vs **free implementation** — across backend, web, mobile, and desktop. Cross-cutting tags (policy, deploy, observe) are registered in packages like any other `@tag`. Multi-file workspaces compose by **import + attach** — see [language-spec.md — Workspace layout](language-spec.md#workspace-layout).
 
 ### The line
 
@@ -384,7 +373,7 @@ The contract line is the fix. We deliberately keep the contract **smaller than t
 
 ### The honest test: NOT_DERIVABLE
 
-The compiler (`@pactia/pactiac`) tags every lowered fact with a provenance:
+The compiler (**pactiac**) tags every lowered fact with a provenance:
 
 | Provenance      | Meaning                                                | Side of the line |
 | --------------- | ------------------------------------------------------ | ---------------- |
@@ -392,6 +381,7 @@ The compiler (`@pactia/pactiac`) tags every lowered fact with a provenance:
 | `INFERRED`      | Derived by a documented deterministic rule             | Above            |
 | `PACKAGE`       | Supplied by an imported package                        | Above            |
 | `MACRO`         | Supplied by `#macro` expansion                         | Above            |
+| `DEFINE`        | Supplied by local `def #` template expansion           | Above            |
 | `GUIDANCE`      | Author wrote `@guide` or best-practice prose           | Below (AI only)  |
 | `GENERATED`     | Optional `bsc expand` (LLM) narrative from IR        | Below (AI only)  |
 | `NOT_DERIVABLE` | The target IR wants it, but Pactia does not contain it | **Below**        |

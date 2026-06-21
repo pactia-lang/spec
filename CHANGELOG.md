@@ -15,12 +15,14 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 ### Changed
 
+- **Editorial coherence pass:** README tooling table (spec 1.2 vs `pactia 1.0` version line), broken links, error-code alignment (`REGISTRY_COLLISION`), provenance table (`DEFINE`), lockfile schema note, cross-repo links, **removed tag-name-specific validation (state-graph codes and pass)**.
 - **Spec coherence pass:** `README.md`, `docs/overview.md`, `docs/packages.md`, `docs/platform.md`, `docs/registry.md`, `docs/compilation.md`, `docs/language-spec.md`, `schemas/manifests/pactia-toml.schema.json` aligned to 1.2 crate model.
 - **Removed stale references:** `pactia.package.json`, `[stack]` in product TOML, tarball fetch, pactia.io as sole registry.
-- **Stack binding:** product-level `#stack_macro` + stack `import` in source only — no `[stack].package` in `pactia.toml`.
+- **Stack binding:** product-level `#macro` (e.g. `#rust_anb`) + stack `import` in source only — no `[stack].package` in `pactia.toml`.
 - **Removed:** `schemas/manifests/pactia-package.schema.json` — obsolete `pactia.package.json` format dropped in 1.2 crate model.
 - **Removed IR JSON Schema:** no `schemas/ir/` in this repo; compiler IR shape is prose in [compilation.md](docs/compilation.md) only.
-- **Removed:** per-tag JSON Schema sidecars and kernel tag routing tables — tag bodies validate from package `export def` field specs; lowering uses generic placement rules (`extensions[]`, `modifiers`, `fields[]`).
+- **Removed:** per-tag JSON Schema sidecars and tag-name routing tables — all tag bodies validate from package `export def` field specs only; lowering uses generic placement rules (`extensions[]`, `modifiers`, `fields[]`).
+- **Removed:** tag-name-specific validation (e.g. state-graph cross-checks) from normative spec — one uniform field-spec path for every tag.
 - **`pactia.toml`:** dropped `kind` field (Cargo-style — name, version, optional description, `[dependencies]` only).
 
 ### Changed (1.2 baseline)
@@ -40,7 +42,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 ### Added (1.1 baseline)
 
 - **Pactia 1.1 language model:** `def @` / `def #` with `in` placement; multiline prose `>> … >>`; module `def` constants; reserved words `view`, `interface`, `class`, `function`.
-- **Tag names are package-owned:** `@api`, `@entity`, etc. live in **`@pactia/kernel`** on pactia.io — not in this spec repo.
+- **Tag names are package-owned:** `@api`, `@entity`, etc. live in **`@pactia/kernel`** on [pactia-lang/kernel](https://github.com/pactia-lang/kernel) — not in this spec repo.
 
 ### Changed (1.1 baseline)
 
@@ -58,7 +60,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 - **`define tag` / `define macro` / `define template`** — replaced by `def`.
 - **`yaml merge` / `yaml package/*` embeds.**
 - **`pactia.workspace.yaml` / `pactia-workspace.schema.json`.**
-- **`registry/kernel-tags.yaml` and `schemas/tags/`** — tag defs live in package `index.pactia`; `@pactia/kernel` on pactia.io.
+- **`registry/kernel-tags.yaml` and `schemas/tags/`** — tag defs live in package `index.pactia`; `@pactia/kernel` on [pactia-lang/kernel](https://github.com/pactia-lang/kernel).
 - **`schemas/ir/`** — removed; IR shape is documented in `docs/compilation.md` only.
 - **`docs/stdlib/`** — removed; spec repo documents language and compiler mechanics only.
 
@@ -69,7 +71,7 @@ Pre-1.1 specification (superseded by unreleased 1.1 pass).
 ### Added
 
 - Three altitudes, `@tag { }`, `#[macro]`, workspace layout, package manager (`pactia.toml` / lockfile).
-- Module-scoped IR, state graph validation, fleet fixtures.
+- Module-scoped IR, fleet fixtures.
 - Protocol and stack packages model.
 
 [Unreleased]: https://github.com/pactia-lang/spec/compare/v1.0.0...HEAD

@@ -7,9 +7,9 @@ Part of: [packages.md](packages.md) | [language-spec.md](language-spec.md)
 
 Platform crates (e.g. `@pactia/rust-anb`, `@pactia/html-css-js`) are **ordinary packages** — same `pactia.toml` shape, resolution, registry rules, and lowering as `@pactia/kernel`. They publish **`export def @`** tags and **`export def #`** macros in `index.pactia`.
 
-`@stack` is a **kernel tag** like `@guide` or `@topology` — optional product-scope profile fields. Platform defaults arrive through **macros and tags** from imported packages, not through compiler stack binding.
+Platform defaults arrive through **macros and tags** from imported packages, not through compiler stack binding. `@stack`, `@guide`, `@topology`, and every other name are ordinary package symbols — same validation and lowering as all tags.
 
-REST **`method`** and **`path`** on `@api` are ordinary tag fields from `@pactia/kernel` — not a separate wire layer.
+Wire-shaped fields such as `method` and `path` are **optional fields on a tag body** when a package's `export def` declares them — not a separate wire layer in the language.
 
 ---
 
@@ -34,7 +34,7 @@ product Relay {
 | `#rust_anb` | Product-scope **macro** — splices `@stack { … }` and other defs from the package body |
 | `pactia.toml` `[dependencies]` | Semver range — same as any dependency |
 | `pactia.lock` | Pinned version + digest |
-| `@stack { … }` | Optional **kernel tag** — extra profile fields; lowers like any other `@` tag |
+| `@stack { … }` | Optional product-scope tag body — lowers like any other `@` host tag |
 
 Product `pactia.toml`:
 
@@ -96,9 +96,9 @@ Products invoke `#rust_anb` in `product { }` after `import @pactia/rust-anb;`. R
 
 ---
 
-## API wire fields
+## Wire fields on endpoints
 
-`@api` is a kernel tag. Wire-shaped fields such as `method` and `path` are **optional fields on the tag body** — validated from the `export def @api` spec in `@pactia/kernel`:
+When a package `export def` includes `method` and `path` as fields, authors may set them on any tag that uses that def — validated from the field spec only:
 
 ```pactia
 import @pactia/kernel;
