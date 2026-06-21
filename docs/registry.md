@@ -13,7 +13,7 @@ This document describes **how symbols resolve** at compile time. It is **not** a
 
 | Form | Registered by | Invoked as |
 | --- | --- | --- |
-| Host tag | `export def @name in … { }` | `@name { }` |
+| Host tag | `export def @name in … { }` | `@name { }` or `@name Shorthand` when `modifier,` is in the def |
 | Modifier tag | `export def @@name in … { }` | `@@name` / `@@name(Shorthand)` on next host or field |
 | Macro | `export def #name(…) in … { }` | `#name` / `#name(args)` |
 
@@ -32,7 +32,7 @@ All symbols come from **packages** resolved through `pactia.toml` and `pactia.lo
 
 `@pactia/kernel`, `@pactia/rust-anb`, and every other package resolve the same way — declare in `pactia.toml`, pin in `pactia.lock`, `import` in source. No symbol gets a special compiler branch.
 
-Transitive package dependencies do not add symbols unless re-exported by a direct dependency.
+Transitive package dependencies (packages listed only in a dependency's `pactia.toml`, not imported by the product) **never** contribute symbols to `effectiveRegistry`.
 
 ---
 
@@ -44,7 +44,7 @@ Built once per compile after package resolution:
 1. For each imported package: parse index.pactia export defs from vendored package directory
 2. Derive generic ir slot per tag from `in` placement and modifier flag only (no tag-name routing table)
 3. Merge local non-exported def @ / def # from each module { } in the assembled workspace
-4. Apply precedence on name collision (see below)
+4. Reject duplicate unqualified names across any sources (see Name collisions)
 5. Attach field specs, in placements, macro splice bodies
 ```
 
@@ -52,21 +52,31 @@ Every `@name`, `@@name`, and `#name` must resolve to an entry or the compiler em
 
 ---
 
-## Precedence
+## Name collisions
 
-On duplicate unqualified names:
+**Duplicate unqualified names are always an error** — there is no shadowing or precedence winner.
 
-```
-explicit import  >  other imported dependency  >  local def @ / def #
-```
+| Situation | Code |
+| --- | --- |
+| Two imported packages export the same `@` / `@@` / `#` name | `REGISTRY_COLLISION` |
+| Local `def @` / `def #` collides with an imported symbol | `REGISTRY_COLLISION` |
+| Two local defs in the same module share a name | `REGISTRY_COLLISION` |
 
-Same rules for every package — including `@pactia/kernel` and `@pactia/rust-anb`. No manifest `kind` and no reserved registry tier.
+Rename or use partial imports so only one package supplies a given symbol. Partial imports filter which defs load from a package; they do not allow the same unqualified name from two packages.
 
 ---
 
 ## Placement
 
-Each registry entry lists **`in`** targets (`product`, `module`, `model`, `service`, `field`). The compiler walks the enclosing block at each use site. Mismatch → **`PLACEMENT_VIOLATION`**.
+Each registry entry lists **`in`** targets (`product`, `module`, `model`, `service`, `field`). The compiler checks the **enclosing block at each use site**. Mismatch → **`PLACEMENT_VIOLATION`**.
+
+| Def `in` | Meaning |
+| --- | --- |
+| `product` | May appear only inside `product { }` |
+| `service, product` | May appear inside `product { }` **or** `service { }` — not in `module` or `model` alone |
+| (all five targets) | May appear in any block that accepts tags |
+
+A tag used in an allowed block is **lowered into that block's IR file** — see [compilation.md — Tag lowering](compilation.md#tag-lowering).
 
 **`export def` must include `in`.** Local non-exported `def @` / `def #` in `module { }` may omit `in` (all placements) — see [language-spec.md](language-spec.md).
 
@@ -103,7 +113,7 @@ Macro **def body** may contain `@tag { }`, `@@tag`, nested `#macro`, field lines
 | | Product compile |
 | --- | --- |
 | Input | `product.pactia`, workspace fragments, vendored package `index.pactia` files |
-| Output | `out/**/*.json` (or `input/**/*.json`) |
+| Output | JSON IR under the compile output directory (default layout: `input/**/*.json`; override with `-o`) |
 | `export def` | Forbidden in product; required in package `index.pactia` |
 
 Package publish ships **`pactia.toml` + `index.pactia`** only — see [packages.md](packages.md).

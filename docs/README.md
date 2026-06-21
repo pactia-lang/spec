@@ -10,7 +10,7 @@ Normative and supporting documents for **Pactia 1.2** — an AI-native, model-ag
 | [language-spec.md](language-spec.md) | **Language only** — grammar, blocks, `def`, `@` / `@@` / `#` sigils, attach, migration from 1.1 |
 | [macros.md](macros.md) | **Normative** — unified `def` for tags and macros |
 | [grammar-reference.md](grammar-reference.md) | BNF and implementer error codes |
-| [registry.md](registry.md) | Symbol resolution, tiers, precedence — **not** a tag catalog |
+| [registry.md](registry.md) | Symbol resolution, tiers, name collisions — **not** a tag catalog |
 | [packages.md](packages.md) | `pactia.toml`, imports, publish, `export def` |
 | [compilation.md](compilation.md) | Compiler pipeline, JSON IR layout, tag lowering, provenance |
 | [platform.md](platform.md) | Stack packages |

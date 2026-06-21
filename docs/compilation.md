@@ -4,7 +4,7 @@ Status: **Specification** — Pactia 1.2 compiler pipeline.
 
 Part of: [language-spec.md](language-spec.md) | [overview.md](overview.md#philosophy)
 
-Pactia compiles to **AI-neutral JSON IR** (`input/**/*.json`) — not vendor-specific prompts. **BSC** renders that IR for Cursor, Claude Code, Copilot, or custom agents, and may optionally use an LLM to expand agent briefs — grounded in JSON IR, provenance `GENERATED`, never overriding formal IR facts.
+Pactia compiles to **AI-neutral JSON IR** — not vendor-specific prompts. Default output layout uses an `input/` directory tree; `pactiac compile -o <dir>` writes the same structure under `<dir>`. **BSC** renders that IR for Cursor, Claude Code, Copilot, or custom agents, and may optionally use an LLM to expand agent briefs — grounded in JSON IR, provenance `GENERATED`, never overriding formal IR facts.
 
 ---
 
@@ -12,60 +12,63 @@ Pactia compiles to **AI-neutral JSON IR** (`input/**/*.json`) — not vendor-spe
 
 ```
 ┌──────────────┐     ┌──────────────────────────────┐     ┌──────────────────────────────┐
-│  *.pactia    │────▶│  input/                      │────▶│  bsc render + expand (LLM)   │
+│  *.pactia    │────▶│  input/  (or -o path)        │────▶│  bsc render + expand (LLM)   │
 │  pactiac     │     │  *.module.json *.model.json  │     │  (optional agent briefs)     │
 │              │     │  *.service.json              │     │                              │
 └──────────────┘     └──────────────────────────────┘     └──────────────────────────────┘
 ```
 
-`pactiac` never calls an LLM. `pactiac compile` **reads** `pactia.lock`; it does not write it. Lock updates belong to `pactia add` / `pactia build`.
+`pactiac` never calls an LLM. `pactiac compile` **reads** `pactia.lock` when present; it does not write it. Lock updates belong to `pactia add` / `pactia build`.
 
 ---
 
 ## Compile phases
 
+Canonical phase list — other docs link here rather than renumbering:
+
 ```
 0.  Assemble workspace: resolve partial imports + attach (module(name) { service(…) { model(…) } }),
     or legacy merge of modules/*/module.pactia + services, into one product AST
-1.  Read and validate version declaration (pactia 1.0)
+1.  Validate version declaration (pactia 1.0)
 2.  Lex: strip comments (never in IR)
-3.  Resolve packages via pactia.toml / pactia.lock (TOML); build effectiveRegistry from
+3.  Parse source → AST
+4.  Resolve packages via pactia.toml / pactia.lock when present; build effectiveRegistry from
     every imported dependency's index.pactia export defs (IR slots derived at compile)
-4.  Merge declarations (local fragments → imported fragments → entry file)
-5.  Expand #macro until fixed point — splice def # bodies in-place (package + local);
+5.  Bind: attach registry entries to tag/macro nodes (UNKNOWN_SYMBOL)
+6.  Expand #macro until fixed point — splice def # bodies in-place (package + local);
     check in against enclosing block at each invocation
-6.  Validate every `@tag { }` body against its `export def` field spec (required fields; open extensions) — **same rules for all tag names**; no tag-name-specific validation pass
-7.  Lower @tags → JSON IR with provenance (generic slot rules below)
-8.  Infer missing shapes on lowered IR per inference rules
-9.  Write IR files: `workspace.json` (full bundle), `manifest.json`, slice files (emitted last)
-10. (optional) bsc render / expand from IR
+7.  Validate every tag/macro use: placement + field spec (uniform for all tag names)
+8.  Lower @tags → JSON IR with provenance (generic slot rules below)
+9.  Emit IR files: workspace.json (full bundle), manifest.json, slice files
+— outside pactiac —
+10. (optional) BSC render / expand from IR
 ```
 
 See [language-spec.md — Workspace layout](language-spec.md#workspace-layout) for multi-file merge order.
+
+**Not in pactiac today (planned / BSC):** deterministic **inference** on lowered IR (provenance `INFERRED`), cross-host consistency checks beyond field specs, tag-name-specific conformance interpretation.
 
 ### Tag validation (uniform)
 
 Every host tag, modifier, and macro invocation is checked the same way:
 
 1. Symbol resolves in effectiveRegistry (`UNKNOWN_SYMBOL` if not)
-2. Enclosing block matches `in` placement (`PLACEMENT_VIOLATION`)
+2. Enclosing block is listed in the symbol's `in` targets (`PLACEMENT_VIOLATION`)
 3. Tag body satisfies the parsed `def` field spec — required fields present; extra fields allowed (`TAG_BODY_*`, `CLAUSE_DUPLICATE_KEY`)
 
 There is **no** compiler pass that special-cases particular tag names (no state-graph pass, no `@api` wire pass, no kernel catalog). Cross-module or cross-host consistency beyond field specs is **out of scope for pactiac** — downstream tools (e.g. BSC conformance) may interpret lowered IR.
-
-### Inference
-
-Phase 8: after lowering, deterministic rules fill documented IR gaps. Explicit author tags always win. Inference reads **lowered IR**, not macro decoration metadata.
 
 ---
 
 ## Tag lowering
 
-Lowering uses **enclosing scope** (which IR file) and **generic merge rules** from each tag's `in` placement and modifier flag. The compiler does **not** map tag names (e.g. `@api`, `@entity`) to fixed JSON keys — those names live in packages only.
+Lowering uses the **enclosing block at the use site** (which must match the symbol's `in` targets) to choose the IR file, plus **generic merge rules** from the symbol's modifier flag. The compiler does **not** map tag names (e.g. `@api`, `@entity`) to fixed JSON keys — those names live in packages only.
 
 ### Scope — which IR file
 
-| Use site (enclosing block) | IR file |
+When a tag is used, the compiler maps the **enclosing block** to an IR file. The symbol's `in` must include that block; otherwise compile fails with `PLACEMENT_VIOLATION`.
+
+| Enclosing block at use site | IR file |
 | --- | --- |
 | `product { }` | `product.json` |
 | `module { }` | `modules/<m>/<m>.module.json` |
@@ -73,15 +76,18 @@ Lowering uses **enclosing scope** (which IR file) and **generic merge rules** fr
 | `service { }` | `modules/<m>/services/<s>.service.json` |
 | field line in `model { }` | same model file — under the owning field |
 
-The compiler rejects tags whose `in` placement does not include the enclosing block (`PLACEMENT_VIOLATION`) before lower.
+Example: `export def @auth in service, product` may appear in `product { }` or `service { }`. Used in a service block → lowered to that service's `.service.json`. Used at product scope → lowered to `product.json`.
+
+A def with `in product` only **cannot** appear inside `service { }` — placement rejects it before lower.
 
 ### Slot — generic paths (no tag-name table)
 
-| Tag kind | `ir.file` | `ir.path` | `ir.merge` |
-| --- | --- | --- | --- |
-| Host tag (`@name { }`) | from `in` | `extensions[]` | `append_host` |
-| Modifier (`@@name`) | from `in` | `modifiers` | `merge_into_host` |
-| Field modifier on model line | model | `fields[]` | `field_annotation` |
+| Tag kind | `ir.path` | `ir.merge` |
+| --- | --- | --- |
+| Host tag (`@name { }` or `@name Shorthand`) | `extensions[]` | `append_host` |
+| Modifier (`@@name`) | `modifiers` | `merge_into_host` |
+| Field modifier on model line | `fields[]` | `field_annotation` |
+| Local non-exported `def @` in `module { }` | per local def | `merge_fields` |
 
 Each appended host object carries the tag body fields (and `id` / `name` when the tag declares a host id). There is **no** compiler table that routes `@api` → `endpoints[]` or `@entity` → `entities[]`.
 
@@ -89,10 +95,12 @@ Each appended host object carries the tag body fields (and `id` / `name` when th
 | --- | --- |
 | `append_host` | Tag block becomes one object pushed at `path` |
 | `merge_into_host` | Modifier merges into the pending host (e.g. `@@output` before `@api`) |
-| `merge_fields` | Body fields merge as a nested object at `path` |
+| `merge_fields` | Body fields merge as a nested object at `path` (local module defs) |
 | `field_annotation` | Field-level tag merges under the model field |
 
 Modifier shorthand (`@@output VehicleListResponse` before `@api`) uses **`merge_into_host`** — see [language-spec.md — Tags](language-spec.md#tags).
+
+Host-tag prefix shorthand (`@auth Customer` when the package def includes `modifier,`) lowers like the equivalent block body — see [language-spec.md — Tags](language-spec.md#tags).
 
 ### Prose
 
@@ -110,7 +118,7 @@ IR file names mirror structural blocks: `<target>.<block>.json`.
 | `model { }` in module `trading` | `trading.model.json` |
 | `service OrderService { }` | `order.service.json` |
 
-Example output tree:
+Example output tree (default `-o` layout):
 
 ```text
 input/
@@ -156,6 +164,8 @@ Emitted for agents and BSC: one read gives the full product without chasing path
 
 **`manifest.json`** — the `manifest` slice alone. Records language version, entry file, lock digest, module file tree (`modules[].name`, `path`, `module`, `model`, `services[].file`), and cross-module `references[]`. Not product intent — navigation metadata only.
 
+Products with **no package dependencies** may compile without a `pactia.lock`; `lockfileDigest` in manifest is then omitted.
+
 ---
 
 ## Workspace assembly
@@ -196,9 +206,9 @@ No module list in `pactia.toml`. Single-file products declare all blocks inline 
 Merge order (both paths):
 
 1. Load `pactia.toml` (dependencies only)
-2. Resolve package imports (lockfile pins)
+2. Resolve package imports (lockfile pins when lockfile present)
 3. Assemble product AST (attach or legacy folder merge)
-4. Continue compile phases 0–10 (parse through emit)
+4. Continue compile phases 0–9
 
 ---
 
@@ -207,7 +217,7 @@ Merge order (both paths):
 | Source | Meaning |
 | --- | --- |
 | `Pactia` | Written directly by the author |
-| `INFERRED` | Derived by a documented deterministic rule |
+| `INFERRED` | Derived by a deterministic rule (**planned** — BSC or future pactiac pass; no normative inference rules in spec 1.2) |
 | `PACKAGE` | Supplied by an import |
 | `MACRO` | Supplied by `#macro` expansion |
 | `DEFINE` | Supplied by local `def #` template expansion |
@@ -226,10 +236,12 @@ Packages ship **`pactia.toml` + `index.pactia`** only. Publish is a **git tag** 
 ## CLI
 
 ```bash
-pactiac compile product.pactia -o ./out
-pactiac compile -w ./my-product -o ./out
+pactiac compile product.pactia -o ./input
+pactiac compile -w ./my-product -o ./input
 pactia build                    # vendor lock + compile
 ```
+
+`-o` sets the output root; the IR tree (`workspace.json`, `manifest.json`, slices) is written beneath it.
 
 ---
 

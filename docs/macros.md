@@ -94,7 +94,7 @@ Wrong placement → **`PLACEMENT_VIOLATION`**.
 
 ## Host tags (`def @`)
 
-**Use:**
+**Use — block form:**
 
 ```pactia
 @sanctions_check {
@@ -104,6 +104,15 @@ Wrong placement → **`PLACEMENT_VIOLATION`**.
 }
 ```
 
+**Use — prefix shorthand** (when package def includes `modifier,`):
+
+```pactia
+@auth Customer
+@auth(Admin)
+```
+
+Maps to fields per the package def (e.g. `roles: [Customer]`). Without `modifier,` in the def, use `{ … }` block form only.
+
 **Register (package):**
 
 ```pactia
@@ -112,6 +121,11 @@ export def @sanctions_check in service {
   provider,
   notes: "",
   > Screen against provider list.
+}
+
+export def @auth in service {
+  roles,
+  modifier,
 }
 ```
 

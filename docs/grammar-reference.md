@@ -21,8 +21,9 @@ ServiceDecl       ::= "service" Identifier "{" ServiceItem* "}"
 ModelDecl         ::= "model" Identifier? "{" ModelItem* "}"
 FragmentExport    ::= "export" ( ModuleDecl | ModelDecl | ServiceDecl | DefDecl | ModuleConstDecl )
 ImportLine        ::= "import" PackagePath ";"
-                  |   "import" "{" ImportSymbol ( "," ImportSymbol )* "}" "from" FilePath ";"
+                  |   "import" "{" ImportSymbol ( "," ImportSymbol )* "}" "from" ImportSource ";"
 ImportSymbol      ::= "@" Identifier | "@@" Identifier | "#" Identifier | Identifier
+ImportSource      ::= PackagePath | FilePath
 PackagePath       ::= "@" Identifier ( "/" Identifier )*
 FilePath          ::= Path
 ```
@@ -52,8 +53,11 @@ Package `index.pactia`: `export def` at file root only. Fragment files: `export 
 ## Tags, modifiers, and macros
 
 ```
-TagApplication    ::= "@" Identifier TagBody?
-TagBody           ::= "{" TagBodyItem* "}"
+TagApplication    ::= HostTagBlock | HostTagPrefix | ModifierApplication
+HostTagBlock      ::= "@" Identifier HostId? "{" TagBodyItem* "}"
+HostTagPrefix     ::= "@" Identifier HostPrefixArg?    /* requires modifier, in package def @ */
+HostId            ::= Identifier                         /* e.g. @api list_orders { … } */
+HostPrefixArg     ::= Identifier | "(" Identifier ")"   /* e.g. @auth Customer */
 ModifierApplication ::= "@@" Identifier ModifierArg?
 ModifierArg       ::= Identifier | "(" Identifier ")"
 MacroApplication  ::= "#" Identifier MacroArgs?
@@ -86,7 +90,7 @@ AssignmentLine    ::= Identifier ":" Value ","
 | `DEF_IN_PRODUCT` | `export def` in consumer product |
 | `DEF_PLACEMENT_REQUIRED` | `export def` missing `in` |
 | `PLACEMENT_VIOLATION` | Use outside symbol's `in` targets |
-| `REGISTRY_COLLISION` | Two imports expose same unqualified name |
+| `REGISTRY_COLLISION` | Duplicate unqualified `@` / `@@` / `#` name from any two registry sources (imports or local defs) |
 | `DEPENDENCY_NOT_DECLARED` | Import without `pactia.toml` entry |
 | `VERSION_IN_IMPORT` | Semver in import |
 | `MACRO_UNKNOWN` | Unknown `#name` |

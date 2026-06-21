@@ -10,6 +10,8 @@
 
 Every Pactia file is legal at **altitude 0**. Tags are an opt-in upgrade, one fact at a time, never all-or-nothing.
 
+**Prose is not a placeholder.** A few well-written `>` lines can carry product definition, roles, data rules, API behavior, and agent policy — the same facts tags formalize later, without learning `@`, `@@`, or `#`. Add tags only when you want deterministic IR or conformance on that fact.
+
 ### Altitude 0 — prose only
 
 The smallest legal program. `>` prose inside `product { }` — at least one line describing **what the product is**, then optional agent rules. No tags, no `module`.
@@ -19,14 +21,24 @@ pactia 1.0
 
 product MyApp {
   > A mobile app for tracking personal fitness goals and sharing progress with friends.
-  > Never commit secrets. Map errors to our envelope before returning.
-  > List endpoints use cursor pagination.
+  >
+  > Users sign up with email. Each user owns their workouts; only the owner may edit or delete.
+  > Friends see shared workouts in a feed — read-only across users, no cross-account writes.
+  >
+  > Backend is Rust on actix-web with PostgreSQL. Mobile clients use REST over HTTPS.
+  > List endpoints use cursor pagination (default 20, max 100). Offsets are not supported.
+  >
+  > Auth: bearer JWT. Workout APIs require a logged-in customer; scope is owner rows only.
+  > Never commit secrets. Map all handler errors to our standard envelope before returning.
+  > Log structured errors server-side; never leak stack traces or internal IDs to clients.
 }
 ```
 
+That file is complete. An agent can implement workouts, auth, and pagination from prose alone. Nothing here is "informal" — it lowers to IR as **`GUIDANCE`** with full provenance. Conformance simply has nothing to gate until you add tags.
+
 ### Altitude 1 — light tagging
 
-Add structure where it helps. Keep a **product description** in `product { }`, then add one tag at a time.
+Add structure **where enforcement or reuse helps**. Keep the product story in prose; tag one fact at a time instead of rewriting the whole spec.
 
 ```pactia
 pactia 1.0
@@ -36,41 +48,89 @@ import @pactia/rust-anb;
 
 product MyApp {
   > A mobile app for tracking personal fitness goals and sharing progress with friends.
+  >
+  > Users sign up with email. Each user owns their workouts; only the owner may edit or delete.
+  > Friends see shared workouts in a feed — read-only across users, no cross-account writes.
+  > List endpoints use cursor pagination. Never commit secrets; use our error envelope.
+
+  #rust_anb
 
   module fitness {
+    > Workouts and social feed — one bounded context. All APIs are customer-scoped unless noted.
+
     service WorkoutService {
+      > Owner-only row scope on every mutation and list. JWT required on all routes.
+      > Empty history returns 200 with an empty list, not 404.
+
       @auth Customer
       @@output WorkoutListResponse
       @api list_workouts {
-        > Customers browse their workout history, paginated.
+        > Customers browse their workout history, newest first, paginated.
+        > Include nextCursor when more pages exist; omit when this is the last page.
+      }
+
+      @auth Customer
+      @@output WorkoutResponse
+      @api create_workout {
+        > Customer logs a new workout. Body: type, duration, optional notes.
+        > Reject payloads over 4 KB. Idempotent on client-supplied request id if present.
       }
     }
   }
 }
 ```
 
-Altitude 1 may omit `method` / `path`; add them when you need wire-level IR.
+Notice what stayed prose: feed rules, pagination policy, error envelope, stack choice (`#rust_anb` only pins platform law). Tags mark **auth**, **response shapes**, and **operation identity** — the facts you might want BSC to check later. Altitude 1 may omit `method` / `path`; add them when you need wire-level IR.
 
 ### Altitude 2 — fully specified
 
-Full enforcement surface — same file shape as [relay.pactia](https://github.com/pactia-lang/pactiac/blob/main/test/fixtures/kernel/relay.pactia) (1.2 canonical).
+Full enforcement surface — same file shape as [relay.pactia](https://github.com/pactia-lang/pactiac/blob/main/test/fixtures/kernel/relay.pactia) (1.2 canonical). Even here, `@api` blocks often keep behavior in prose; tags carry wire shape, roles, and macros:
 
 ```pactia
-service FleetService {
-  @auth { roles: [Customer, Admin] }
-  #list
-  #paginated
-  #owner
-  @@output VehicleListResponse
-  @throws { names: [Forbidden] }
-  @api list_vehicles {
-    method: GET,
-    path: "/api/v1/vehicles",
+pactia 1.0
+
+import @pactia/kernel;
+import @pactia/rust-anb;
+
+product Fleet {
+  > B2B fleet management — customers manage their own vehicles; admins see all tenants.
+  > List endpoints are cursor-paginated. Mutations are audit-logged.
+
+  #rust_anb
+
+  module fleet {
+    service FleetService {
+      @auth { roles: [Customer, Admin] }
+      #list
+      #paginated
+      #owner
+      @@output VehicleListResponse
+      @throws { names: [Forbidden] }
+      @api list_vehicles {
+        method: GET,
+        path: "/api/v1/vehicles",
+        > Customers see only vehicles where customerId matches their account.
+        > Admins see all vehicles. Default sort: createdAt descending.
+        > Return 403 when a customer requests another tenant's row by id.
+      }
+    }
   }
 }
 ```
 
 Same language, same compiler, your chosen density. See [language-spec.md — Three altitudes](language-spec.md#three-altitudes).
+
+### Same story, less syntax
+
+| Concern | Altitude 0 (prose) | Tag when you need… |
+| --- | --- | --- |
+| Who may call an API | `> Auth: bearer JWT; owner rows only` | `@auth Customer` — conformance on roles |
+| List behavior | `> Cursor pagination, default 20` | `#list` / `#paginated` — macro defaults in IR |
+| Response shape | `> Return workout list + optional nextCursor` | `@@output WorkoutListResponse` — schema checks |
+| Wire route | `> GET /workouts for history` | `@api { method, path }` — OpenAPI / route gates |
+| Payment states | `>` lines inside `@states { }` or plain module prose | `@transition { }` — enforceable state graph |
+
+Start with the left column. Move right only when a gate or package reuse justifies the syntax.
 
 ---
 
@@ -100,7 +160,7 @@ Pactia does **not** replace Rust, React, or Swift. It sits above them as a durab
 
 **AI model agnostic** means Pactia is **not** tied to any specific model (GPT, Claude, Gemini, …) or coding platform (Cursor, Claude Code, Copilot, custom agents). The same compiled output must work everywhere.
 
-That is why `pactiac` lowers Pactia to **AI-neutral JSON IR** (`workspace.json` plus per-scope slice files under `out/` or `input/`) — structured facts with provenance, not vendor prompt templates. **BSC** then:
+That is why `pactiac` lowers Pactia to **AI-neutral JSON IR** (`workspace.json` plus per-scope slice files under the compile output directory, default layout `input/`) — structured facts with provenance, not vendor prompt templates. **BSC** then:
 
 1. **Renders** that IR into each target’s file conventions (`.cursor/rules`, `CLAUDE.md`, Copilot instructions, …).
 2. **Optionally expands** it with an LLM — grounded in JSON IR, not free-form — to produce richer agent context.
@@ -139,6 +199,21 @@ See [Three altitudes](#three-altitudes) above. In short:
 ### Structure without suffocation
 
 When you formalize something, Pactia is strict about **how** (tags and macros) so tools and packages parse the same way. When you omit formal facts, **prose is first-class** — not a hack. Standardize AI-native authoring without caging engineers or models.
+
+**Multiline prose** (`>> … >>`) delimits one block; use `>` for single lines — do not prefix every line with `>>`:
+
+```pactia
+product InternalTools {
+  >> Every handler validates input at the boundary; domain layer assumes invariants already hold.
+  Retries are idempotent only where @api prose or tags say so — never blanket retry on POST.
+  When in doubt, prefer explicit prose over a tag you do not plan to enforce. >>
+
+  > Shorter rules still use one line each.
+  > Never commit secrets.
+}
+```
+
+That compiles. BSC can expand it into agent briefs; conformance ignores it until you promote a line to a tag.
 
 ### Shareable prompts (packages)
 
@@ -182,7 +257,7 @@ A Pactia program is not executed. It is **compiled to module-scoped JSON IR** (`
 | Prose + `@` / `@@` / `#` | 50-keyword classic DSL |
 | `> prose` + `//` / `/* */` comments | Bare sentences or undocumented notes in source |
 | Turing-incomplete by design | A general-purpose language |
-| Outcomes via `@must` / `@test` | Imperative `flow {}` scripts |
+| Outcomes via `@test` (and `@must` when defined in kernel) | Imperative `flow {}` scripts |
 
 Pactia deliberately describes **less than the full system** when you want it to. Logic, topology, and tuning live [below the intent line](overview.md#the-intent-line). Numbered implementation steps belong in code or optional `implementation_hint` files.
 
@@ -195,7 +270,7 @@ Pactia deliberately describes **less than the full system** when you want it to.
 5. **AI model and platform agnostic** — compile to neutral JSON; BSC renders and optionally LLM-expands per consumer.
 6. **Share through packages** — reuse intent via git-pinned imports, not copy-paste.
 7. **Strict when structured** — tags lower deterministically; conformance can hold them.
-8. **Free when prose** — guidance for agents and humans unless linked to `@test` / `@must`.
+8. **Free when prose** — guidance for agents and humans unless linked to enforceable tag fields (e.g. `@test`).
 9. **Small kernel, rich composition** — [packages](packages.md) add verticals; extend libraries, not grammar.
 10. **Provenance** — `Pactia`, `GUIDANCE`, `NOT_DERIVABLE`, … so tools know what is law vs hint.
 
@@ -237,21 +312,30 @@ Grammar: [language-spec.md](language-spec.md)
 
 ## Minimal example
 
-A mid-altitude program: actors and entities are tagged; **payment lifecycle is prose** — rich context for agents without forcing every edge into `@transition` until you need conformance.
+A mid-altitude program: **roles and entities are tagged where structure helps**; **payment lifecycle, disputes, and escrow rules stay prose** until you need enforceable transitions.
 
 ```pactia
 pactia 1.0
 
 import @pactia/kyc-compliance;
-import @pactia/rust-anb;
+import @pactia/rust-stack;
 
 product P2PExchange {
-  > Peer-to-peer crypto/fiat marketplace with escrow
+  > Peer-to-peer crypto/fiat marketplace with escrow between buyers and sellers.
+  > KYC: traders must pass enhanced screening before first trade over the platform limit.
+  > Disputes: admins may freeze a trade and reverse escrow; traders cannot self-resolve disputes.
+  > Fiat payment happens off-platform; on-platform status tracks buyer/seller acknowledgements only.
+  > Never hold card data; never log full bank account numbers in application logs.
 
-  #rust_anb
+
+  // One line pins Rust/actix, cursor pagination, error envelope, CI, and crate policy in IR
+  // so agents inherit platform law without repeating it in prose or hand-copying package defs.
+  #rust_stack
   @topology { mode: microservices, }
 
   module exchange {
+    > Core marketplace: offers, trades, escrow handoff. One trade has exactly one buyer and one seller.
+
     @actor traders {
       role: Trader,
       capabilities: [create_offers, take_trades],
@@ -277,14 +361,20 @@ product P2PExchange {
 
       @states trade_payment {
         entity: Trade.status,
-        > PAYMENT_PENDING — buyer has accepted the trade; fiat payment not yet acknowledged.
-        > PAYMENT_SENT — buyer marked payment sent; seller reviews off-platform receipt.
+        > PAYMENT_PENDING — buyer accepted the trade; fiat payment not yet acknowledged on-platform.
+        > PAYMENT_SENT — buyer marked payment sent; seller verifies receipt outside the app.
         > PAYMENT_CONFIRMED — seller confirmed; escrow may release crypto to the buyer.
-        > Valid edges: PAYMENT_PENDING → PAYMENT_SENT (buyer only), PAYMENT_SENT → PAYMENT_CONFIRMED (seller or system after escrow check).
+        > Valid edges: PAYMENT_PENDING → PAYMENT_SENT (buyer only),
+        >   PAYMENT_SENT → PAYMENT_CONFIRMED (seller or system after escrow check).
+        > Invalid: skip states, confirm without sent, buyer confirming on behalf of seller.
+        > Admin freeze pauses all edges until dispute.resolved event (see module prose below).
       }
     }
 
     service TradeService {
+      > All trade mutations require Trader role. Row scope: buyer or seller on the trade only.
+      > mark_payment_sent is buyer-only; confirm_payment is seller-only (or escrow worker).
+
       @auth { roles: [Trader] }
       #buyer
       @@input MarkPaymentSentRequest
@@ -293,7 +383,8 @@ product P2PExchange {
         method: POST,
         path: "/api/v1/trades/:id/mark-payment-sent",
         > Buyer asserts fiat was sent; moves trade PAYMENT_PENDING → PAYMENT_SENT.
-        > Idempotent if already PAYMENT_SENT. Reject if buyer is not party to the trade.
+        > Idempotent if already PAYMENT_SENT — return current trade, no error.
+        > Reject 403 if caller is not the buyer. Reject 409 if trade is not PAYMENT_PENDING.
       }
     }
 
@@ -301,12 +392,18 @@ product P2PExchange {
       payload: TradePaymentConfirmedPayload,
       handler: EscrowService.onPaymentConfirmed,
       > Fired when trade reaches PAYMENT_CONFIRMED and escrow can release funds.
+      > Escrow service is the only writer that may emit this after on-chain checks pass.
     }
+
+    > Dispute flow (prose only until you tag @dispute): admin sets trade on hold,
+    > both parties upload evidence out of band, admin resolves → escrow releases or reverses.
   }
 }
 ```
 
-When you need **enforceable** state edges, add structured fields on the relevant tags (e.g. `transitions` on one host tag, `@transition`-style modifiers on another) — same validation as any other tag body; BSC conformance interprets the lowered IR. See [relay.pactia](https://github.com/pactia-lang/pactiac/blob/main/test/fixtures/kernel/relay.pactia) for altitude 2.
+**What prose carried without extra tags:** KYC policy, dispute ownership, off-platform payment, logging limits, invalid state edges, idempotency, row scope, and the admin freeze narrative. Tags pin **actors**, **entity shape**, **one enforceable API**, and **one integration event** — the slice you might gate in CI first.
+
+When you need **enforceable** state edges, add structured fields on the relevant tags (e.g. `transitions` on `@states`, `@transition`-style modifiers) — same validation as any other tag body; BSC conformance interprets the lowered IR. See [relay.pactia](https://github.com/pactia-lang/pactiac/blob/main/test/fixtures/kernel/relay.pactia) for altitude 2.
 
 ## Coherence with BSC goals
 
@@ -378,7 +475,7 @@ The compiler (**pactiac**) tags every lowered fact with a provenance:
 | Provenance      | Meaning                                                | Side of the line |
 | --------------- | ------------------------------------------------------ | ---------------- |
 | `Pactia`        | Written by the author                                  | Above            |
-| `INFERRED`      | Derived by a documented deterministic rule             | Above            |
+| `INFERRED`      | Derived by a documented deterministic rule (**planned** — BSC / future pactiac) | Above            |
 | `PACKAGE`       | Supplied by an imported package                        | Above            |
 | `MACRO`         | Supplied by `#macro` expansion                         | Above            |
 | `DEFINE`        | Supplied by local `def #` template expansion           | Above            |
@@ -392,7 +489,7 @@ The compiler (**pactiac**) tags every lowered fact with a provenance:
 
 1. **Above the line is deterministic.** No LLM decides anything above the line. Same Pactia, same contract, byte for byte.
 2. **Below the line is free.** AI and humans choose logic, topology, and structure however they like.
-3. **The contract never describes behavior.** No numbered `flow {}` blocks. Use `@must` for enforceable outcomes; use `@guide` or `implementation_hint` for suggested patterns (below the line).
+3. **The contract never describes behavior.** No numbered `flow {}` blocks. Use `@test` for enforceable acceptance criteria; `@must` when a package defines it. Use `@guide` or `implementation_hint` for suggested patterns (below the line).
 4. **The IR is the contract, not the system.** `workspace.json` (full bundle) and slice files (`product.json`, `*.module.json`, `*.model.json`, `*.service.json`) carry only above-the-line facts. Agents read **`workspace.json` first** — see kernel `@pactia` and [compilation.md](compilation.md#ir-layout).
 5. **The line is crossed only by conformance.** The sole connection between the two halves is the conformance gate: it checks the implementation against the contract and fails the build otherwise (static surface checks today; runtime enforcement planned).
 
@@ -441,9 +538,9 @@ The contract guarantees the operation, its roles, its ownership rule, and its re
 | **Split by ownership**          | Pactia stays small; output is still comprehensive                            |
 
 
-**Principle: Pactia is comprehensive in output, selective in input.**
+**Principle: Pactia is comprehensive in BSC output, selective in input.**
 
-The architect writes **decisions**. The stack package provides **defaults**. The compiler **derives** the rest from `service` blocks and `model`.
+The architect writes **decisions**. The stack package provides **defaults**. **`pactiac`** lowers authored tags to JSON IR; **BSC render** (planned inference) assembles the rest from IR + stack defaults.
 
 ```
 ┌────────────────────────────────────────────────────────────────┐
@@ -451,21 +548,23 @@ The architect writes **decisions**. The stack package provides **defaults**. The
 ├────────────────────────────────────────────────────────────────┤
 │  STACK PACKAGE  Platform owns how (CI tool, tracing, Helm base)│
 ├────────────────────────────────────────────────────────────────┤
-│  COMPILER      Derives metrics, scenarios, modules from APIs   │
+│  pactiac        Lowers tags → JSON IR (deterministic)          │
+├────────────────────────────────────────────────────────────────┤
+│  BSC render     Agent/spec bundle from IR + stack (planned)    │
 └────────────────────────────────────────────────────────────────┘
                               │
                               ▼
               Full specification package (everything AI needs)
 ```
 
-A senior architect using Pactia should finish in **one session** (~100–200 lines). The generated spec package should still contain observability, deployment, CI, testing, security — because those sections are **assembled**, not hand-typed line by line.
+A senior architect using Pactia should finish in **one session** (~100–200 lines). The BSC-rendered spec package should still contain observability, deployment, CI, testing, security — because those sections are **assembled** from IR + stack defaults, not hand-typed line by line.
 
 ### Product concern matrix
 
 
-| Concern                       | Architect writes in Pactia?                       | Stack package                         | Compiler derives                   |
+| Concern                       | Architect writes in Pactia?                       | Stack package                         | BSC derives (planned)              |
 | ----------------------------- | ------------------------------------------------- | ------------------------------------- | ---------------------------------- |
-| Web / mobile / desktop UI     | **Yes** — `@surface { platform: … }`, `@bind { }` | surface std packages              | `@bind` cross-links to `@api`        |
+| Web / mobile / desktop UI     | **Yes** — `@surface { … }` on `@api` or `@bind { }` | surface std packages              | `@bind` cross-links to `@api`        |
 | Product & domain              | **Yes** — core                                    | —                                     | —                                  |
 | Services & APIs               | **Yes** — core                                    | pagination defaults                   | DTOs, OpenAPI, route rules         |
 | Error catalog                 | **Yes** — `@errors { }`                           | fallback `[401, 403]`                 | endpoint error list from `@errors` |
@@ -479,7 +578,7 @@ A senior architect using Pactia should finish in **one session** (~100–200 lin
 | Deployment / environments     | `@deploy` when non-default                    | K8s, Helm, ports, health paths        | namespaces from env names          |
 | CI/CD                         | `@deploy gate` overrides                      | provider, deploy tool, branch mapping | —                                  |
 | Testing                       | **Critical scenarios** — `@test`                  | framework, coverage target            | stubs from `@test` blocks          |
-| Implementation order          | **Optional** — `roadmap` (planned)                | phase templates                       | inferred from service deps         |
+| Implementation order          | **Optional** — `roadmap` (planned)                | phase templates                       | from service deps (planned)        |
 | Coding standards              | `@guide` or stack package                     | full patterns                         | —                                  |
 | Module structure              | **No**                                            | clean architecture layers             | modules from `module` blocks       |
 
@@ -496,7 +595,7 @@ The architect **does** sometimes need to say:
 - gates before production (coverage, scenario pass, manual approval)
 - different replica counts per environment
 
-### Recommended Pactia syntax (1.0)
+### Recommended deploy / observe syntax
 
 ```pactia
 // Stack package already says: GITHUB_ACTIONS + ARGOCD + develop→staging + main→prod
@@ -517,7 +616,7 @@ The architect **does** sometimes need to say:
 }
 ```
 
-What compiles out:
+What **BSC render** produces from IR + stack defaults (not emitted by `pactiac compile`):
 
 - `deployment-strategy.md` — environments, Helm, rollout
 - CI section embedded from stack + gate overrides
@@ -553,10 +652,9 @@ What compiles out:
 }
 ```
 
-### Compiler derives (no Pactia required)
+### BSC derives from IR (planned — not pactiac)
 
-
-| From                    | Derives                                          |
+| From                    | Derives (BSC)                                    |
 | ----------------------- | ------------------------------------------------ |
 | `@emit vehicle.created` | `vehicle_created_total` counter                  |
 | Each `service`          | RED metrics scaffolding (rate, errors, duration) |
@@ -590,7 +688,7 @@ If omitted: stack package `deploymentBaseline.autoscaling` applies to all servic
 - Default coverage target (e.g. 80%)
 - Given/when/then format
 
-### Architect declares (1.0)
+### Architect declares acceptance tests
 
 ```pactia
 @test customer_cannot_read_other_vehicle {
@@ -600,17 +698,17 @@ If omitted: stack package `deploymentBaseline.autoscaling` applies to all servic
 }
 ```
 
-### Compiler derives
+### BSC derives test scenarios (planned)
 
 - One happy-path scenario per endpoint (from `@auth` + `@@output` + shapes in `model`)
 - Auth negative cases for `#owner` endpoints
 - Kafka emit assertions for `@emit` tags
 
-Architect adds `@test` blocks only for **business-critical** paths; the rest are generated.
+Architect adds `@test` blocks only for **business-critical** paths; BSC may generate the rest when inference rules exist.
 
-### Compiled output
+### BSC render output (not pactiac JSON IR)
 
-Even when Pactia is minimal, the specification package must include everything an AI implementer needs — for **every surface** (API handlers, web routes, mobile screens, ops):
+Even when Pactia is minimal, the **BSC specification package** should include everything an AI implementer needs — for **every surface** (API handlers, web routes, mobile screens, ops):
 
 
 | Output file                            | Primary sources                                      |
@@ -640,14 +738,14 @@ The architect reads the **generated** deployment and testing docs to verify; the
 | **Extended** | Regulated / high-scale | ~250 lines  | + `@observe`, `@deploy`, `@security`, pipeline gates |
 
 
-All tiers compile to the **same JSON IR depth**; Express tier relies more on inference and stack defaults.
+All tiers produce the **same pactiac JSON IR** from what the author wrote. Richer agent briefs (markdown specs, derived scenarios, OpenAPI prose) come from **BSC render** and optional expand — planned inference rules, not `pactiac compile` today.
 
 ### Decision checklist for new Pactia constructs
 
 Before adding a keyword, ask:
 
 1. **Does every project need to say this?** → stack package
-2. **Can it be derived from services/domain?** → compiler
+2. **Can it be derived from services/domain?** → BSC render (planned) or stack package
 3. **Do only some projects differ?** → Pactia optional block
 4. **Is it product/business truth?** → Pactia core (`@tag { }`)
 
@@ -664,16 +762,16 @@ CI tool vendor → (1). Metrics per event → (2). SLO targets → (3). Entity r
 | Integration, events, policy | `@event { }`, `@policy { }`, `@integration { }`, prose |
 | Observability, deploy gates | `@observe { }`, `@deploy { }` |
 | Acceptance tests | `@test { }` + When/Then |
-| Multi-surface UI | `@surface { }` + `@bind { }` |
+| Multi-surface UI | `@surface { … }` on `@api` + `@bind { }` |
 
 Platform overrides use registered tags from imported packages (e.g. `@pactia/kernel`, stack packages).
 
 ### Summary
 
-- **Tradeoff:** simplicity in Pactia, comprehensiveness in compiled output.
+- **Tradeoff:** simplicity in Pactia, comprehensiveness in BSC-rendered agent/spec output.
 - **CI:** `@deploy { gate ... }` overrides, not a full CI DSL; stack owns the toolchain.
 - **Observability, deployment:** `@observe`, `@deploy` tags — package-defined, same as other `@tag` symbols.
-- **Senior architect workflow:** write Pactia → compile → review generated spec → adjust Pactia overrides → AI implements.
+- **Senior architect workflow:** write Pactia → `pactiac compile` → review BSC-rendered spec → adjust Pactia overrides → AI implements.
 
 See: [language-spec.md](language-spec.md), [compilation.md](compilation.md), [packages.md](packages.md)
 

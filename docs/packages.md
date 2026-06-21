@@ -80,6 +80,8 @@ version = "0.1.0"
 
 ### `pactia.lock`
 
+Required when the product **imports packages**. Optional for altitude-0 products with no `@scope/name` imports (no vendored deps to pin).
+
 ```toml
 lockVersion = 1
 
@@ -153,7 +155,7 @@ git tag v1.0.0 && git push origin v1.0.0
 
 ```bash
 pactia build
-pactiac compile -w . -o out/
+pactiac compile -w . -o input/
 ```
 
 ---
