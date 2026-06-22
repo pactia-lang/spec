@@ -106,6 +106,9 @@ AssignmentLine    ::= Identifier ":" Value ","
 | `IMPORT_UNUSED` | Partial import symbol never referenced |
 | `ATTACH_UNDEFINED` | Attach symbol not imported |
 | `ATTACH_KIND_MISMATCH` | `module(x)` expects export module, etc. |
+| `CONTEXT_IMPORT_UNUSED` | Imported `export context` symbol never attached |
+| `CONTEXT_ATTACH_UNDEFINED` | `context(x)` symbol not imported |
+| `CONTEXT_ATTACH_KIND_MISMATCH` | `context(x)` expects `export context`, not module/service/model |
 | `CONSTANT_UNDEFINED` | `${name}` references unknown module constant |
 
 ### Tag bodies

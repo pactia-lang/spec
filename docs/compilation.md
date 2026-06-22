@@ -27,7 +27,7 @@ Pactia compiles to **AI-neutral JSON IR** — not vendor-specific prompts. Defau
 Canonical phase list — other docs link here rather than renumbering:
 
 ```
-0.  Assemble workspace: resolve partial imports + attach (module(name) { service(…) { model(…) } }),
+0.  Assemble workspace: resolve partial imports + attach (module(name) { service(…) { model(…) context(…) } }),
     or legacy merge of modules/*/module.pactia + services, into one product AST
 1.  Validate version declaration (pactia 1.0)
 2.  Lex: strip comments (never in IR)
@@ -38,10 +38,11 @@ Canonical phase list — other docs link here rather than renumbering:
 6.  Expand #macro until fixed point — splice def # bodies in-place (package + local);
     check in against enclosing block at each invocation
 7.  Validate every tag/macro use: placement + field spec (uniform for all tag names)
-8.  Lower @tags → JSON IR with provenance (generic slot rules below)
+8.  Lower @tags → JSON IR with provenance (generic slot rules below); lower `context` blocks → `context[]` (structural — see [Context lowering](#context-lowering))
 9.  Emit IR files: workspace.json (full bundle), manifest.json, slice files
 — outside pactiac —
 10. (optional) BSC render / expand from IR
+11. (optional) pactia build: context index — verify paths, expand directories, digests (see [Context index](#context-index-pactia-build))
 ```
 
 See [language-spec.md — Workspace layout](language-spec.md#workspace-layout) for multi-file merge order.
@@ -106,6 +107,34 @@ Host-tag prefix shorthand (`@auth Customer` when the package def includes `modif
 
 Prose (`>`, `>>`) lowers with provenance **`GUIDANCE`** into the nearest applicable host's guidance array unless linked to enforceable tag fields.
 
+### Context lowering
+
+**Status: Planned** — pactiac implementation not yet shipped.
+
+The **`context`** keyword is **not** lowered through the tag registry. It uses one fixed IR slot per scope — the same placement table as tags for **which file**, but a dedicated array key:
+
+| Enclosing block | IR file | IR key |
+| --------------- | ------- | ------ |
+| `product { }` | `product.json` | `context[]` |
+| `module { }` | `*.module.json` | `context[]` |
+| `model { }` | `*.model.json` | `context[]` |
+| `service { }` | `*.service.json` | `context[]` |
+
+Each entry:
+
+```json
+{
+  "id": "api_notes",
+  "path": "./context/catalog/services/catalog-admin/api-notes.md",
+  "guidance": ["API design notes for admin create flow."],
+  "provenance": "Pactia"
+}
+```
+
+`path` may be a string or array of strings as authored. Directory paths (trailing `/`) are stored as a single string; expansion to a file list happens in **pactia build**, not in pactiac.
+
+**pactiac does not:** open files, validate paths exist, expand directories, compute digests, or copy assets.
+
 ---
 
 ## IR layout
@@ -125,6 +154,8 @@ input/
   workspace.json          # single-file bundle — start here (agents, BSC)
   manifest.json           # compile index only
   product.json
+  context.index.json      # optional — written by pactia build (digests, expanded directory files)
+  context/                # optional — bundled copies when pactia build --bundle-context
   modules/
     trading/
       trading.module.json
@@ -141,6 +172,7 @@ input/
 | `modules/<m>/<m>.module.json`           | Module scope                                                                                                     |
 | `modules/<m>/<m>.model.json`            | Model scope                                                                                                      |
 | `modules/<m>/services/<s>.service.json` | Service scope                                                                                                    |
+| `context[]` on each slice above         | External file references (`id`, `path`, optional `guidance`) — provenance `Pactia` or `GUIDANCE` for caption   |
 
 **Agents and tools:** read `workspace.json` first — it is the entry point referenced by kernel `@pactia`. Use per-slice files when you only need one module or service, or when diffing a single scope.
 
@@ -175,9 +207,9 @@ Compile from the project root (directory containing `product.pactia`).
 ### Import + attach (1.2)
 
 1. Read `product.pactia` (imports, product-level tags, attach tree).
-2. Resolve `import { symbols } from ./path.pactia` — load `export module`, `export service`, `export model` bodies.
-3. Splice attach references into inline `module { }` / `service { }` / `model { }` blocks.
-4. Merged source contains **package imports only** (not fragment import lines).
+2. Resolve `import { symbols } from ./path.pactia` — load `export module`, `export service`, `export model`, `export context` bodies.
+3. Splice attach references into inline `module { }` / `service { }` / `model { }` blocks; `context(symbol)` splices exported context blocks.
+4. Merged source contains **package imports only** (not fragment import lines). Tag and macro symbols (`@api`, `#database`, …) are resolved from those product-level `@pactia/*` imports for **all** inlined fragment bodies — fragments do not import packages themselves. See [language-spec.md — Package imports vs fragment imports](language-spec.md#package-imports-vs-fragment-imports).
 
 Example attach:
 
@@ -194,9 +226,42 @@ product Relay {
 }
 ```
 
-Diagnostics: `IMPORT_UNUSED`, `ATTACH_UNDEFINED`, `ATTACH_KIND_MISMATCH`.
+Diagnostics: `IMPORT_UNUSED`, `ATTACH_UNDEFINED`, `ATTACH_KIND_MISMATCH`, `CONTEXT_IMPORT_UNUSED`, `CONTEXT_ATTACH_UNDEFINED`, `CONTEXT_ATTACH_KIND_MISMATCH`.
 
 No module list in `pactia.toml`. Single-file products declare all blocks inline (see [relay.pactia](https://github.com/pactia-lang/pactiac/blob/main/test/fixtures/kernel/relay.pactia)).
+
+---
+
+## Context index (pactia build)
+
+**Status: Planned** — pactia implementation not yet shipped.
+
+**Outside pactiac.** `pactia build` (or `pactia context index`) walks compiled IR `context[]` entries and writes **`context.index.json`** beside the IR tree.
+
+| Step | Behavior |
+| ---- | -------- |
+| Verify | Every file path exists; every directory path exists and is non-empty after expansion rules |
+| Expand directory | Recursive walk; skip dotfiles and dot-directories; do not follow symlinks |
+| Digest | `sha256:` per included file |
+| Guardrails | Warn at **50** files per context block; error at **500** |
+| Bundle (optional) | `--bundle-context`: copy included files under `out/.../context/`, rewrite IR paths to bundle-relative locations |
+
+**Future:** `.pactiacontextignore` at workspace root (gitignore-style) to exclude paths from directory expansion — not required in v1.
+
+Example index entry for a directory group:
+
+```json
+{
+  "id": "admin_assets",
+  "scope": "service/catalog/catalog-admin",
+  "path": "./context/catalog/services/catalog-admin/",
+  "files": [
+    { "path": "./context/catalog/services/catalog-admin/api-notes.md", "digest": "sha256:…" }
+  ]
+}
+```
+
+Agents and CI use digests in `context.index.json` to detect which attachments changed without diffing full IR slices.
 
 ### Legacy folder merge (deprecated)
 

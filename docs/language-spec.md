@@ -16,6 +16,7 @@ Tag and macro **names** (e.g. `@api`, `#list`, `@@output`) come from **imported 
 | `@pk` on field lines                | `@@pk`                                                                                  |
 | `modules/*/module.pactia` auto-scan | `import { … } from ./fragments/…` + `module(name) { … }` attach                         |
 | `#[rust-stack]` inside `@stack { }` | `#rust-stack` at product level after `import @pactia/rust-stack` (no `[stack]` in TOML) |
+| (none)                            | `context { }` keyword — external files for agent guidance (see [Context](#context))   |
 
 Legacy `#[…]` bracket macros and folder-based module discovery may still be accepted by older compilers during transition; new products should use 1.2 syntax only.
 
@@ -84,7 +85,7 @@ Pactia is a **shareable standard for AI-native product intent**:
 
 ## Design laws
 
-1. **Small fixed keyword set** — structure, imports, `def`, prose — not a catalog of domain tags.
+1. **Small fixed keyword set** — structure, imports, `def`, prose, `context` — not a catalog of domain tags.
 2. **Three sigils** — host `@tag { }`; modifier `@@tag` on the **next** `@` host or field line only; macro `#name` splices at call site.
 3. **Still compilable** — tags lower deterministically; macros expand before lower. **All tag names share one validation and lowering path** — field spec + `in` placement only.
 4. **Packages on disk** — `@pactia/kernel` and other libraries are normal packages (`index.pactia`), not spec tables or compiler sysroot.
@@ -105,9 +106,10 @@ Pactia is a **shareable standard for AI-native product intent**:
 | `service` | Deployable API/logic unit            |
 | `model`   | Data shapes                          |
 | `import`  | Package or file import               |
-| `export`  | Export defs from package source only |
-| `def`     | Register `@tag` or `#macro`          |
+| `export`  | Export defs from package source; `export module` / `service` / `model` / `context` in fragments |
+| `def`     | Register `@tag` or `#macro`; or alias a `context` block (see [Context](#context)) |
 | `in`      | Placement on `def`                   |
+| `context` | Attach external files (md, images, …) to product / module / service / model scope |
 
 ### Reserved (no syntax in 1.2)
 
@@ -156,6 +158,99 @@ Comments: `//` and `/* */` — stripped before IR.
 Interpolation: `${name}` in prose or macro bodies — compile-time only (macro parameters or module `def` constants).
 
 Prose lowers with provenance **`GUIDANCE`** unless linked to enforceable tag fields.
+
+---
+
+## Context
+
+**Status: Planned** — `context` keyword and `pactia` context index are specified here; pactiac / pactia implementation not yet shipped.
+
+**`context`** is a language keyword — not a tag, not a macro, not in the package registry. It attaches **external files** (markdown, images, PDFs, plain text, etc.) to a scope for agent guidance. Below the conformance line, like prose.
+
+```pactia
+context api_notes {
+  path: "./context/catalog/services/catalog-admin/api-notes.md",
+  > API design notes for admin create flow.
+}
+
+context design_pack {
+  path: [
+    "./context/catalog/wireframe.png",
+    "./context/catalog/flow.md",
+  ],
+  > Wireframes and flow for catalog admin. >>
+}
+
+context admin_assets {
+  path: "./context/catalog/services/catalog-admin/",
+  > All files under this folder apply to admin APIs.
+}
+```
+
+### Rules
+
+| Rule | Detail |
+| ---- | ------ |
+| Name | `context <name> { }` — name required |
+| Body | **`path`** (required) and **prose** (`>`, `>>`) only |
+| Forbidden in body | `@tags`, `#macros`, `def`, nested blocks, any other fields |
+| Placement | `product { }`, `module { }`, `service { }`, `model { }` |
+
+### `path` shapes
+
+One field, three value forms — all workspace-relative from **project root**:
+
+| Form | Example | Meaning |
+| ---- | ------- | ------- |
+| File | `path: "./docs/vision.md"` | Single file |
+| Array | `path: [ "./a.md", "./b.png" ]` | Explicit file group |
+| Directory | `path: "./pack/"` | Trailing `/` — directory group (expanded at `pactia build`; see [compilation.md — Context index](compilation.md#context-index-pactia-build)) |
+
+No globs in v1.
+
+### Constant alias
+
+Inside `module { }` (or service scope where `def` constants are allowed):
+
+```pactia
+def api_context_notes = context api_notes {
+  path: "./context/catalog/services/catalog-admin/api-notes.md",
+}
+
+> Use ${api_context_notes} when implementing admin APIs.
+```
+
+Lowers to a resolvable reference in guidance — not enforceable IR.
+
+### Export and attach
+
+Mirror `export module` / `export service` / `export model`:
+
+```pactia
+// fragments/catalog-admin.context.pactia
+export context api_notes {
+  path: "./context/catalog/services/catalog-admin/api-notes.md",
+}
+```
+
+```pactia
+import { api_notes } from ./fragments/catalog-admin.context.pactia;
+
+product Marketplace {
+  module(catalog) {
+    service(CatalogAdminService) {
+      model(catalog_model)
+      context(api_notes)
+    }
+  }
+}
+```
+
+`context(symbol)` is valid in product / module / service / model attach trees. Multiple `context(symbol)` lines per scope are allowed. Inline `context { }` inside an exported fragment remains valid without a separate export file.
+
+Diagnostics: `CONTEXT_IMPORT_UNUSED`, `CONTEXT_ATTACH_UNDEFINED`, `CONTEXT_ATTACH_KIND_MISMATCH` (mirror attach codes).
+
+`pactiac` lowers `context` blocks to a fixed **`context[]`** array on the enclosing IR slice. It does **not** read files, validate paths, or compute digests — see [compilation.md — Context lowering](compilation.md#context-lowering).
 
 ---
 
@@ -374,6 +469,7 @@ Fragment files export hosts by name — no `product` block:
 export module orders { … }
 export model orders_model { … }
 export service OrderService { … }
+export context api_notes { … }
 export def max_page = 100
 ```
 
@@ -383,6 +479,7 @@ Import symbols, then **attach** in the product shell:
 import { orders } from ./fragments/orders.module.pactia;
 import { orders_model } from ./fragments/orders.model.pactia;
 import { OrderService } from ./fragments/order.service.pactia;
+import { api_notes } from ./fragments/catalog-admin.context.pactia;
 
 product Relay {
   #rust-stack
@@ -390,12 +487,51 @@ product Relay {
   module(orders) {
     service(OrderService) {
       model(orders_model)
+      context(api_notes)
     }
   }
 }
 ```
 
-Attach names must match imported export symbols. Diagnostics: `IMPORT_UNUSED`, `ATTACH_UNDEFINED`, `ATTACH_KIND_MISMATCH`.
+Attach names must match imported export symbols. Diagnostics: `IMPORT_UNUSED`, `ATTACH_UNDEFINED`, `ATTACH_KIND_MISMATCH`, and context-specific `CONTEXT_*` codes (see [Context](#context)).
+
+### Package imports vs fragment imports
+
+Fragment files **do not** declare `import … from @pactia/…`. Tags (`@api`, `@auth`, `@test`, …), modifier tags (`@@output`), and macros (`#database`, `#create`, `#rust-stack`) are imported **once** in `product.pactia`. Local `./fragments/…` imports only register **export symbols** for attach — they do not bring package definitions into the fragment file.
+
+When `pactiac` assembles the workspace:
+
+1. **Package imports** from `product.pactia` are copied to the top of the merged program.
+2. **Fragment imports** are used to load `export module` / `export service` / `export model` / `export context` bodies into a symbol registry — their `import` lines are **not** kept in the merged text.
+3. **Attach** splices those bodies inline (`module(name) { service(…) { model(…) context(…) } }` → nested blocks).
+4. **Bind** resolves every `@` / `@@` / `#` use in inlined fragments against the registry built from the product-level `@pactia/*` imports (packages vendored via `pactia.lock`).
+
+So a service fragment may use `@api` and `#database` without its own package import — the merged monolith already imported them at product scope. If a tag is used in a fragment but not imported in `product.pactia`, compile fails at bind with an unknown symbol.
+
+Example ([marketplace](https://github.com/pactia-lang/examples/tree/main/marketplace)):
+
+```pactia
+// product.pactia — package + fragment imports
+import { @api, @auth, @test, #database, #create, #idempotent, @@output } from @pactia/kernel;
+import { CatalogAdminService } from ./fragments/catalog-admin.service.pactia;
+
+product Marketplace {
+  module(catalog) {
+    service(CatalogAdminService) { model(catalog_model) }
+  }
+}
+```
+
+```pactia
+// fragments/catalog-admin.service.pactia — no @pactia/* import
+export service CatalogAdminService {
+  #database
+  @auth { roles: [CatalogOperator] }
+  @api create_product { method: POST, path: "/api/v1/products", }
+}
+```
+
+After merge, the compiler sees one program: product imports at the top, then `service CatalogAdminService { … }` with the fragment body inlined. See [compilation.md — Workspace assembly](compilation.md#workspace-assembly).
 
 **Monolith** — all `module { }` / `service { }` / `model { }` inline in one file; attach optional.
 
@@ -442,10 +578,12 @@ my-product/
   pactia.toml
   pactia.lock
   product.pactia              # product shell: imports, attach, product-level tags
+  context/                    # optional: external files referenced by context { path: … }
   fragments/
     orders.module.pactia      # export module orders { … }
     orders.model.pactia       # export model orders_model { … }
     order.service.pactia      # export service OrderService { … }
+    catalog-admin.context.pactia   # export context api_notes { … } (naming convention)
 ```
 
 Canonical example: [relay workspace](https://github.com/pactia-lang/pactiac/tree/main/test/fixtures/workspace/relay) (attach) and [relay.pactia](https://github.com/pactia-lang/pactiac/blob/main/test/fixtures/kernel/relay.pactia) (monolith).
