@@ -155,7 +155,7 @@ input/
   manifest.json           # compile index only
   product.json
   context.index.json      # optional — written by pactia build (digests, expanded directory files)
-  context/                # optional — bundled copies when pactia build --bundle-context
+  context/                # optional — bundled copies by default; omitted with pactia build --no-bundle-context
   modules/
     trading/
       trading.module.json
@@ -234,7 +234,7 @@ No module list in `pactia.toml`. Single-file products declare all blocks inline 
 
 ## Context index (pactia build)
 
-**Status: Implemented** — `pactia build` walks compiled IR `context[]` entries and writes **`context.index.json`** beside the IR tree. Bundles files under `input/context/` by default; use `--no-bundle-context` to skip the copy.
+**Status: Implemented** — `pactia build` walks compiled IR `context[]` entries and writes **`context.index.json`** beside the IR tree. Bundles files under `input/context/` by default; rewrites IR `context[].path` values and index paths to bundle-relative `context/...` locations so `out/` is self-contained for agents. Use `--no-bundle-context` to skip the copy and keep workspace-relative paths.
 
 | Step | Behavior |
 | ---- | -------- |
@@ -242,7 +242,7 @@ No module list in `pactia.toml`. Single-file products declare all blocks inline 
 | Expand directory | Recursive walk; skip dotfiles and dot-directories; do not follow symlinks |
 | Digest | `sha256:` per included file |
 | Guardrails | Warn at **50** files per context block; error at **500** |
-| Bundle (optional) | `--bundle-context`: copy included files under `out/.../context/`, rewrite IR paths to bundle-relative locations |
+| Bundle (default) | Copy included files under `out/.../input/context/`; rewrite IR and index paths to bundle-relative locations; omit `package` on bundled index entries |
 
 **Future:** `.pactiacontextignore` at workspace root (gitignore-style) to exclude paths from directory expansion — not required in v1.
 
@@ -252,9 +252,9 @@ Example index entry for a directory group:
 {
   "id": "admin_assets",
   "scope": "service/catalog/catalog-admin",
-  "path": "./context/catalog/services/catalog-admin/",
+  "path": "context/catalog/services/catalog-admin/",
   "files": [
-    { "path": "./context/catalog/services/catalog-admin/api-notes.md", "digest": "sha256:…" }
+    { "path": "context/catalog/services/catalog-admin/api-notes.md", "digest": "sha256:…" }
   ]
 }
 ```
