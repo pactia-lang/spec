@@ -8,6 +8,8 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- **`context` keyword** — package-relative file attachments; `export context`, attach `context(symbol)`, `def alias = context name { }`
+- **Package manager docs** — `pactia install`, dual coordinates, `~/.pactia/config.toml`, lock-is-truth, `pactia update`, `pactia why`, `publish --dry-run` in [packages.md](docs/packages.md), [overview.md](docs/overview.md), [platform.md](docs/platform.md)
 - **Crate model:** packages are `pactia.toml` + `index.pactia` only — no `pactia.package.json`; IR slots derived at product compile.
 - **Official package repos:** [pactia-lang/kernel](https://github.com/pactia-lang/kernel), [pactia-lang/pactia-io](https://github.com/pactia-lang/pactia-io).
 - **Go-style distribution:** packages resolve from **git remote + semver tag**; lockfile digest; vendored under `.pactia/packages/` — see [packages.md](docs/packages.md#go-modules-distribution).
@@ -15,6 +17,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 ### Changed
 
+- **Editor support:** document `context` keyword, blocks, attach syntax, and folding rules in [editor-support.md](docs/editor-support.md)
 - **Editorial coherence pass:** README tooling table (spec 1.2 vs `pactia 1.0` version line), broken links, error-code alignment (`REGISTRY_COLLISION`), provenance table (`DEFINE`), lockfile schema note, cross-repo links, **removed tag-name-specific validation (state-graph codes and pass)**.
 - **Spec coherence pass:** `README.md`, `docs/overview.md`, `docs/packages.md`, `docs/platform.md`, `docs/registry.md`, `docs/compilation.md`, `docs/language-spec.md`, `schemas/manifests/pactia-toml.schema.json` aligned to 1.2 crate model.
 - **Removed stale references:** `pactia.package.json`, `[stack]` in product TOML, tarball fetch, pactia.io as sole registry.
