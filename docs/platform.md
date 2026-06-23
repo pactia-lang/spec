@@ -122,7 +122,7 @@ service OrderService {
 | `pactia.toml` | Semver **ranges** for dependencies |
 | `pactia.lock` | **Pinned** version + digest (TOML) |
 
-Bump the range, refresh `pactia.lock`, recompile. Review package release notes for macro or platform-law changes.
+Bump the range in `pactia.toml`, run `pactia update`, recompile. Review package release notes for macro or platform-law changes.
 
 ---
 

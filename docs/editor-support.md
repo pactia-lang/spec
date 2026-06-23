@@ -16,7 +16,7 @@ Install the **vscode-pactia** extension from the marketplace or load from the re
 
 | Token | Examples |
 | --- | --- |
-| Keyword | `pactia`, `product`, `module`, `service`, `model`, `import`, `export`, `def`, `in`, `from` |
+| Keyword | `pactia`, `product`, `module`, `service`, `model`, `context`, `import`, `export`, `def`, `in`, `from` |
 | Reserved | `view`, `interface`, `class`, `function`, `field` |
 | Host tag | `@identifier` |
 | Modifier tag | `@@identifier` |
@@ -36,7 +36,8 @@ Highlighting follows [language-spec.md](language-spec.md) and [grammar-reference
 
 - Block keywords open `{` … `}` nests
 - `@tag { }`, `@@modifier`, and `#macro` are distinct line kinds
-- Attach syntax: `module(name) { service(Name) { model(modelName) } }`
+- Attach syntax: `module(name) { service(Name) { model(modelName) } }`, `context(symbol)`
+- `context name { }` blocks: `path` plus prose; `export context`, attach `context(symbol)`, `def alias = context name { }`
 - `def` bodies: field lists, prose; macro bodies may include `@tag` / `@@tag` / `#macro` lines
 - `${identifier}` in prose and macro bodies is a compile-time interpolation token
 

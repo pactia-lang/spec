@@ -18,7 +18,7 @@ Pactia compiles to **AI-neutral JSON IR** — not vendor-specific prompts. Defau
 └──────────────┘     └──────────────────────────────┘     └──────────────────────────────┘
 ```
 
-`pactiac` never calls an LLM. `pactiac compile` **reads** `pactia.lock` when present; it does not write it. Lock updates belong to `pactia add` / `pactia build`.
+`pactiac` never calls an LLM. `pactiac compile` **reads** `pactia.lock` when present; it does not write it. Lock updates belong to `pactia add` / `pactia update`.
 
 ---
 

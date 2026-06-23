@@ -8,8 +8,120 @@ Part of: [language-spec.md](language-spec.md) | [registry.md](registry.md) | [pl
 
 | Repo                                                              | Packages                                       |
 | ----------------------------------------------------------------- | ---------------------------------------------- |
-| [pactia-lang/kernel](https://github.com/pactia-lang/kernel)       | `@pactia/kernel`, `@pactia/kernel-*`           |
-| [pactia-lang/pactia-io](https://github.com/pactia-lang/pactia-io) | `@pactia/rust-stack`, `@pactia/html-css-js`, … |
+| [pactia-io](https://github.com/pactia-io)                         | `@pactia/kernel`, `@pactia/rust-stack`, …      |
+| Any git host (via coordinate)                                     | `@github.com/org/repo`, `@gitlab.com/org/repo` |
+
+---
+
+## Commands
+
+```bash
+pactia init <dir> [--name <ProductName>]
+pactia add <coordinate> [range] [-C <workspace>]
+pactia install [-C <workspace>]
+pactia update [<coordinate>] [-C <workspace>]
+pactia build [-C <workspace>] [-o <output-dir>]
+```
+
+| Command   | Role                                                                 |
+| --------- | -------------------------------------------------------------------- |
+| `init`    | Minimal `pactia.toml` + `product.pactia` (prose only; no lock)       |
+| `add`     | Add a dependency range, resolve lock, download, vendor               |
+| `install` | Read `pactia.lock`, download pinned versions, vendor (no re-resolve) |
+| `update`  | Re-resolve ranges from `pactia.toml`, refresh lock, download, vendor |
+| `build`   | `install` from lock, then `pactiac compile`                          |
+| `why`     | Show why a locked package is in the dependency graph                   |
+| `publish` | `publish --dry-run` validates `pactia.toml` + `index.pactia` before tagging |
+
+Default dependency range on `add` is `^1.0`.
+
+**Lock is truth** for `install` and `build`: versions come from `pactia.lock` only. Re-resolve on `add` or `update`. Digest mismatches fail with a clear error.
+
+Typical flows:
+
+```bash
+# New workspace
+pactia init my-product --name MyProduct
+# edit product.pactia — imports, #rust-stack, modules
+pactia add @pactia/kernel
+pactia add @pactia/rust-stack
+pactia build -C my-product
+
+# Clone existing repo
+pactia install -C my-product
+pactia build -C my-product
+
+# Refresh pins after bumping ranges in pactia.toml
+pactia update -C my-product
+```
+
+---
+
+## Coordinates
+
+Two equivalent styles:
+
+**Shorthand scope** (curated prefix — configured in `~/.pactia/config.toml`):
+
+```pactia
+import @pactia/kernel;
+```
+
+```toml
+"@pactia/kernel" = "^1.0"
+```
+
+**Go-style host path** (self-describing — git host in the coordinate):
+
+```pactia
+import @github.com/acme/fleet-rules;
+```
+
+```toml
+"@github.com/acme/fleet-rules" = "^1.0"
+```
+
+Short names on the CLI resolve to `@pactia/{name}` (e.g. `pactia add rust-stack` → `@pactia/rust-stack`).
+
+Invalid: `@github/package` or `@github.com/foo` — use full `@host/org/repo`.
+
+Vendor directory encodes `/` as `--`: `@github.com/acme/fleet-rules@1.0.0` → `.pactia/packages/@github.com--acme--fleet-rules@1.0.0/`.
+
+---
+
+## Config (`~/.pactia/config.toml`)
+
+Machine-local. Not in the product `pactia.toml`. The pactia CLI reads **all** git bases, API URLs, and download preferences from this file.
+
+First install copies `config/config.example.toml` from the [pactia](https://github.com/pactia-lang/pactia) repo when the file is missing.
+
+```toml
+[source."@pactia/"]
+git = "https://github.com/pactia-io"
+
+[hosts."github.com"]
+git = "https://github.com"
+api = "https://api.github.com"
+token = "env:PACTIA_GITHUB_TOKEN"
+
+[hosts."gitlab.com"]
+git = "https://gitlab.com"
+api = "https://gitlab.com/api/v4"
+token = "env:PACTIA_GITLAB_TOKEN"
+
+[defaults]
+prefer = "http"    # HTTP archive first; git clone fallback
+```
+
+| Entry | Derivation |
+| ----- | ---------- |
+| `[source."@pactia/"]` | `@pactia/{name}` → `{git}/{name}` at tag `v{version}` |
+| `[hosts."github.com"]` | `@github.com/{org}/{repo}` → `{git}/{org}/{repo}` |
+| `[hosts."gitlab.com"]` | `@gitlab.com/{org}/{repo}` → `{git}/{org}/{repo}` |
+
+Missing `[hosts."…"]` or `[source."…"]` for a coordinate → configure `config.toml` (clear error).
+
+Set `PACTIA_VENDOR_ROOT` to a local package directory during development (monorepo fixtures).
 
 ---
 
@@ -30,10 +142,10 @@ Authors edit **`index.pactia`**. The compiler parses export defs at product comp
 | Go                | Pactia                                   |
 | ----------------- | ---------------------------------------- |
 | Module path       | Package coordinate (`@pactia/kernel`)    |
-| Version = git tag | Same                                     |
+| Version = git tag | Same (`v1.0.0`, `v1.0.0-beta.1`, …)      |
 | `go.sum`          | `digest` in `pactia.lock`                |
 | Vendor cache      | `.pactia/packages/@scope--name@version/` |
-| `go get`          | `pactia fetch` / `pactia add` (planned)  |
+| `go get`          | `pactia add` / `pactia update`           |
 
 **Import in source** uses the coordinate only:
 
@@ -41,7 +153,7 @@ Authors edit **`index.pactia`**. The compiler parses export defs at product comp
 import @pactia/kernel;
 ```
 
-Versions live in `pactia.toml` / `pactia.lock`. Any git host works.
+Versions live in `pactia.toml` / `pactia.lock`. Any configured git host works.
 
 ---
 
@@ -91,6 +203,8 @@ version = "1.0.0"
 digest = "sha256:…"
 ```
 
+Digest covers `pactia.toml` + `index.pactia` in the vendored tree (or `.digest` marker when present).
+
 ---
 
 ## Package authoring
@@ -124,36 +238,53 @@ import { orders, OrderService } from ./fragments/orders.pactia;
 
 ## Package resolution
 
-1. Read ranges from `pactia.toml` `[dependencies]`
-2. Pin from `pactia.lock`
-3. Load vendored package from `.pactia/packages/` (or `PACTIA_VENDOR_ROOT`)
-4. Parse **`index.pactia`** export defs into effectiveRegistry
+**At compile time (`pactiac`):**
+
+1. Read pinned versions from `pactia.lock`
+2. Load vendored package from `.pactia/packages/` (or `PACTIA_VENDOR_ROOT`)
+3. Parse **`index.pactia`** export defs into effectiveRegistry
+
+**At package-manager time (`pactia`):**
+
+- `add` / `update` — resolve semver ranges, write `pactia.lock`, download to `~/.pactia/packages/`, copy to `.pactia/packages/`
+- `install` / `build` — use lock pins only; verify digests
 
 All imported packages merge with the same rules. `@stack` lowers as a normal product-scope tag; `#rust-stack` expands as a normal product-scope macro.
 
-| Code                      | Condition                          |
-| ------------------------- | ---------------------------------- |
-| `PACKAGE_NOT_FOUND`       | Unknown coordinate                 |
-| `PACKAGE_LOCK_MISMATCH`   | Digest mismatch                    |
-| `DEPENDENCY_NOT_DECLARED` | Import without `pactia.toml` entry |
-| `VERSION_IN_IMPORT`       | Semver in import line              |
-| `UNKNOWN_SYMBOL`          | `@` / `#` not in effectiveRegistry |
+| Code                      | Condition                                      |
+| ------------------------- | ---------------------------------------------- |
+| `PACKAGE_NOT_FOUND`       | Unknown coordinate                             |
+| `LOCK_DIGEST_MISMATCH`    | Vendored tree digest ≠ lock                    |
+| `LOCK_STALE`              | `pactia.toml` and lock out of sync             |
+| `LOCK_MISSING`              | Dependencies declared but no `pactia.lock`     |
+| `DEPENDENCY_NOT_DECLARED` | Import without `pactia.toml` entry             |
+| `VERSION_IN_IMPORT`       | Semver in import line                          |
+| `UNKNOWN_SYMBOL`          | `@` / `#` not in effectiveRegistry             |
 
 ---
 
-## Publish and fetch
+## Publish
 
-Git repo + semver tag. Ship **`pactia.toml` + `index.pactia`** only.
+Git repo + semver tag. Ship **`pactia.toml` + `index.pactia`** (plus any extra files in the repo tree).
 
 ```bash
 git tag v1.0.0 && git push origin v1.0.0
 ```
+
+Validate before tagging:
+
+```bash
+pactia publish --dry-run -C .
+```
+
+Pre-release tags (`v1.0.0-beta.1`, …) are valid. Semver ranges decide what satisfies a dependency.
 
 ---
 
 ## Consumer compile
 
 ```bash
+pactia install    # or rely on pactia build to install from lock first
 pactia build
 pactiac compile -w . -o input/
 ```

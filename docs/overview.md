@@ -420,7 +420,7 @@ When you need **enforceable** state edges, add structured fields on the relevant
 
 1. `pactiac compile` / `pactia build` → IR ([compilation.md](compilation.md))
 2. `bsc compile-workspace` → agent briefs from IR (BSC render)
-3. Git-hosted packages + lockfile ([packages.md](packages.md))
+3. `pactia add`, `install`, `update`, and lockfiles ([packages.md](packages.md))
 4. Web UI / editor (vscode-pactia, future pactia.io tooling)
 
 ---
