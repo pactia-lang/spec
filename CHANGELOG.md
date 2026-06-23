@@ -8,7 +8,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
-- **`context` keyword** — package-relative file attachments; `export context`, attach `context(symbol)`, `def alias = context name { }`
+- **`context` keyword** — package-relative file attachments; `export context`, attach `context(symbol)`, `def alias = context name { }`; pactiac lowers to `context[]`, pactia build indexes and bundles assets
 - **Package manager docs** — `pactia install`, dual coordinates, `~/.pactia/config.toml`, lock-is-truth, `pactia update`, `pactia why`, `publish --dry-run` in [packages.md](docs/packages.md), [overview.md](docs/overview.md), [platform.md](docs/platform.md)
 - **Crate model:** packages are `pactia.toml` + `index.pactia` only — no `pactia.package.json`; IR slots derived at product compile.
 - **Official package repos:** [pactia-lang/kernel](https://github.com/pactia-lang/kernel), [pactia-lang/pactia-io](https://github.com/pactia-lang/pactia-io).
