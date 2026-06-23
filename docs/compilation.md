@@ -109,7 +109,7 @@ Prose (`>`, `>>`) lowers with provenance **`GUIDANCE`** into the nearest applica
 
 ### Context lowering
 
-**Status: Planned** — pactiac implementation not yet shipped.
+**Status: Implemented** — pactiac lowers `context[]`; pactia build writes the index and bundles files (see below).
 
 The **`context`** keyword is **not** lowered through the tag registry. It uses one fixed IR slot per scope — the same placement table as tags for **which file**, but a dedicated array key:
 
@@ -234,9 +234,7 @@ No module list in `pactia.toml`. Single-file products declare all blocks inline 
 
 ## Context index (pactia build)
 
-**Status: Planned** — pactia implementation not yet shipped.
-
-**Outside pactiac.** `pactia build` (or `pactia context index`) walks compiled IR `context[]` entries and writes **`context.index.json`** beside the IR tree.
+**Status: Implemented** — `pactia build` walks compiled IR `context[]` entries and writes **`context.index.json`** beside the IR tree. Bundles files under `input/context/` by default; use `--no-bundle-context` to skip the copy.
 
 | Step | Behavior |
 | ---- | -------- |

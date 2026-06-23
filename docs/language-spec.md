@@ -163,7 +163,7 @@ Prose lowers with provenance **`GUIDANCE`** unless linked to enforceable tag fie
 
 ## Context
 
-**Status: Planned** — `context` keyword and `pactia` context index are specified here; pactiac / pactia implementation not yet shipped.
+**Status: Implemented** — `context` keyword lowers in pactiac; `pactia build` writes `context.index.json` and bundles files by default.
 
 **`context`** is a language keyword — not a tag, not a macro, not in the package registry. It attaches **external files** (markdown, images, PDFs, plain text, etc.) to a scope for agent guidance. Below the conformance line, like prose.
 
