@@ -30,6 +30,8 @@ pactia build [-C <workspace>] [-o <output-dir>]
 | `install` | Read `pactia.lock`, download pinned versions, vendor (no re-resolve) |
 | `update`  | Re-resolve ranges from `pactia.toml`, refresh lock, download, vendor |
 | `build`   | `install` from lock, then `pactiac compile`                          |
+| `why`     | Show why a locked package is in the dependency graph                   |
+| `publish` | `publish --dry-run` validates `pactia.toml` + `index.pactia` before tagging |
 
 Default dependency range on `add` is `^1.0`.
 
@@ -267,6 +269,12 @@ Git repo + semver tag. Ship **`pactia.toml` + `index.pactia`** (plus any extra f
 
 ```bash
 git tag v1.0.0 && git push origin v1.0.0
+```
+
+Validate before tagging:
+
+```bash
+pactia publish --dry-run -C .
 ```
 
 Pre-release tags (`v1.0.0-beta.1`, …) are valid. Semver ranges decide what satisfies a dependency.
