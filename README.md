@@ -97,14 +97,14 @@ Spec **1.2** documents syntax and IR for products that declare **`pactia 1.0`** 
 ```
 *.pactia  ──pactiac──▶  workspace.json + slice IR  ──▶  agent context + specifications
               ▲
-         pactia — vendor git deps, lockfile, build (Go-style module fetch)
+         pactia — vendor git deps, lockfile, build
 ```
 
 | | Repo | Role |
 | --- | --- | --- |
 | Language | **spec** (this repo) | Pactia 1.2 — grammar, JSON IR, packages |
 | Compiler | [pactiac](https://github.com/pactia-lang/pactiac) | Deterministic compile to module-scoped IR |
-| Package manager | [pactia](https://github.com/pactia-lang/pactia) | `pactia build`, lockfiles, fetch from git |
+| Package manager | [pactia](https://github.com/pactia-lang/pactia) | `pactia init`, `add`, `install`, `update`, `build` |
 | Kernel packages | [kernel](https://github.com/pactia-lang/kernel) | `@pactia/kernel`, `@pactia/kernel-*` |
 | Stack / surface | [pactia-io](https://github.com/pactia-lang/pactia-io) | Platform packages |
 | Editor | [vscode-pactia](https://github.com/pactia-lang/vscode-pactia) | Syntax, tags, diagnostics |
