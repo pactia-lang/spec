@@ -8,7 +8,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
-- **`context` keyword** — package-relative file attachments; `export context`, attach `context(symbol)`, `def alias = context name { }`; pactiac lowers to `context[]`, pactia build indexes and bundles assets
+- **`context` keyword** — lowers to structural `context[]` on each IR slice; pactia build indexes and bundles assets
 - **Package manager docs** — `pactia install`, dual coordinates, `~/.pactia/config.toml`, lock-is-truth, `pactia update`, `pactia why`, `publish --dry-run` in [packages.md](docs/packages.md), [overview.md](docs/overview.md), [platform.md](docs/platform.md)
 - **Crate model:** packages are `pactia.toml` + `index.pactia` only — no `pactia.package.json`; IR slots derived at product compile.
 - **Official package repos:** [pactia-lang/kernel](https://github.com/pactia-lang/kernel), [pactia-lang/pactia-io](https://github.com/pactia-lang/pactia-io).
@@ -17,6 +17,9 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 ### Changed
 
+- **Source-order IR:** each slice lowers to ordered **`body[]`** (tags, prose, macro expansions) plus optional **`context[]`** (context keyword); `tag` names object shape — no per-type aggregation arrays.
+- **`context[]` entries** use `name` (context block identifier), not `id`; `context.index.json` mirrors the same field.
+- **`FRAGMENT_PACKAGE_IMPORT`** — warning when a fragment file contains a package import (assembly ignores it; product-level imports apply after merge).
 - **Editor support:** document `context` keyword, blocks, attach syntax, and folding rules in [editor-support.md](docs/editor-support.md)
 - **Editorial coherence pass:** README tooling table (spec 1.2 vs `pactia 1.0` version line), broken links, error-code alignment (`REGISTRY_COLLISION`), provenance table (`DEFINE`), lockfile schema note, cross-repo links, **removed tag-name-specific validation (state-graph codes and pass)**.
 - **Spec coherence pass:** `README.md`, `docs/overview.md`, `docs/packages.md`, `docs/platform.md`, `docs/registry.md`, `docs/compilation.md`, `docs/language-spec.md`, `schemas/manifests/pactia-toml.schema.json` aligned to 1.2 crate model.
@@ -24,13 +27,13 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 - **Stack binding:** product-level `#macro` (e.g. `#rust-stack`) + stack `import` in source only — no `[stack].package` in `pactia.toml`.
 - **Removed:** `schemas/manifests/pactia-package.schema.json` — obsolete `pactia.package.json` format dropped in 1.2 crate model.
 - **Removed IR JSON Schema:** no `schemas/ir/` in this repo; compiler IR shape is prose in [compilation.md](docs/compilation.md) only.
-- **Removed:** per-tag JSON Schema sidecars and tag-name routing tables — all tag bodies validate from package `export def` field specs only; lowering uses generic placement rules (`extensions[]`, `modifiers`, `fields[]`).
+- **Removed:** per-tag JSON Schema sidecars — all tag bodies validate from package `export def` field specs only; lowering uses source-order `body[]` per slice (`modifiers` merge into next host; field modifiers on model lines).
 - **Removed:** tag-name-specific validation (e.g. state-graph cross-checks) from normative spec — one uniform field-spec path for every tag.
 - **`pactia.toml`:** dropped `kind` field (Cargo-style — name, version, optional description, `[dependencies]` only).
 
 ### Changed (1.2 baseline)
 
-- **Workspace assembly:** import + attach replaces automatic `modules/*` folder scan as the normative model; folder merge documented as legacy/deprecated.
+- **Workspace assembly:** import + attach in `product.pactia` is normative; folder layout is convention only.
 - **Macro invocation:** `#name` / `#name(args)` replaces `#[name]` (legacy may still parse during transition).
 - **Modifier invocation:** `@@output`, `@@pk`, etc. replace `@output` / `@pk` prefix on the line above hosts/fields.
 - **Docs updated for 1.2:** `language-spec.md`, `compilation.md`, `platform.md`, `macros.md`, `registry.md`, `packages.md`, `grammar-reference.md`, `editor-support.md`, `overview.md`.
@@ -40,7 +43,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 - `#[macro]` bracket syntax — use `#macro`.
 - `@stack { #[rust-stack] }` stack binding — use `#rust-stack` at product level.
-- `modules/*/module.pactia` directory scan — use export + attach.
+- `modules/*/module.pactia` fixed-filename scan — use `<name>.module.pactia` export layout under `modules/<name>/`.
 
 ### Added (1.1 baseline)
 

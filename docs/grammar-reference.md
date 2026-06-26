@@ -109,6 +109,7 @@ AssignmentLine    ::= Identifier ":" Value ","
 | `CONTEXT_IMPORT_UNUSED` | Imported `export context` symbol never attached |
 | `CONTEXT_ATTACH_UNDEFINED` | `context(x)` symbol not imported |
 | `CONTEXT_ATTACH_KIND_MISMATCH` | `context(x)` expects `export context`, not module/service/model |
+| `FRAGMENT_PACKAGE_IMPORT` | Package import in a fragment file (warning — ignored at assembly) |
 | `CONSTANT_UNDEFINED` | `${name}` references unknown module constant |
 
 ### Tag bodies

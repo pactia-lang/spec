@@ -306,7 +306,7 @@ Pactia is how humans **author**. `pactiac` produces **vendor-neutral IR**. BSC *
 
 ## Language version
 
-**Spec 1.2** — three sigils: `@` host tags, `@@` modifier tags (next `@` or field only), `#` macros. Keywords: `product`, `module`, `service`, `model`, `import`, `export`, `def`, `in`. Multi-file workspaces: **import + attach** (`export module` fragments, `module(name) { service(…) { model(…) } }`). Monoliths inline all blocks in one file. Source files declare **`pactia 1.0`** on the version line. See [language-spec.md](language-spec.md#migration-from-11).
+**Spec 1.2** — three sigils: `@` host tags, `@@` modifier tags (next `@` or field only), `#` macros. Keywords: `product`, `module`, `service`, `model`, `import`, `export`, `def`, `in`, `context`. Multi-file workspaces: **import + attach** in `product.pactia` (folder-agnostic paths). Monoliths inline all blocks in one file. Source files declare **`pactia 1.0`** on the version line. See [language-spec.md](language-spec.md#migration-from-11).
 
 Grammar: [language-spec.md](language-spec.md)
 
@@ -427,7 +427,7 @@ When you need **enforceable** state edges, add structured fields on the relevant
 
 ## The intent line
 
-The **intent line** (also called the contract line in BSC) divides every software product into **formalized intent** vs **free implementation** — across backend, web, mobile, and desktop. Cross-cutting tags (policy, deploy, observe) are registered in packages like any other `@tag`. Multi-file workspaces compose by **import + attach** — see [language-spec.md — Workspace layout](language-spec.md#workspace-layout).
+The **intent line** (also called the contract line in BSC) divides every software product into **formalized intent** vs **free implementation** — across backend, web, mobile, and desktop. Cross-cutting tags (policy, deploy, observe) are registered in packages like any other `@tag`. Multi-file workspaces compose by **import + attach** in `product.pactia` — see [language-spec.md — Workspace layout](language-spec.md#workspace-layout).
 
 ### The line
 

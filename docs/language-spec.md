@@ -14,11 +14,11 @@ Tag and macro **names** (e.g. `@api`, `#list`, `@@output`) come from **imported 
 | `#[list]`                           | `#list`                                                                                 |
 | `@output Type` before `@api`        | `@@output Type` or `@@output(Type)`                                                     |
 | `@pk` on field lines                | `@@pk`                                                                                  |
-| `modules/*/module.pactia` auto-scan | `import { … } from ./fragments/…` + `module(name) { … }` attach                         |
+| `modules/*/module.pactia` auto-scan only | **Import + attach** — paths in `product.pactia` define composition; folder names are convention |
 | `#[rust-stack]` inside `@stack { }` | `#rust-stack` at product level after `import @pactia/rust-stack` (no `[stack]` in TOML) |
 | (none)                            | `context { }` keyword — external files for agent guidance (see [Context](#context))   |
 
-Legacy `#[…]` bracket macros and folder-based module discovery may still be accepted by older compilers during transition; new products should use 1.2 syntax only.
+Legacy `#[…]` bracket macros may still be accepted during transition. Multi-file products use **import + attach** — see [Workspace layout](#workspace-layout).
 
 ---
 
@@ -195,6 +195,7 @@ context admin_assets {
 | Body | **`path`** (required) and **prose** (`>`, `>>`) only |
 | Forbidden in body | `@tags`, `#macros`, `def`, nested blocks, any other fields |
 | Placement | `product { }`, `module { }`, `service { }`, `model { }` |
+| Lowered IR | `{ "name", "path", "guidance?", "provenance": "Pactia" }` in **`context[]`** on the enclosing slice — see [compilation.md — Context lowering](compilation.md#context-lowering) |
 
 ### `path` shapes
 
@@ -250,7 +251,7 @@ product Marketplace {
 
 Diagnostics: `CONTEXT_IMPORT_UNUSED`, `CONTEXT_ATTACH_UNDEFINED`, `CONTEXT_ATTACH_KIND_MISMATCH` (mirror attach codes).
 
-`pactiac` lowers `context` blocks to a fixed **`context[]`** array on the enclosing IR slice. It does **not** read files, validate paths, or compute digests — see [compilation.md — Context lowering](compilation.md#context-lowering).
+`pactiac` lowers `context` blocks to **`context[]`** on the enclosing IR slice (structural — not `body[]`, not `tag`). Registry `@context` tags, if used, lower to **`body[]`** with `tag: context`. It does **not** read files, validate paths, or compute digests — see [compilation.md — Context lowering](compilation.md#context-lowering).
 
 ---
 
@@ -497,7 +498,7 @@ Attach names must match imported export symbols. Diagnostics: `IMPORT_UNUSED`, `
 
 ### Package imports vs fragment imports
 
-Fragment files **do not** declare `import … from @pactia/…`. Tags (`@api`, `@auth`, `@test`, …), modifier tags (`@@output`), and macros (`#database`, `#create`, `#rust-stack`) are imported **once** in `product.pactia`. Local `./fragments/…` imports only register **export symbols** for attach — they do not bring package definitions into the fragment file.
+Fragment files **do not** declare `import … from @pactia/…`. Tags (`@api`, `@auth`, `@test`, …), modifier tags (`@@output`), and macros (`#database`, `#create`, `#rust-stack`) are imported **once** in `product.pactia`. Local `./fragments/…` imports only register **export symbols** for attach — they do not bring package definitions into the fragment file. A package import line in a fragment is **ignored** at assembly; pactiac emits **`FRAGMENT_PACKAGE_IMPORT`** (warning).
 
 When `pactiac` assembles the workspace:
 
@@ -571,26 +572,63 @@ Products may declare UI intent with registered product-scoped tags and bind them
 
 ## Workspace layout
 
-Multi-file repos compose by **import + attach** — not by scanning a `modules/` tree.
+**Folder structure is not part of the language.** The compiler does not require `modules/`, `fragments/`, or any fixed directory tree. Assembly is **import-driven**: `product.pactia` declares `import { symbols } from ./any/path/file.pactia` and wires them with `module(name) { service(Symbol) { model(…) context(…) } }`.
+
+| Concern | Normative mechanism |
+| ------- | ------------------- |
+| Where fragments live | **Import paths** in `product.pactia` (any relative path) |
+| How fragments compose | **Attach tree** in `product { }` |
+| Package tags/macros | **Package imports** once at product scope |
+| Folder names | **Convention only** — team ergonomics, not compiler rules |
+
+### Import + attach (normative)
+
+```pactia
+import { @api, #database } from @pactia/kernel;
+import { orders } from ./domains/orders/orders.module.pactia;
+import { orders_model } from ./domains/orders/orders.model.pactia;
+import { OrderService } from ./domains/orders/order.service.pactia;
+
+product Marketplace {
+  module(orders) {
+    service(OrderService) {
+      model(orders_model)
+    }
+  }
+}
+```
+
+Fragment files use `export module` / `export service` / `export model` / `export context`. They do **not** repeat `import … from @pactia/…` — product-level package imports apply to all inlined bodies.
+
+Diagnostics: `IMPORT_UNUSED`, `ATTACH_UNDEFINED`, `ATTACH_KIND_MISMATCH`, `CONTEXT_IMPORT_UNUSED`, `CONTEXT_ATTACH_UNDEFINED`, `CONTEXT_ATTACH_KIND_MISMATCH`.
+
+Canonical examples: [relay workspace](https://github.com/pactia-lang/pactiac/tree/main/test/fixtures/workspace/relay) (`./fragments/…`), [PPM](https://github.com/pactia-lang/examples/tree/main/ppm) (`./modules/…` — same mechanism, different folder convention).
+
+### Recommended folder conventions (non-normative)
+
+Teams often use predictable layouts for navigation and tooling — the compiler does not enforce them:
 
 ```text
 my-product/
   pactia.toml
   pactia.lock
-  product.pactia              # product shell: imports, attach, product-level tags
-  context/                    # optional: external files referenced by context { path: … }
-  fragments/
-    orders.module.pactia      # export module orders { … }
-    orders.model.pactia       # export model orders_model { … }
-    order.service.pactia      # export service OrderService { … }
-    catalog-admin.context.pactia   # export context api_notes { … } (naming convention)
+  product.pactia              # package imports + attach tree
+  context/                    # optional — files referenced by context { path: … }
+  shared/                     # optional — export def constants
+  modules/<name>/             # common: one bounded context per directory
+    <name>.module.pactia
+    <name>.model.pactia
+    services/*.service.pactia
+  fragments/                  # common: flat or shallow fragment library
+    orders.module.pactia
+    order.service.pactia
 ```
 
-Canonical example: [relay workspace](https://github.com/pactia-lang/pactiac/tree/main/test/fixtures/workspace/relay) (attach) and [relay.pactia](https://github.com/pactia-lang/pactiac/blob/main/test/fixtures/kernel/relay.pactia) (monolith).
+Use whichever paths fit the repo; only **import paths** and the **attach tree** matter at compile time.
 
-### Legacy folder merge (deprecated)
+### Legacy folder scan (deprecated)
 
-Older compilers merged `modules/<dir>/module.pactia` + `services/*.service.pactia` by directory scan. New products should use **export + attach**. The compiler may still support folder merge during transition.
+When `product.pactia` has **no** attach tree, older compilers may merge `modules/<dir>/module.pactia` + `services/*.service.pactia` by directory convention. **Do not rely on this** for new products — explicit import + attach is the supported model.
 
 ### Compile merge order
 
@@ -599,8 +637,8 @@ Workspace **assembly** (compilation phase 0):
 ```
 1. Load `pactia.toml` (dependencies)
 2. Resolve package import paths (lockfile pins)
-3. Resolve partial imports → load export module / service / model fragments
-4. Splice attach tree (module(name) { service(…) { model(…) } }) into product { }
+3. Resolve fragment imports → load export module / service / model / context bodies
+4. Splice attach tree into product { }
 5. Emit one assembled product AST (package imports only in merged text)
 ```
 
@@ -679,7 +717,7 @@ Implementer codes: [grammar-reference.md](grammar-reference.md).
 
 - Using `export def` in a product file — publish a package instead.
 - Prefix `#macro` above `@api` — use in-block `#name` invocation.
-- Using `modules/*` folder scan for new products — use export + attach.
+- Relying on **directory scan** instead of import + attach in `product.pactia`.
 - Putting semver in `import` — use `pactia.toml`.
 - Expecting the language spec to list every package tag — read the package source (e.g. `@pactia/kernel` on [pactia-lang/kernel](https://github.com/pactia-lang/kernel)).
 
