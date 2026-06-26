@@ -135,7 +135,7 @@ Set `PACTIA_VENDOR_ROOT` to a local package directory during development (monore
 | `lib.rs`      | `index.pactia` — `export def @…` / `#…`                           |
 | `cargo build` | `pactia build` → invokes `pactiac compile`                        |
 
-Authors edit **`index.pactia`**. The compiler parses export defs at product compile time and **derives IR slot metadata** from `in` placement and modifier flag only — no tag-name routing table (see [compilation.md](compilation.md#tag-lowering)).
+Authors edit **`index.pactia`**. The compiler validates from field specs and placement, then lowers each scope to an ordered **`body[]`** in source sequence (see [compilation.md](compilation.md#source-order-body)).
 
 ### Go modules (distribution)
 
@@ -185,7 +185,7 @@ version = "0.1.0"
 
 | Rule                   | Detail                                                                         |
 | ---------------------- | ------------------------------------------------------------------------------ |
-| No module list         | Import + attach in `product.pactia`                                            |
+| No module list         | Import + attach in `product.pactia` (folder-agnostic fragment paths)           |
 | No `[stack]` in TOML   | Platform binding is `#macro` in source — [platform.md](platform.md)            |
 | No `kind`              | Unlike old drafts — all packages are equal crates; `@stack` is a tag in source |
 | No extra TOML sections | Only `[package]` and `[dependencies]`                                          |

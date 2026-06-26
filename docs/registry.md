@@ -42,7 +42,7 @@ Built once per compile after package resolution:
 
 ```
 1. For each imported package: parse index.pactia export defs from vendored package directory
-2. Derive generic ir slot per tag from `in` placement and modifier flag only (no tag-name routing table)
+2. Derive IR slot per tag: **`body[]`** append in source order; modifiers use `merge_into_host`
 3. Merge local non-exported def @ / def # from each module { } in the assembled workspace
 4. Reject duplicate unqualified names across any sources (see Name collisions)
 5. Attach field specs, in placements, macro splice bodies

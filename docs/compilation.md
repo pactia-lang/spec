@@ -27,7 +27,7 @@ Pactia compiles to **AI-neutral JSON IR** — not vendor-specific prompts. Defau
 Canonical phase list — other docs link here rather than renumbering:
 
 ```
-0.  Assemble workspace: resolve partial imports + attach (module(name) { service(…) { model(…) context(…) } }),
+0.  Assemble workspace: resolve fragment imports + attach in `product.pactia` (folder-agnostic paths),
     or legacy merge of modules/*/module.pactia + services, into one product AST
 1.  Validate version declaration (pactia 1.0)
 2.  Lex: strip comments (never in IR)
@@ -38,7 +38,7 @@ Canonical phase list — other docs link here rather than renumbering:
 6.  Expand #macro until fixed point — splice def # bodies in-place (package + local);
     check in against enclosing block at each invocation
 7.  Validate every tag/macro use: placement + field spec (uniform for all tag names)
-8.  Lower @tags → JSON IR with provenance (generic slot rules below); lower `context` blocks → `context[]` (structural — see [Context lowering](#context-lowering))
+8.  Lower @tags → JSON IR with provenance (source-order `body[]`); lower `context` keyword → `context[]` on slice (see [Context lowering](#context-lowering))
 9.  Emit IR files: workspace.json (full bundle), manifest.json, slice files
 — outside pactiac —
 10. (optional) BSC render / expand from IR
@@ -57,13 +57,17 @@ Every host tag, modifier, and macro invocation is checked the same way:
 2. Enclosing block is listed in the symbol's `in` targets (`PLACEMENT_VIOLATION`)
 3. Tag body satisfies the parsed `def` field spec — required fields present; extra fields allowed (`TAG_BODY_*`, `CLAUSE_DUPLICATE_KEY`)
 
-There is **no** compiler pass that special-cases particular tag names (no state-graph pass, no `@api` wire pass, no kernel catalog). Cross-module or cross-host consistency beyond field specs is **out of scope for pactiac** — downstream tools (e.g. BSC conformance) may interpret lowered IR.
+There is **no** compiler pass that special-cases particular tag names for **validation** (no state-graph pass, no `@api` wire pass). Cross-module or cross-host consistency beyond field specs is **out of scope for pactiac** — downstream tools (e.g. BSC conformance) may interpret lowered IR.
+
+**Lowering** preserves **source order**. The compiler walks the bound tree in document order. Host tags, prose lines, and macro expansions append to **`body[]`**; **`context`** blocks append to **`context[]`** on the same slice. Registry host entries carry **`tag`** plus def-shaped fields — agents read kind from `tag`, not from aggregation buckets.
 
 ---
 
 ## Tag lowering
 
-Lowering uses the **enclosing block at the use site** (which must match the symbol's `in` targets) to choose the IR file, plus **generic merge rules** from the symbol's modifier flag. The compiler does **not** map tag names (e.g. `@api`, `@entity`) to fixed JSON keys — those names live in packages only.
+Lowering uses the **enclosing block** to choose the **IR file**. Within that file, host tags, prose lines, and macro expansions append to **`body[]`** in source order. The **`context`** keyword appends to **`context[]`** on the same slice (structural slot — not mixed into `body[]`). Modifiers (`@@name`) do **not** get their own `body[]` slot — they merge into the **next** host tag (see [merge rules](#slot--merge-rules)). Macros expand **in place** during the expand-macros phase before lower, so spliced tags appear at the `#macro` site in `body[]`.
+
+**Why order matters:** IR is the agent source of truth. Authors sequence prose before policy before stack before modules deliberately. `@@output` before `@api` binds to that API, not the next one. Aggregating `@entity` / `@enum` / `@api` into separate typed arrays destroys document order and breaks those semantics.
 
 ### Scope — which IR file
 
@@ -81,23 +85,96 @@ Example: `export def @auth in service, product` may appear in `product { }` or `
 
 A def with `in product` only **cannot** appear inside `service { }` — placement rejects it before lower.
 
-### Slot — generic paths (no tag-name table)
+### Source-order `body[]`
 
-| Tag kind                                    | `ir.path`      | `ir.merge`         |
-| ------------------------------------------- | -------------- | ------------------ |
-| Host tag (`@name { }` or `@name Shorthand`) | `extensions[]` | `append_host`      |
-| Modifier (`@@name`)                         | `modifiers`    | `merge_into_host`  |
-| Field modifier on model line                | `fields[]`     | `field_annotation` |
-| Local non-exported `def @` in `module { }`  | per local def  | `merge_fields`     |
+Each IR slice (`product`, `module`, `model`, `service`) has structural **`name`**, ordered **`body[]`**, and optional ordered **`context[]`**:
 
-Each appended host object carries the tag body fields (and `id` / `name` when the tag declares a host id). There is **no** compiler table that routes `@api` → `endpoints[]` or `@entity` → `entities[]`.
+| IR slice root | `body[]` | `context[]` |
+| ------------- | -------- | ----------- |
+| `product.json` → `product` | tags, prose, macro expansions | context keyword blocks |
+| `*.module.json` → `module` | same | same |
+| `*.model.json` → `model` | same | same |
+| `*.service.json` → `service` | same | same |
+
+`context[]` preserves source order **among context blocks** on that slice. Relative order between a context block and a `body[]` entry is not encoded in a single stream — use both arrays on the slice.
+
+Nested host tags (e.g. `@surface` inside `@api`) append to the parent host's **`body[]`**, preserving order within the parent.
+
+**Structural fields** on block headers (`service.name`, `service.flags.*` from field lines and service macros) stay on the service root object — not in `body[]`.
+
+| Source construct | IR slot |
+| ---------------- | ------- |
+| `>` / `>>` prose line | `{ "kind": "prose", "text": "…", "provenance": "GUIDANCE" }` in **`body[]`** |
+| `context id { path: … }` | `{ "name", "path", … }` in **`context[]`** — structural keyword slot (not `body[]`, not `tag`) |
+| `@context` (registry tag, if defined) | `{ "tag": "context", … }` in **`body[]`** — distinct from the keyword |
+| `@guide` prose-only lines | `{ "tag": "guide", "text": "…", "provenance": "GUIDANCE" }` |
+| `@entity`, `@api`, `@rule`, … | `{ "tag": "<symbol>", …fields from def…, "provenance": "Pactia" }` |
+| `#macro` expansion | Spliced tags/prose appear here in macro expansion order |
+
+**Fixed JSON keys per tag** means each entry's **object shape** is determined by the registry `def` for that `tag` (`method`/`path` for `api`, `name`/`fields` for `entity`, …) — not separate top-level buckets like `entities[]` vs `enums[]`.
+
+Example — source order preserved:
+
+```pactia
+model {
+  @enum Status { values: [PENDING, FULFILLED] }
+  @entity Order { id: uuid }
+  @enum Priority { values: [LOW, HIGH] }
+}
+```
+
+```json
+{
+  "model": {
+    "body": [
+      { "tag": "enum", "name": "Status", "values": ["PENDING", "FULFILLED"], "provenance": "Pactia" },
+      { "tag": "entity", "name": "Order", "fields": [ … ], "provenance": "Pactia" },
+      { "tag": "enum", "name": "Priority", "values": ["LOW", "HIGH"], "provenance": "Pactia" }
+    ]
+  }
+}
+```
+
+Service example — modifier binds to the following host:
+
+```pactia
+@@output OrderListResponse
+@api list_orders { method: GET, path: "/api/v1/orders" }
+@auth { roles: [Operator] }
+@api create_order { method: POST, path: "/api/v1/orders" }
+```
+
+```json
+{
+  "service": {
+    "body": [
+      {
+        "tag": "api",
+        "id": "list_orders",
+        "method": "GET",
+        "path": "/api/v1/orders",
+        "modifierTags": ["output"],
+        "modifiers": { "bodyRef": "OrderListResponse" },
+        "provenance": "Pactia"
+      },
+      { "tag": "auth", "roles": ["Operator"], "provenance": "Pactia" },
+      { "tag": "api", "id": "create_order", "method": "POST", "path": "/api/v1/orders", "provenance": "Pactia" }
+    ]
+  }
+}
+```
+
+### Slot — merge rules
 
 | `ir.merge`         | Meaning                                                               |
 | ------------------ | --------------------------------------------------------------------- |
-| `append_host`      | Tag block becomes one object pushed at `path`                         |
-| `merge_into_host`  | Modifier merges into the pending host (e.g. `@@output` before `@api`) |
-| `merge_fields`     | Body fields merge as a nested object at `path` (local module defs)    |
-| `field_annotation` | Field-level tag merges under the model field                          |
+| `append_host`      | One object appended to `body[]` (or parent host `body[]` when nested) |
+| `merge_into_host`  | Modifier merges into the **next** host (e.g. `@@output` before `@api`) |
+| `field_annotation` | Field-level tag merges under the owning model field line              |
+
+Each appended host object carries **`tag`**, body fields, **`id`** or **`name`** when declared, optional **`modifierTags`** / **`modifiers`** on endpoints, and **`provenance`**.
+
+Field lines in `@entity` bodies include **`modifierTags`** on each field (`pk`, `nullable`, `pii`, …) even when the modifier body is empty.
 
 Modifier shorthand (`@@output VehicleListResponse` before `@api`) uses **`merge_into_host`** — see [language-spec.md — Tags](language-spec.md#tags).
 
@@ -105,26 +182,19 @@ Host-tag prefix shorthand (`@auth Customer` when the package def includes `modif
 
 ### Prose
 
-Prose (`>`, `>>`) lowers with provenance **`GUIDANCE`** into the nearest applicable host's guidance array unless linked to enforceable tag fields.
+Standalone `>` / `>>` lines in a block lower as **`body[]`** entries (`kind: prose`). Prose inside a host tag block lowers into that host object's fields (`text`, `summary`) without a separate `body[]` slot.
 
 ### Context lowering
 
-**Status: Implemented** — pactiac lowers `context[]`; pactia build writes the index and bundles files (see below).
+**Status: Implemented** — pactiac lowers `context { }` into **`context[]`** on the enclosing slice (structural — like `name` on product); pactia build writes the index and bundles files (see below).
 
-The **`context`** keyword is **not** lowered through the tag registry. It uses one fixed IR slot per scope — the same placement table as tags for **which file**, but a dedicated array key:
+The **`context`** keyword is **not** lowered through the tag registry. It does **not** use `tag` or `body[]`. A registry export `@context` (if any) still lowers to **`body[]`** with `tag: context` — no collision.
 
-| Enclosing block | IR file | IR key |
-| --------------- | ------- | ------ |
-| `product { }` | `product.json` | `context[]` |
-| `module { }` | `*.module.json` | `context[]` |
-| `model { }` | `*.model.json` | `context[]` |
-| `service { }` | `*.service.json` | `context[]` |
-
-Each entry:
+Each entry in **`context[]`**:
 
 ```json
 {
-  "id": "api_notes",
+  "name": "api_notes",
   "path": "./context/catalog/services/catalog-admin/api-notes.md",
   "guidance": ["API design notes for admin create flow."],
   "provenance": "Pactia"
@@ -172,7 +242,8 @@ input/
 | `modules/<m>/<m>.module.json`           | Module scope                                                                                                     |
 | `modules/<m>/<m>.model.json`            | Model scope                                                                                                      |
 | `modules/<m>/services/<s>.service.json` | Service scope                                                                                                    |
-| `context[]` on each slice above         | External file references (`id`, `path`, optional `guidance`) — provenance `Pactia` or `GUIDANCE` for caption   |
+| `body[]` on each slice above            | Ordered tags, prose, macro expansions in source order                                      |
+| `context[]` on each slice above         | Context keyword attachments (`name`, `path`, optional `guidance`) — source order within `context[]` |
 
 **Agents and tools:** read `workspace.json` first — it is the entry point referenced by kernel `@pactia`. Use per-slice files when you only need one module or service, or when diffing a single scope.
 
@@ -204,17 +275,19 @@ Products with **no package dependencies** may compile without a `pactia.lock`; `
 
 Compile from the project root (directory containing `product.pactia`).
 
-### Import + attach (1.2)
+**Folder-agnostic:** fragment locations come from `import … from ./path` in `product.pactia`. Directory names (`modules/`, `fragments/`, `domains/…`) are team convention only.
 
-1. Read `product.pactia` (imports, product-level tags, attach tree).
-2. Resolve `import { symbols } from ./path.pactia` — load `export module`, `export service`, `export model`, `export context` bodies.
-3. Splice attach references into inline `module { }` / `service { }` / `model { }` blocks; `context(symbol)` splices exported context blocks.
-4. Merged source contains **package imports only** (not fragment import lines). Tag and macro symbols (`@api`, `#database`, …) are resolved from those product-level `@pactia/*` imports for **all** inlined fragment bodies — fragments do not import packages themselves. See [language-spec.md — Package imports vs fragment imports](language-spec.md#package-imports-vs-fragment-imports).
+### Import + attach (normative)
 
-Example attach:
+1. Read `product.pactia` — package imports, fragment imports, product-level tags, attach tree.
+2. Resolve each `import { symbols } from ./path.pactia` — load `export module`, `export service`, `export model`, `export context` bodies from those paths.
+3. Splice attach references: `module(name) { service(Symbol) { model(…) context(…) } }`.
+4. Merged source retains **package imports only** (not fragment import lines). Tags and macros in fragments resolve from product-level `@pactia/*` imports.
+
+Example:
 
 ```pactia
-import { orders, orders_model, OrderService } from ./fragments/…;
+import { orders, orders_model, OrderService } from ./fragments/orders/…;
 
 product Relay {
   #rust-stack
@@ -226,15 +299,30 @@ product Relay {
 }
 ```
 
+Same mechanism when paths use `./modules/workspace/…` (see [PPM](https://github.com/pactia-lang/examples/tree/main/ppm)) — only import paths differ.
+
 Diagnostics: `IMPORT_UNUSED`, `ATTACH_UNDEFINED`, `ATTACH_KIND_MISMATCH`, `CONTEXT_IMPORT_UNUSED`, `CONTEXT_ATTACH_UNDEFINED`, `CONTEXT_ATTACH_KIND_MISMATCH`.
 
-No module list in `pactia.toml`. Single-file products declare all blocks inline (see [relay.pactia](https://github.com/pactia-lang/pactiac/blob/main/test/fixtures/kernel/relay.pactia)).
+Canonical attach example: [relay workspace](https://github.com/pactia-lang/pactiac/tree/main/test/fixtures/workspace/relay).
+
+No module list in `pactia.toml`. Single-file products declare all blocks inline (see [relay.pactia monolith](https://github.com/pactia-lang/pactiac/blob/main/test/fixtures/kernel/relay.pactia)).
+
+### Legacy folder scan (deprecated)
+
+If `product.pactia` has **no** attach tree, pactiac may still merge `modules/<dir>/module.pactia` + `services/*.service.pactia` by directory convention. **Not normative** — use import + attach for new work.
+
+Merge order:
+
+1. Load `pactia.toml` (dependencies only)
+2. Resolve package imports (lockfile pins when lockfile present)
+3. Assemble product AST (import + attach, or legacy scan)
+4. Continue compile phases 0–9
 
 ---
 
 ## Context index (pactia build)
 
-**Status: Implemented** — `pactia build` walks compiled IR `context[]` entries and writes **`context.index.json`** beside the IR tree. Bundles files under `input/context/` by default; rewrites IR `context[].path` values and index paths to bundle-relative `context/...` locations so `out/` is self-contained for agents. Use `--no-bundle-context` to skip the copy and keep workspace-relative paths.
+**Status: Implemented** — `pactia build` walks compiled IR **`context[]`** on each slice and writes **`context.index.json`** beside the IR tree. Bundles files under `input/context/` by default; rewrites bundled `path` values to `context/...` locations so `out/` is self-contained for agents. Use `--no-bundle-context` to skip the copy and keep workspace-relative paths.
 
 | Step | Behavior |
 | ---- | -------- |
@@ -250,30 +338,21 @@ Example index entry for a directory group:
 
 ```json
 {
-  "id": "admin_assets",
-  "scope": "service/catalog/catalog-admin",
-  "path": "context/catalog/services/catalog-admin/",
-  "files": [
-    { "path": "context/catalog/services/catalog-admin/api-notes.md", "digest": "sha256:…" }
+  "entries": [
+    {
+      "name": "admin_assets",
+      "scope": "service/catalog/catalog-admin",
+      "path": "context/catalog/services/catalog-admin/",
+      "files": [
+        { "path": "context/catalog/services/catalog-admin/api-notes.md", "digest": "sha256:…" }
+      ]
+    }
   ]
 }
 ```
 
 Agents and CI use digests in `context.index.json` to detect which attachments changed without diffing full IR slices.
 
-### Legacy folder merge (deprecated)
-
-1. For each `modules/<dir>/module.pactia`, merge into `product { }`.
-2. Merge each `modules/<dir>/services/*.service.pactia`; resolve `import "./…"` for features under that module.
-
-Merge order (both paths):
-
-1. Load `pactia.toml` (dependencies only)
-2. Resolve package imports (lockfile pins when lockfile present)
-3. Assemble product AST (attach or legacy folder merge)
-4. Continue compile phases 0–9
-
----
 
 ## Provenance model
 

@@ -200,7 +200,7 @@ service OrderService {
 }
 ```
 
-Service-scoped macros (e.g. `#database`, `#cache`, `#events` from `@pactia/kernel`) splice inside `service { }`. Their def bodies may assign dot-path fields such as `flags.*` or `modifiers.*` — merged via generic lowering rules in [compilation.md](compilation.md#tag-lowering), not a tag-name routing table.
+Service-scoped macros (e.g. `#database`, `#cache`, `#events` from `@pactia/kernel`) splice inside `service { }` at the invocation site. Expanded tags appear in service **`body[]`** in that order — see [compilation.md](compilation.md#tag-lowering).
 
 **Invalid** — macro outside the host block:
 
