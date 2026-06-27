@@ -34,7 +34,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 ### Changed (1.2 baseline)
 
 - **Workspace assembly:** import + attach in `product.pactia` is normative; folder layout is convention only.
-- **Macro invocation:** `#name` / `#name(args)` replaces `#[name]` (legacy may still parse during transition).
+- **Macro invocation:** `#name` / `#name(args)` replaces `#[name]` (bracket syntax removed in 1.2).
 - **Modifier invocation:** `@@output`, `@@pk`, etc. replace `@output` / `@pk` prefix on the line above hosts/fields.
 - **Docs updated for 1.2:** `language-spec.md`, `compilation.md`, `platform.md`, `macros.md`, `registry.md`, `packages.md`, `grammar-reference.md`, `editor-support.md`, `overview.md`.
 - **Removed `fixtures/`:** `.pactia` examples live in [pactiac test/fixtures](https://github.com/pactia-lang/pactiac/tree/main/test/fixtures) only — spec is docs + manifest schemas.
@@ -72,7 +72,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [1.0.0] - TBD
 
-Pre-1.1 specification (superseded by unreleased 1.1 pass).
+Pre-1.1 specification (superseded by 1.2).
 
 ### Added
 
