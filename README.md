@@ -1,5 +1,9 @@
 # Pactia specification
 
+[![CI](https://github.com/pactia-lang/spec/actions/workflows/ci.yml/badge.svg)](https://github.com/pactia-lang/spec/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+[![Spec Version](https://img.shields.io/badge/spec-1.2-blue.svg)](https://github.com/pactia-lang/spec/releases)
+
 ### The intent language for the AI era
 
 **You write what must stay true. AI writes how it works.**
