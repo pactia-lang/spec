@@ -9,7 +9,7 @@ Authors: [overview.md](overview.md) | [language-spec.md](language-spec.md)
 ## Program structure
 
 ```
-Program           ::= VersionLine? ( ImportLine | FragmentExport | DefDecl | ProductDecl )*
+Program           ::= VersionLine? ( ImportLine | FragmentExport | ManifestExport | DefDecl | ConstantExport | ProductDecl )*
 VersionLine       ::= "pactia" Version
 ProductDecl       ::= "product" Identifier "{" ProductItem* "}"
 ProductItem       ::= AttachModule | ModuleDecl | TagLike | MacroLike | ProseLine
@@ -20,6 +20,8 @@ ModuleDecl        ::= "module" Identifier "{" ModuleItem* "}"
 ServiceDecl       ::= "service" Identifier "{" ServiceItem* "}"
 ModelDecl         ::= "model" Identifier? "{" ModelItem* "}"
 FragmentExport    ::= "export" ( ModuleDecl | ModelDecl | ServiceDecl | DefDecl | ModuleConstDecl )
+ManifestExport    ::= "export" Path
+                   // Package index only: export "./commerce.module.pactia"
 ImportLine        ::= "import" PackagePath ";"
                   |   "import" "{" ImportSymbol ( "," ImportSymbol )* "}" "from" ImportSource ";"
 ImportSymbol      ::= "@" Identifier | "@@" Identifier | "#" Identifier | Identifier
@@ -134,6 +136,15 @@ All tags use this table only — **no tag-name-specific error codes** in pactiac
 | `PACKAGE_NOT_FOUND` | Unknown package |
 | `PACKAGE_LOCK_MISMATCH` | Digest mismatch |
 | `LOCK_ENTRY_MISSING` | Missing lock pin |
+
+### Topology packages (1.3)
+
+| Code | Condition |
+| --- | --- |
+| `TOPOLOGY_DEF_FORBIDDEN` | `export def module` / `service` / `model` / `context` (use `export` without `def`) |
+| `TOPOLOGY_WILDCARD_FORBIDDEN` | Bare `import @topology-pkg` (use `import { symbol } from …`) |
+| `PACKAGE_EXPORT_MIXED` | Both registry and topology exports without `mixed-exports = true` opt-in |
+| `EXPORT_NOT_DECLARED` | Imported symbol not found in topology package export surface |
 
 Author-facing subset: [language-spec.md — Author errors](language-spec.md#author-errors).
 
