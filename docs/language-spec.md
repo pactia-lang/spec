@@ -428,6 +428,41 @@ Rules: compile-time literals or prose only; bind once; no expressions; do not lo
 
 ---
 
+## Package constants (1.2)
+
+Package `index.pactia` may export constants with or without `def`:
+
+```pactia
+pactia 1.0
+
+export def max_page = 100
+export def default_timeout = 30
+export def hint = > Validate all inputs.
+```
+
+**Grammar:** `"export" "def"? Identifier "=" ( Literal | ProseLine | MultilineProse )`
+
+| Form | Meaning |
+|------|---------|
+| `export def name = value` | Valid — publishes a named constant for importers |
+| `export name = value` | **`CONSTANT_DEF_REQUIRED`** — missing `def` keyword |
+| `def name = value` inside `module { }` | Module-local constant (existing, unchanged) |
+
+**Consumer import:**
+
+```pactia
+import { max_page } from @pactia/rust-stack;
+import { * } from @pactia/kernel;  // includes export def constants
+
+product MyApp {
+  > Page size is ${max_page}
+}
+```
+
+`export def name = value` constants are resolved from vendored package `index.pactia` at compile time. `${name}` interpolation in prose and macro bodies reads these values. Unresolved constants emit `CONSTANT_UNDEFINED`.
+
+---
+
 ## Literals and fields
 
 Tag bodies use assignment syntax: `key: value`, nested `{ }`, arrays `[ … ]`, identifiers, strings, numbers, booleans.

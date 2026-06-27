@@ -35,6 +35,8 @@ FilePath          ::= Path
 ```
 DefDecl           ::= ExportOpt "def" DefSigil DefName DefParams? InClause? "{" DefBody* "}"
 ModuleConstDecl   ::= "def" Identifier "=" ( Literal | ProseLine | MultilineProse )
+ConstantExport    ::= ExportOpt "def" Identifier "=" ( Literal | ProseLine | MultilineProse )
+  // Package index only: "export" "def" max_page "=" 100
 ExportOpt         ::= "export" | ε
 DefSigil          ::= "@" | "@@" | "#"
 DefName           ::= Identifier
@@ -111,6 +113,8 @@ AssignmentLine    ::= Identifier ":" Value ","
 | `CONTEXT_ATTACH_KIND_MISMATCH` | `context(x)` expects `export context`, not module/service/model |
 | `FRAGMENT_PACKAGE_IMPORT` | Package import in a fragment file (warning — ignored at assembly) |
 | `CONSTANT_UNDEFINED` | `${name}` references unknown module constant |
+| `CONSTANT_DEF_REQUIRED` | `export name = value` missing `def` keyword |
+| `EXPORT_KIND_AMBIGUITY` | Same bare name used as both constant and topology export |
 
 ### Tag bodies
 
