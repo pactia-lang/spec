@@ -8,6 +8,9 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- **Package constants** — `export def name = value` in package `index.pactia`; resolvable via `import { name } from @pkg` and `${name}` interpolation in consumer prose and macro bodies. Bare `export name = value` (missing `def`) emits `CONSTANT_DEF_REQUIRED`. See [language-spec.md — Package constants](docs/language-spec.md#package-constants-12).
+- **`CONSTANT_DEF_REQUIRED`** and **`EXPORT_KIND_AMBIGUITY`** diagnostic codes added to [grammar-reference.md](docs/grammar-reference.md#implementer-error-codes).
+- **`effectiveRegistry.constants`** — package-exported constants merged into the compile-time symbol table alongside tags, macros, and contexts.
 - **`context` keyword** — lowers to structural `context[]` on each IR slice; pactia build indexes and bundles assets
 - **Package manager docs** — `pactia install`, dual coordinates, `~/.pactia/config.toml`, lock-is-truth, `pactia update`, `pactia why`, `publish --dry-run` in [packages.md](docs/packages.md), [overview.md](docs/overview.md), [platform.md](docs/platform.md)
 - **Crate model:** packages are `pactia.toml` + `index.pactia` only — no `pactia.package.json`; IR slots derived at product compile.

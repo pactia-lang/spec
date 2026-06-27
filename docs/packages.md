@@ -220,9 +220,14 @@ export def @sanctions_check in service {
 export def #sanctions_screen in service {
   @sanctions_check { level: enhanced, }
 }
+
+export def max_page = 100
+export def hint = > Validate all inputs.
 ```
 
 Prose-first: `>` or `>> … >>`. Structured fields optional.
+
+**Package constants** (`export def name = value`): exported named values (literals or prose) resolved at compile time from vendored `index.pactia`. Consumers use `import { name } from @pkg` to import constants. `export name = value` without `def` emits `CONSTANT_DEF_REQUIRED`.
 
 ---
 
