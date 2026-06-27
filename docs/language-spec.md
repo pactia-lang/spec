@@ -18,7 +18,7 @@ Tag and macro **names** (e.g. `@api`, `#list`, `@@output`) come from **imported 
 | `#[rust-stack]` inside `@stack { }` | `#rust-stack` at product level after `import @pactia/rust-stack` (no `[stack]` in TOML) |
 | (none)                            | `context { }` keyword — external files for agent guidance (see [Context](#context))   |
 
-Legacy `#[…]` bracket macros may still be accepted during transition. Multi-file products use **import + attach** — see [Workspace layout](#workspace-layout).
+Multi-file products use **import + attach** — see [Workspace layout](#workspace-layout).
 
 ---
 
@@ -625,10 +625,6 @@ my-product/
 ```
 
 Use whichever paths fit the repo; only **import paths** and the **attach tree** matter at compile time.
-
-### Legacy folder scan (deprecated)
-
-When `product.pactia` has **no** attach tree, older compilers may merge `modules/<dir>/module.pactia` + `services/*.service.pactia` by directory convention. **Do not rely on this** for new products — explicit import + attach is the supported model.
 
 ### Compile merge order
 

@@ -27,8 +27,7 @@ Pactia compiles to **AI-neutral JSON IR** — not vendor-specific prompts. Defau
 Canonical phase list — other docs link here rather than renumbering:
 
 ```
-0.  Assemble workspace: resolve fragment imports + attach in `product.pactia` (folder-agnostic paths),
-    or legacy merge of modules/*/module.pactia + services, into one product AST
+0.  Assemble workspace: resolve fragment imports + attach in `product.pactia` (folder-agnostic paths) into one product AST
 1.  Validate version declaration (pactia 1.0)
 2.  Lex: strip comments (never in IR)
 3.  Parse source → AST
@@ -306,17 +305,6 @@ Diagnostics: `IMPORT_UNUSED`, `ATTACH_UNDEFINED`, `ATTACH_KIND_MISMATCH`, `CONTE
 Canonical attach example: [relay workspace](https://github.com/pactia-lang/pactiac/tree/main/test/fixtures/workspace/relay).
 
 No module list in `pactia.toml`. Single-file products declare all blocks inline (see [relay.pactia monolith](https://github.com/pactia-lang/pactiac/blob/main/test/fixtures/kernel/relay.pactia)).
-
-### Legacy folder scan (deprecated)
-
-If `product.pactia` has **no** attach tree, pactiac may still merge `modules/<dir>/module.pactia` + `services/*.service.pactia` by directory convention. **Not normative** — use import + attach for new work.
-
-Merge order:
-
-1. Load `pactia.toml` (dependencies only)
-2. Resolve package imports (lockfile pins when lockfile present)
-3. Assemble product AST (import + attach, or legacy scan)
-4. Continue compile phases 0–9
 
 ---
 
