@@ -86,15 +86,16 @@ Full index: [docs/README.md](docs/README.md)
 | [platform.md](docs/platform.md) | Stack packages |
 | [compilation.md](docs/compilation.md) | Compiler pipeline, JSON IR |
 | [editor-support.md](docs/editor-support.md) | VS Code / Cursor highlighting |
+| [normative-reference.md](docs/normative-reference.md) | One-page reference — implementer cheat sheet |
 | [schemas/](schemas/) | JSON Schema — `pactia.toml`, `pactia.lock` only |
 
 ## Tooling
 
 | Pactia spec | Language declaration | pactiac | pactia |
 | --- | --- | --- | --- |
-| **1.2** | `pactia 1.0` on the version line | `>=1.0.0` | `>=1.0.0` |
+| **1.2** | `pactia 1.0` on the version line | `>=0.3.0` | `>=0.3.0` |
 
-Spec **1.2** documents syntax and IR for products that declare **`pactia 1.0`** in source.
+Spec **1.2** documents syntax and IR for products that declare **`pactia 1.0`** in source. Highlights: package constants (`export def name = value`), `CONSTANT_DEF_REQUIRED` diagnostic, `context` keyword, import + attach workspace assembly.
 
 ## The stack
 
