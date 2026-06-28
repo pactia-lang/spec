@@ -36,6 +36,30 @@ Transitive package dependencies (packages listed only in a dependency's `pactia.
 
 ---
 
+## structuralExports (1.3)
+
+Topology packages export modules, services, models, and contexts for multi-team composition. These symbols live in **`structuralExports`** — a separate map on `effectiveRegistry` — not in the tag/macro tier.
+
+| Field | Source | Consumer |
+|-------|--------|----------|
+| `tags` | `export def @` / `export def @@` in package `index.pactia` | `@name`, `@@name` in source |
+| `macros` | `export def #` in package `index.pactia` | `#name(args)` in source |
+| `constants` | `export def name = value` in package `index.pactia` | `${name}` interpolation |
+| `contexts` | `export context` in package `index.pactia` | `context(name)` attach |
+| `structuralExports` | `export module` / `service` / `model` / `context` in topology packages | `import { name } from @topology-pkg` → attach |
+
+**Import routing by profile:**
+
+| Package profile | Consumer import style | Resolved via |
+|----------------|----------------------|--------------|
+| Registry | `import { @api, #list, max_page } from @pkg` | `tags`, `macros`, `constants` |
+| Topology | `import { commerce, OrderService } from @pkg` | `structuralExports` |
+| Mixed | `import { @api, commerce } from @pkg` | Both; requires `mixed-exports = true` |
+
+Bare `import @topology-pkg` (wildcard) is forbidden (`TOPOLOGY_WILDCARD_FORBIDDEN`). Use explicit `import { symbol } from …`.
+
+---
+
 ## effectiveRegistry
 
 Built once per compile after package resolution:

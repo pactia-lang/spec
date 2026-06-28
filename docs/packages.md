@@ -190,6 +190,24 @@ version = "0.1.0"
 | No `kind`              | Unlike old drafts — all packages are equal crates; `@stack` is a tag in source |
 | No extra TOML sections | Only `[package]` and `[dependencies]`                                          |
 
+### Export profile fields
+
+Topology packages may declare their export profile in `pactia.toml`:
+
+```toml
+[package]
+name = "@acme/marketplace-backend"
+version = "1.0.0"
+exports = "topology"       # "registry" (default) | "topology"
+```
+
+| Field | Values | Meaning |
+|-------|--------|---------|
+| `exports` | `"registry"` (default), `"topology"` | Declared export profile; validated against `index.pactia` content (`PACKAGE_PROFILE_MISMATCH`) |
+| `mixed-exports` | `true` / `false` (default) | Opt-in for packages exporting both registry defs and topology symbols; discouraged (`HYBRID_PACKAGE_DISCOURAGED` warning) |
+
+When `mixed-exports = true`, the `exports` field is ignored. Preferred: two separate coordinates (one registry, one topology).
+
 ### `pactia.lock`
 
 Required when the product **imports packages**. Optional for altitude-0 products with no `@scope/name` imports (no vendored deps to pin).
@@ -203,7 +221,7 @@ version = "1.0.0"
 digest = "sha256:…"
 ```
 
-Digest covers `pactia.toml` + `index.pactia` in the vendored tree (or `.digest` marker when present).
+Digest covers `pactia.toml` + `index.pactia` + manifest-referenced `export "./…"` files in the vendored tree (or `.digest` marker when present).
 
 ---
 

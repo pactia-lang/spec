@@ -447,6 +447,14 @@ Packages may publish structural topology — modules, services, models, and cont
 - Bare `import @topology-pkg` is forbidden — use `import { symbol } from …` (`TOPOLOGY_WILDCARD_FORBIDDEN`)
 - Mixed packages (both registry and topology exports) require `mixed-exports = true` in `pactia.toml [package]` (`PACKAGE_EXPORT_MIXED`)
 - Imported symbols must exist in the package export surface (`EXPORT_NOT_DECLARED`)
+- `export service` / `model` / `context` nested inside `export module { }` is forbidden — declare at root level (`TOPOLOGY_NESTED_EXPORT`)
+- Only one root topology export per bare `.pactia` file (`TOPOLOGY_MULTIPLE_ROOT_EXPORTS`)
+- `index.pactia` with `export "./file"` manifest must not also contain inline topology exports (`TOPOLOGY_MANIFEST_INLINE_EXPORT`)
+- `export "./file"` must reference an existing file (`TOPOLOGY_EXPORT_FILE_MISSING`)
+- `pactia.toml` `exports` field must match `index.pactia` content — profile mismatch is an error (`PACKAGE_PROFILE_MISMATCH`)
+- `mixed-exports = true` is an escape hatch; prefer separate registry and topology packages (`HYBRID_PACKAGE_DISCOURAGED`, warning)
+- `import { *, topologySymbol } from @pkg` mixes registry wildcard with topology — use separate import lines (`PACKAGE_IMPORT_MIXED`)
+- Two packages exporting the same service name is a collision (`TOPOLOGY_DUPLICATE_SERVICE`)
 
 ---
 
@@ -515,6 +523,7 @@ import { #rust-stack, #list } from @pactia/rust-stack;
 | `@name`    | Host tag def                 |
 | `@@name`   | Modifier tag def             |
 | `#name`    | Macro def                    |
+| `*`        | All registry exports         |
 | `max_page` | Exported constant (no sigil) |
 
 One style per package coordinate per file (full **or** partial, not both for the same package).
@@ -761,6 +770,13 @@ Normative spec vs **pactiac** ([feat/pactiac-1.2-compiler](https://github.com/pa
 | `IMPORT_UNUSED`          | Partial import symbol never referenced                              |
 | `REGISTRY_COLLISION`     | Duplicate unqualified name from any two registry sources            |
 | `UNKNOWN_SYMBOL`         | Unregistered `@name` / `#name` / `@@name`                           |
+| `TOPOLOGY_DEF_FORBIDDEN` | `export def module` / `service` / `model` / `context` (use `export` without `def`) |
+| `TOPOLOGY_NESTED_EXPORT` | `export service` / `model` / `context` nested inside `export module` |
+| `TOPOLOGY_MULTIPLE_ROOT_EXPORTS` | More than one root topology export per bare file |
+| `TOPOLOGY_MANIFEST_INLINE_EXPORT` | Inline topology with `export "./file"` manifest |
+| `EXPORT_NOT_DECLARED`    | Imported symbol not in package export surface |
+| `PACKAGE_EXPORT_MIXED`   | Registry + topology exports without `mixed-exports = true` |
+| `TOPOLOGY_DUPLICATE_SERVICE` | Same service name from two packages |
 
 Implementer codes: [grammar-reference.md](grammar-reference.md).
 
