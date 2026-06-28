@@ -9,8 +9,10 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 ### Added
 
 - **Topology packages (1.3)** — structural exports for multi-team product composition. `export "./file.pactia"` manifest, three profiles (Registry/Topology/Mixed), `mixed-exports = true` opt-in, topology body inlining. See [language-spec.md — Topology packages](docs/language-spec.md#topology-packages-13), [packages.md — Topology](docs/packages.md#topology-packages-13), [grammar-reference.md](docs/grammar-reference.md).
-- **Topology diagnostics** — `TOPOLOGY_DEF_FORBIDDEN`, `TOPOLOGY_WILDCARD_FORBIDDEN`, `PACKAGE_EXPORT_MIXED`, `EXPORT_NOT_DECLARED` error codes.
+- **Topology diagnostics** — `TOPOLOGY_DEF_FORBIDDEN`, `TOPOLOGY_WILDCARD_FORBIDDEN`, `TOPOLOGY_NESTED_EXPORT`, `TOPOLOGY_MULTIPLE_ROOT_EXPORTS`, `TOPOLOGY_MANIFEST_INLINE_EXPORT`, `TOPOLOGY_EXPORT_FILE_MISSING`, `PACKAGE_EXPORT_MIXED`, `PACKAGE_PROFILE_MISMATCH`, `HYBRID_PACKAGE_DISCOURAGED`, `PACKAGE_IMPORT_MIXED`, `EXPORT_NOT_DECLARED`, `TOPOLOGY_DUPLICATE_SERVICE` error/warning codes. See [grammar-reference.md](docs/grammar-reference.md#implementer-error-codes).
 - **Package constants** — `export def name = value` in package `index.pactia`; resolvable via `import { name } from @pkg` and `${name}` interpolation in consumer prose and macro bodies. Bare `export name = value` (missing `def`) emits `CONSTANT_DEF_REQUIRED`. See [language-spec.md — Package constants](docs/language-spec.md#package-constants-12).
+- **`exports` field in `pactia.toml`** — packages may declare `exports = "topology"` or `exports = "registry"` (default) to declare their export profile; validated against `index.pactia` content (`PACKAGE_PROFILE_MISMATCH`).
+- **`*` wildcard import** — `import { *, commerce } from @pkg` supported in import symbol grammar; `*` imports all registry exports.
 - **`CONSTANT_DEF_REQUIRED`** and **`EXPORT_KIND_AMBIGUITY`** diagnostic codes added to [grammar-reference.md](docs/grammar-reference.md#implementer-error-codes).
 - **`effectiveRegistry.constants`** — package-exported constants merged into the compile-time symbol table alongside tags, macros, and contexts.
 - **`context` keyword** — lowers to structural `context[]` on each IR slice; pactia build indexes and bundles assets

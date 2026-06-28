@@ -145,6 +145,14 @@ All tags use this table only — **no tag-name-specific error codes** in pactiac
 | `TOPOLOGY_WILDCARD_FORBIDDEN` | Bare `import @topology-pkg` (use `import { symbol } from …`) |
 | `PACKAGE_EXPORT_MIXED` | Both registry and topology exports without `mixed-exports = true` opt-in |
 | `EXPORT_NOT_DECLARED` | Imported symbol not found in topology package export surface |
+| `TOPOLOGY_NESTED_EXPORT` | `export service` / `model` / `context` nested inside `export module { }` |
+| `TOPOLOGY_MULTIPLE_ROOT_EXPORTS` | More than one root topology export per bare `.pactia` file |
+| `TOPOLOGY_MANIFEST_INLINE_EXPORT` | Inline `export module` / `service` in `index.pactia` when using `export "./file"` manifest |
+| `TOPOLOGY_EXPORT_FILE_MISSING` | `export "./file"` references a file that does not exist |
+| `PACKAGE_PROFILE_MISMATCH` | `pactia.toml` `exports` field does not match `index.pactia` content |
+| `HYBRID_PACKAGE_DISCOURAGED` | `mixed-exports = true` escape hatch; prefer separate registry + topology packages |
+| `PACKAGE_IMPORT_MIXED` | Consumer imports `{ *, topologySymbol }` from a hybrid package |
+| `TOPOLOGY_DUPLICATE_SERVICE` | Two packages export the same service name |
 
 Author-facing subset: [language-spec.md — Author errors](language-spec.md#author-errors).
 
