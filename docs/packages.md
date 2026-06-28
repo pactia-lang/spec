@@ -268,6 +268,35 @@ All imported packages merge with the same rules. `@stack` lowers as a normal pro
 
 ---
 
+## Topology packages (1.3)
+
+Packages may export structural topology (modules, services, models, contexts) for multi-team product composition. See [language-spec.md — Topology packages](language-spec.md#topology-packages-13).
+
+**Manifest (`index.pactia`):**
+```pactia
+pactia 1.0
+export "./commerce.module.pactia"
+export "./orders.service.pactia"
+export "./orders.model.pactia"
+```
+
+**Bare topology file:**
+```pactia
+export module commerce {
+  service OrderApi { @api list { method: GET, path: "/orders" } }
+}
+```
+
+**Consumer:**
+```pactia
+import { commerce, OrderService } from @acme/marketplace-backend;
+product MyApp { module(commerce) { service(OrderService) { } } }
+```
+
+**Profiles:** `detectPackageProfile()` determines Registry, Topology, or Mixed from `index.pactia` content. Mixed packages require `mixed-exports = true` in `pactia.toml [package]`.
+
+---
+
 ## Publish
 
 Git repo + semver tag. Ship **`pactia.toml` + `index.pactia`** (plus any extra files in the repo tree).

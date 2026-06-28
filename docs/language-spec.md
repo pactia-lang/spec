@@ -428,6 +428,28 @@ Rules: compile-time literals or prose only; bind once; no expressions; do not lo
 
 ---
 
+## Topology packages (1.3)
+
+Packages may publish structural topology — modules, services, models, and contexts — as versioned dependencies for multi-team product composition.
+
+**Profiles:** The compiler detects the package profile from `index.pactia` content:
+
+| Profile | `index.pactia` contains | Consumer import |
+|---------|------------------------|-----------------|
+| Registry | `export def @/#/@@` and/or `export def name = value` only | `import { @api, max_page } from @pkg` |
+| Topology | `export module/service/model/context` and/or `export "./..."` | `import { commerce, OrderService } from @pkg` |
+| Mixed | Both — requires `mixed-exports = true` in `pactia.toml` | Partial imports only |
+
+**Manifest (`export "./file"`):** Package `index.pactia` may declare `export "./commerce.module.pactia"` to reference bare topology files. The compiler loads each referenced file, extracts the export block body, and inlines it during workspace assembly.
+
+**Rules:**
+- `export def module` is invalid — use `export module` without `def` (`TOPOLOGY_DEF_FORBIDDEN`)
+- Bare `import @topology-pkg` is forbidden — use `import { symbol } from …` (`TOPOLOGY_WILDCARD_FORBIDDEN`)
+- Mixed packages (both registry and topology exports) require `mixed-exports = true` in `pactia.toml [package]` (`PACKAGE_EXPORT_MIXED`)
+- Imported symbols must exist in the package export surface (`EXPORT_NOT_DECLARED`)
+
+---
+
 ## Package constants (1.2)
 
 Package `index.pactia` may export constants with or without `def`:

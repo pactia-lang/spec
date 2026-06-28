@@ -8,6 +8,8 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+- **Topology packages (1.3)** — structural exports for multi-team product composition. `export "./file.pactia"` manifest, three profiles (Registry/Topology/Mixed), `mixed-exports = true` opt-in, topology body inlining. See [language-spec.md — Topology packages](docs/language-spec.md#topology-packages-13), [packages.md — Topology](docs/packages.md#topology-packages-13), [grammar-reference.md](docs/grammar-reference.md).
+- **Topology diagnostics** — `TOPOLOGY_DEF_FORBIDDEN`, `TOPOLOGY_WILDCARD_FORBIDDEN`, `PACKAGE_EXPORT_MIXED`, `EXPORT_NOT_DECLARED` error codes.
 - **Package constants** — `export def name = value` in package `index.pactia`; resolvable via `import { name } from @pkg` and `${name}` interpolation in consumer prose and macro bodies. Bare `export name = value` (missing `def`) emits `CONSTANT_DEF_REQUIRED`. See [language-spec.md — Package constants](docs/language-spec.md#package-constants-12).
 - **`CONSTANT_DEF_REQUIRED`** and **`EXPORT_KIND_AMBIGUITY`** diagnostic codes added to [grammar-reference.md](docs/grammar-reference.md#implementer-error-codes).
 - **`effectiveRegistry.constants`** — package-exported constants merged into the compile-time symbol table alongside tags, macros, and contexts.
