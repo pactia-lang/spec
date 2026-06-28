@@ -32,6 +32,10 @@ pactia build [-C <workspace>] [-o <output-dir>]
 | `build`   | `install` from lock, then `pactiac compile`                          |
 | `why`     | Show why a locked package is in the dependency graph                   |
 | `publish` | `publish --dry-run` validates `pactia.toml` + `index.pactia` before tagging |
+| `outdated` | Show deps with newer versions available. Accepts `--json`. |
+| `clean` | Remove vendor dir + build output |
+
+Global flags: `--help` / `-h`, `--version` / `-v`, `--json` (machine-readable output on `outdated`, `why`, `build`).
 
 Default dependency range on `add` is `^1.0`.
 

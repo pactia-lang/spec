@@ -528,6 +528,14 @@ import { #rust-stack, #list } from @pactia/rust-stack;
 
 One style per package coordinate per file (full **or** partial, not both for the same package).
 
+**Aliased import** — rename symbols with `as`. The alias **must preserve the original sigil** — a tag stays a tag, a macro stays a macro:
+
+```pactia
+import { @api as @endpoint, #list as #collection } from @pactia/kernel;
+```
+
+Sigil mismatch (`@api as #endpoint`) emits `IMPORT_ALIAS_SIGIL_MISMATCH`. Aliases are useful for disambiguation when two packages export the same symbol name.
+
 ### Fragment exports and attach
 
 Fragment files export hosts by name — no `product` block:
