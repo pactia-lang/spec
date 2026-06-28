@@ -32,7 +32,7 @@ All symbols come from **packages** resolved through `pactia.toml` and `pactia.lo
 
 `@pactia/kernel`, `@pactia/rust-stack`, and every other package resolve the same way — declare in `pactia.toml`, pin in `pactia.lock`, `import` in source. No symbol gets a special compiler branch.
 
-Transitive package dependencies (packages listed only in a dependency's `pactia.toml`, not imported by the product) **never** contribute symbols to `effectiveRegistry`.
+Transitive package dependencies contribute symbols to `effectiveRegistry` when the direct dependency **explicitly `import`s them in its own `index.pactia`**. Packages listed only in a dependency's `pactia.toml [dependencies]` without a corresponding `import` in `index.pactia` do **not** contribute symbols. This enables packages to declare their own symbol dependencies while keeping the import graph explicit.
 
 ---
 

@@ -152,6 +152,13 @@ All tags use this table only — **no tag-name-specific error codes** in pactiac
 | `PACKAGE_PROFILE_MISMATCH` | `pactia.toml` `exports` field does not match `index.pactia` content |
 | `HYBRID_PACKAGE_DISCOURAGED` | `mixed-exports = true` escape hatch; prefer separate registry + topology packages |
 | `PACKAGE_IMPORT_MIXED` | Consumer imports `{ *, topologySymbol }` from a hybrid package |
+| `PACKAGE_IMPORT_UNRESOLVED` | `import @pkg` in package `index.pactia` but `@pkg` not in `pactia.toml [dependencies]` |
+| `PACKAGE_SYMBOL_UNRESOLVED` | `@tag`/`@@tag`/`#macro` in `export def` body doesn't resolve in the package's dependency closure |
+| `PACKAGE_CIRCULAR_DEPENDENCY` | Circular dependency detected in package import graph |
+| `CONSUMER_REDUNDANT_IMPORT` | Consumer explicitly imports a package already available transitively (warning) |
+| `IMPORT_ALIAS_SIGIL_MISMATCH` | `@api as #endpoint` — alias sigil doesn't match original |
+| `IMPORT_ALIAS_COLLISION` | Aliased name conflicts with another imported symbol |
+| `IMPORT_COLLISION_RESOLVABLE` | Wildcard import creates name collision — use `as` to disambiguate (warning) |
 | `TOPOLOGY_DUPLICATE_SERVICE` | Two packages export the same service name |
 
 Author-facing subset: [language-spec.md — Author errors](language-spec.md#author-errors).
