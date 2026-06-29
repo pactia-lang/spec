@@ -1,8 +1,8 @@
 # Pactia Packages
 
-Version: **1.2**
+Version: **1.2** (updated for 1.4 — multi-file packages, file-local imports)
 
-Pactia programs compose from **packages**. Each package is **`pactia.toml` + `index.pactia`** only — **tags and macros** via `export def`. Nothing else.
+Pactia programs compose from **packages**. Each package is **`pactia.toml` + `index.pactia`** plus optional internal `.pactia` files referenced via `export "./file"` — **tags and macros** via `export def`. Package internal files declare their own imports (see [language-spec.md — File-local imports](language-spec.md#file-local-imports)).
 
 Part of: [language-spec.md](language-spec.md) | [registry.md](registry.md) | [platform.md](platform.md)
 
@@ -317,11 +317,13 @@ product MyApp { module(commerce) { service(OrderService) { } } }
 
 **Profiles:** `detectPackageProfile()` determines Registry, Topology, or Mixed from `index.pactia` content. Mixed packages require `mixed-exports = true` in `pactia.toml [package]`.
 
+`export "./file"` works for both topology and registry exports — package authors can split `export def @/@@/#` and `export def name = value` across multiple files referenced from `index.pactia`. Internal files may import packages independently.
+
 ---
 
 ## Publish
 
-Git repo + semver tag. Ship **`pactia.toml` + `index.pactia`** (plus any extra files in the repo tree).
+Git repo + semver tag. Ship **`pactia.toml` + `index.pactia`** plus all files referenced via `export "./file"` in the repo tree. Digest covers the full file closure.
 
 ```bash
 git tag v1.0.0 && git push origin v1.0.0
