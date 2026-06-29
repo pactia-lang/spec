@@ -113,10 +113,11 @@ Missing `in` on `export def` → **`DEF_PLACEMENT_REQUIRED`**.
 - `import @scope/name;` — full import; versions live in `pactia.toml` / `pactia.lock`
 - `import { @api, @@output, #list } from @scope/name;` — partial import
 - `import { orders, OrderService } from ./fragments/…;` — fragment symbols (attach)
-- `export def …` — package `index.pactia` only
+- `export def …` — package `index.pactia` or files referenced via `export "./file"`
 - `export module` / `export service` / `export model` — fragment files
+- Every file imports what it uses — see [language-spec.md — File-local imports](language-spec.md#file-local-imports)
 
-Errors: `DEPENDENCY_NOT_DECLARED`, `VERSION_IN_IMPORT`, `REGISTRY_COLLISION`, `DEF_IN_PRODUCT`, `IMPORT_UNUSED`, `ATTACH_UNDEFINED`, `ATTACH_KIND_MISMATCH`.
+Errors: `DEPENDENCY_NOT_DECLARED`, `VERSION_IN_IMPORT`, `REGISTRY_COLLISION`, `DEF_IN_PRODUCT`, `IMPORT_MISSING`, `IMPORT_UNUSED`, `ATTACH_UNDEFINED`, `ATTACH_KIND_MISMATCH`.
 
 ---
 
@@ -140,7 +141,7 @@ Macro **def body** may contain `@tag { }`, `@@tag`, nested `#macro`, field lines
 | Output       | JSON IR under the compile output directory (default layout: `input/**/*.json`; override with `-o`) |
 | `export def` | Forbidden in product; required in package `index.pactia`                                           |
 
-Package publish ships **`pactia.toml` + `index.pactia`** only — see [packages.md](packages.md).
+Package publish ships **`pactia.toml` + `index.pactia`** plus all files referenced via `export "./file"` — see [packages.md](packages.md).
 
 ---
 

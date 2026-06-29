@@ -278,10 +278,11 @@ Compile from the project root (directory containing `product.pactia`).
 
 ### Import + attach (normative)
 
-1. Read `product.pactia` — package imports, fragment imports, product-level tags, attach tree.
+1. Read `product.pactia` — product-level imports, fragment paths, attach tree.
 2. Resolve each `import { symbols } from ./path.pactia` — load `export module`, `export service`, `export model`, `export context` bodies from those paths.
-3. Splice attach references: `module(name) { service(Symbol) { model(…) context(…) } }`.
-4. Merged source retains **package imports only** (not fragment import lines). Tags and macros in fragments resolve from product-level `@pactia/*` imports.
+3. Collect package imports from all files (product + fragments) into the merged source.
+4. Splice attach references: `module(name) { service(Symbol) { model(…) context(…) } }`.
+5. Each file imports what it uses — see [language-spec.md — File-local imports](language-spec.md#file-local-imports).
 
 Example:
 
@@ -359,7 +360,7 @@ Agents and CI use digests in `context.index.json` to detect which attachments ch
 
 ## Package publish
 
-Packages ship **`pactia.toml` + `index.pactia`** only. Publish is a **git tag** on the package repo. See [packages.md](packages.md).
+Packages ship **`pactia.toml` + `index.pactia`** plus all files referenced via `export "./file"`. Publish is a **git tag** on the package repo. See [packages.md](packages.md).
 
 ---
 

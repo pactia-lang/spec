@@ -1,6 +1,6 @@
 # Pactia Language Specification
 
-Version: **1.2** (spec) — source files declare **`pactia 1.0`** on the version line.  
+Version: **1.2** (spec, updated for 1.4) — source files declare **`pactia 1.0`** on the version line.  
 Status: **Specification**
 
 Part of: [overview.md](overview.md) | [registry.md](registry.md) | [packages.md](packages.md) | [grammar-reference.md](grammar-reference.md)
@@ -570,27 +570,20 @@ product Relay {
 
 Attach names must match imported export symbols. Diagnostics: `IMPORT_UNUSED`, `ATTACH_UNDEFINED`, `ATTACH_KIND_MISMATCH`, and context-specific `CONTEXT_*` codes (see [Context](#context)).
 
-### Package imports vs fragment imports
+### File-local imports
 
-Fragment files **do not** declare `import … from @pactia/…`. Tags (`@api`, `@auth`, `@test`, …), modifier tags (`@@output`), and macros (`#database`, `#create`, `#rust-stack`) are imported **once** in `product.pactia`. Local `./fragments/…` imports only register **export symbols** for attach — they do not bring package definitions into the fragment file. A package import line in a fragment is **ignored** at assembly; pactiac emits **`FRAGMENT_PACKAGE_IMPORT`** (warning).
-
-When `pactiac` assembles the workspace:
-
-1. **Package imports** from `product.pactia` are copied to the top of the merged program.
-2. **Fragment imports** are used to load `export module` / `export service` / `export model` / `export context` bodies into a symbol registry — their `import` lines are **not** kept in the merged text.
-3. **Attach** splices those bodies inline (`module(name) { service(…) { model(…) context(…) } }` → nested blocks).
-4. **Bind** resolves every `@` / `@@` / `#` use in inlined fragments against the registry built from the product-level `@pactia/*` imports (packages vendored via `pactia.lock`).
-
-So a service fragment may use `@api` and `#database` without its own package import — the merged monolith already imported them at product scope. If a tag is used in a fragment but not imported in `product.pactia`, compile fails at bind with an unknown symbol.
-
-Example ([marketplace](https://github.com/pactia-lang/examples/tree/main/marketplace)):
+Every `.pactia` file imports the symbols it uses. `product.pactia` carries **only** product-level imports plus fragment paths for attach. Fragment files carry their own `@pactia/*` imports.
 
 ```pactia
-// product.pactia — package + fragment imports
-import { @api, @auth, @test, #database, #create, #idempotent, @@output } from @pactia/kernel;
+// product.pactia — product-level imports + attach tree
+import { @topology, @tenancy, @guide } from @pactia/kernel;
+import { #rust-stack } from @pactia/rust-stack;
 import { CatalogAdminService } from ./fragments/catalog-admin.service.pactia;
 
 product Marketplace {
+  #rust-stack
+  @topology { mode: microservices }
+
   module(catalog) {
     service(CatalogAdminService) { model(catalog_model) }
   }
@@ -598,7 +591,9 @@ product Marketplace {
 ```
 
 ```pactia
-// fragments/catalog-admin.service.pactia — no @pactia/* import
+// fragments/catalog-admin.service.pactia — owns its dependencies
+import { @api, @auth, #database } from @pactia/kernel;
+
 export service CatalogAdminService {
   #database
   @auth { roles: [CatalogOperator] }
@@ -606,7 +601,16 @@ export service CatalogAdminService {
 }
 ```
 
-After merge, the compiler sees one program: product imports at the top, then `service CatalogAdminService { … }` with the fragment body inlined. See [compilation.md — Workspace assembly](compilation.md#workspace-assembly).
+When `pactiac` assembles the workspace:
+
+1. **Package imports** from all files (product + fragments) are collected into the merged program.
+2. **Fragment imports** (`./fragments/…`) register `export module` / `export service` / `export model` / `export context` symbols for attach.
+3. **Attach** splices those bodies inline (`module(name) { service(…) { model(…) context(…) } }` → nested blocks).
+4. **Bind** resolves every `@` / `@@` / `#` against the effective registry built from all imports.
+
+A file that uses a symbol without importing it emits **`IMPORT_MISSING`** (error). An imported symbol never referenced in its file emits **`IMPORT_UNUSED`** (warning).
+
+See [compilation.md — Workspace assembly](compilation.md#workspace-assembly).
 
 **Monolith** — all `module { }` / `service { }` / `model { }` inline in one file; attach optional.
 
@@ -652,7 +656,7 @@ Products may declare UI intent with registered product-scoped tags and bind them
 | ------- | ------------------- |
 | Where fragments live | **Import paths** in `product.pactia` (any relative path) |
 | How fragments compose | **Attach tree** in `product { }` |
-| Package tags/macros | **Package imports** once at product scope |
+| Package tags/macros | **Package imports** in each file that uses them |
 | Folder names | **Convention only** — team ergonomics, not compiler rules |
 
 ### Import + attach (normative)
@@ -672,9 +676,9 @@ product Marketplace {
 }
 ```
 
-Fragment files use `export module` / `export service` / `export model` / `export context`. They do **not** repeat `import … from @pactia/…` — product-level package imports apply to all inlined bodies.
+Fragment files use `export module` / `export service` / `export model` / `export context`. Each fragment file imports whatever `@pactia/*` packages it needs — see [File-local imports](#file-local-imports).
 
-Diagnostics: `IMPORT_UNUSED`, `ATTACH_UNDEFINED`, `ATTACH_KIND_MISMATCH`, `CONTEXT_IMPORT_UNUSED`, `CONTEXT_ATTACH_UNDEFINED`, `CONTEXT_ATTACH_KIND_MISMATCH`.
+Diagnostics: `IMPORT_MISSING`, `IMPORT_UNUSED`, `ATTACH_UNDEFINED`, `ATTACH_KIND_MISMATCH`, `CONTEXT_IMPORT_UNUSED`, `CONTEXT_ATTACH_UNDEFINED`, `CONTEXT_ATTACH_KIND_MISMATCH`.
 
 Canonical examples: [relay workspace](https://github.com/pactia-lang/pactiac/tree/main/test/fixtures/workspace/relay) (`./fragments/…`), [PPM](https://github.com/pactia-lang/examples/tree/main/ppm) (`./modules/…` — same mechanism, different folder convention).
 
@@ -776,6 +780,8 @@ Normative spec vs **pactiac** ([feat/pactiac-1.2-compiler](https://github.com/pa
 | `ATTACH_UNDEFINED`       | Attach references symbol not imported                               |
 | `ATTACH_KIND_MISMATCH`   | Attach expects `export module` but symbol is `export service`, etc. |
 | `IMPORT_UNUSED`          | Partial import symbol never referenced                              |
+| `IMPORT_MISSING`         | Symbol used in file without a matching import (error)              |
+| `UNUSED_IMPORT`          | Imported symbol never referenced in file (warning)                 |
 | `REGISTRY_COLLISION`     | Duplicate unqualified name from any two registry sources            |
 | `UNKNOWN_SYMBOL`         | Unregistered `@name` / `#name` / `@@name`                           |
 | `TOPOLOGY_DEF_FORBIDDEN` | `export def module` / `service` / `model` / `context` (use `export` without `def`) |

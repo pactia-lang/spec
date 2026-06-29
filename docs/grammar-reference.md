@@ -107,13 +107,14 @@ AssignmentLine    ::= Identifier ":" Value ","
 
 | Code | Condition |
 | --- | --- |
-| `IMPORT_UNUSED` | Partial import symbol never referenced |
+| `IMPORT_UNUSED` | Partial import symbol never referenced (merged source) |
+| `UNUSED_IMPORT` | Imported symbol never referenced in file (warning, per-file) |
 | `ATTACH_UNDEFINED` | Attach symbol not imported |
 | `ATTACH_KIND_MISMATCH` | `module(x)` expects export module, etc. |
 | `CONTEXT_IMPORT_UNUSED` | Imported `export context` symbol never attached |
 | `CONTEXT_ATTACH_UNDEFINED` | `context(x)` symbol not imported |
 | `CONTEXT_ATTACH_KIND_MISMATCH` | `context(x)` expects `export context`, not module/service/model |
-| `FRAGMENT_PACKAGE_IMPORT` | Package import in a fragment file (warning — ignored at assembly) |
+| `IMPORT_MISSING` | Symbol used in file but not imported (error) |
 | `CONSTANT_UNDEFINED` | `${name}` references unknown module constant |
 | `CONSTANT_DEF_REQUIRED` | `export name = value` missing `def` keyword |
 | `EXPORT_KIND_AMBIGUITY` | Same bare name used as both constant and topology export |
