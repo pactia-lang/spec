@@ -78,7 +78,7 @@ Interpolation     ::= "${" Identifier "}"
 ## Tag body items
 
 ```
-TagBodyItem       ::= ProseLine | MultilineProse | AssignmentLine | FieldDeclLine | NestedTag | ModifierApplication | MacroApplication
+TagBodyItem       ::= ProseLine | MultilineProse | AssignmentLine | FieldDeclLine | NestedTag | MacroApplication
 AssignmentLine    ::= Identifier ":" Value ","
 ```
 
@@ -135,8 +135,12 @@ All tags use this table only — **no tag-name-specific error codes** in pactiac
 | Code | Condition |
 | --- | --- |
 | `PACKAGE_NOT_FOUND` | Unknown package |
-| `PACKAGE_LOCK_MISMATCH` | Digest mismatch |
+| `LOCK_DIGEST_MISMATCH` | Vendored tree digest ≠ lock |
+| `LOCK_STALE` | `pactia.toml` and lock out of sync |
+| `LOCK_MISSING` | Dependencies declared but no `pactia.lock` |
 | `LOCK_ENTRY_MISSING` | Missing lock pin |
+| `DEPENDENCY_NOT_DECLARED` | Import without `pactia.toml` entry |
+| `VERSION_IN_IMPORT` | Semver in import line |
 
 ### Topology packages (1.3)
 

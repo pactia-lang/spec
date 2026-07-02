@@ -8,14 +8,14 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
-- **File-local imports (1.4)** — every `.pactia` file imports the symbols it uses. Fragment files carry their own `import @pactia/…` lines. `product.pactia` holds only product-level imports plus fragment paths for attach. `IMPORT_MISSING` (error) fires when a file uses a symbol without importing it. `FRAGMENT_PACKAGE_IMPORT` warning removed. See [language-spec.md — File-local imports](docs/language-spec.md#file-local-imports).
-- **Multi-file packages (1.4)** — `export "./file"` works for registry exports (`export def @/@@/#` and `export def name = value`), not just topology. Package authors can split `export def` across multiple files referenced from `index.pactia`. Internal files may import packages independently. See [packages.md](docs/packages.md).
+- **File-local imports** — every `.pactia` file imports the symbols it uses. Fragment files carry their own `import @pactia/…` lines. `product.pactia` holds only product-level imports plus fragment paths for attach. `IMPORT_MISSING` (error) fires when a file uses a symbol without importing it. See [language-spec.md — File-local imports](docs/language-spec.md#file-local-imports).
+- **Multi-file packages** — `export "./file"` works for registry exports (`export def @/@@/#` and `export def name = value`), not just topology. Package authors can split `export def` across multiple files referenced from `index.pactia`. Internal files may import packages independently. See [packages.md](docs/packages.md).
 - **`IMPORT_MISSING`** and **`UNUSED_IMPORT`** diagnostic codes added to [grammar-reference.md](docs/grammar-reference.md#implementer-error-codes). `FRAGMENT_PACKAGE_IMPORT` removed.
 - **`pactia publish --dry-run`** validates imports in manifest files against `pactia.toml [dependencies]` and resolves def body symbols in both `index.pactia` and manifest files.
 
-- **Topology packages (1.3)** — structural exports for multi-team product composition. `export "./file.pactia"` manifest, three profiles (Registry/Topology/Mixed), `mixed-exports = true` opt-in, topology body inlining. See [language-spec.md — Topology packages](docs/language-spec.md#topology-packages-13), [packages.md — Topology](docs/packages.md#topology-packages-13), [grammar-reference.md](docs/grammar-reference.md).
+- **Topology packages** — structural exports for multi-team product composition. `export "./file.pactia"` manifest, three profiles (Registry/Topology/Mixed), `mixed-exports = true` opt-in, topology body inlining. See [language-spec.md — Topology packages](docs/language-spec.md#topology-packages), [packages.md — Topology](docs/packages.md#topology-packages), [grammar-reference.md](docs/grammar-reference.md).
 - **Topology diagnostics** — `TOPOLOGY_DEF_FORBIDDEN`, `TOPOLOGY_WILDCARD_FORBIDDEN`, `TOPOLOGY_NESTED_EXPORT`, `TOPOLOGY_MULTIPLE_ROOT_EXPORTS`, `TOPOLOGY_MANIFEST_INLINE_EXPORT`, `TOPOLOGY_EXPORT_FILE_MISSING`, `PACKAGE_EXPORT_MIXED`, `PACKAGE_PROFILE_MISMATCH`, `HYBRID_PACKAGE_DISCOURAGED`, `PACKAGE_IMPORT_MIXED`, `EXPORT_NOT_DECLARED`, `TOPOLOGY_DUPLICATE_SERVICE` error/warning codes. See [grammar-reference.md](docs/grammar-reference.md#implementer-error-codes).
-- **Package constants** — `export def name = value` in package `index.pactia`; resolvable via `import { name } from @pkg` and `${name}` interpolation in consumer prose and macro bodies. Bare `export name = value` (missing `def`) emits `CONSTANT_DEF_REQUIRED`. See [language-spec.md — Package constants](docs/language-spec.md#package-constants-12).
+- **Package constants** — `export def name = value` in package `index.pactia`; resolvable via `import { name } from @pkg` and `${name}` interpolation in consumer prose and macro bodies. Bare `export name = value` (missing `def`) emits `CONSTANT_DEF_REQUIRED`. See [language-spec.md — Package constants](docs/language-spec.md#package-constants).
 - **`exports` field in `pactia.toml`** — packages may declare `exports = "topology"` or `exports = "registry"` (default) to declare their export profile; validated against `index.pactia` content (`PACKAGE_PROFILE_MISMATCH`).
 - **`*` wildcard import** — `import { *, commerce } from @pkg` supported in import symbol grammar; `*` imports all registry exports.
 - **`CONSTANT_DEF_REQUIRED`** and **`EXPORT_KIND_AMBIGUITY`** diagnostic codes added to [grammar-reference.md](docs/grammar-reference.md#implementer-error-codes).
@@ -43,7 +43,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 - **Removed:** tag-name-specific validation (e.g. state-graph cross-checks) from normative spec — one uniform field-spec path for every tag.
 - **`pactia.toml`:** dropped `kind` field (Cargo-style — name, version, optional description, `[dependencies]` only).
 
-### Changed (1.2 baseline)
+### Changed (spec 1.2 baseline)
 
 - **Workspace assembly:** import + attach in `product.pactia` is normative; folder layout is convention only.
 - **Macro invocation:** `#name` / `#name(args)` replaces `#[name]` (bracket syntax removed in 1.2).
@@ -57,12 +57,12 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 - `@stack { #[rust-stack] }` stack binding — use `#rust-stack` at product level.
 - `modules/*/module.pactia` fixed-filename scan — use `<name>.module.pactia` export layout under `modules/<name>/`.
 
-### Added (1.1 baseline)
+### Added (pre-1.2 baseline)
 
 - **Pactia 1.1 language model:** `def @` / `def #` with `in` placement; multiline prose `>> … >>`; module `def` constants; reserved words `view`, `interface`, `class`, `function`.
 - **Tag names are package-owned:** `@api`, `@entity`, etc. live in **`@pactia/kernel`** on [pactia-lang/kernel](https://github.com/pactia-lang/kernel) — not in this spec repo.
 
-### Changed (1.1 baseline)
+### Changed (pre-1.2 baseline)
 
 - **Language spec is language-only:** no tag/macro catalog in `language-spec.md`; names come from imported packages (typically `@pactia/kernel`).
 - **Registry doc is mechanics-only:** resolution, tiers, precedence — not a tag encyclopedia.

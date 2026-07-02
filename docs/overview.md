@@ -62,14 +62,14 @@ product MyApp {
       > Owner-only row scope on every mutation and list. JWT required on all routes.
       > Empty history returns 200 with an empty list, not 404.
 
-      @auth Customer
+      @auth { roles: [Customer] }
       @@output WorkoutListResponse
       @api list_workouts {
         > Customers browse their workout history, newest first, paginated.
         > Include nextCursor when more pages exist; omit when this is the last page.
       }
 
-      @auth Customer
+      @auth { roles: [Customer] }
       @@output WorkoutResponse
       @api create_workout {
         > Customer logs a new workout. Body: type, duration, optional notes.
@@ -124,7 +124,7 @@ Same language, same compiler, your chosen density. See [language-spec.md — Thr
 
 | Concern             | Altitude 0 (prose)                                   | Tag when you need…                              |
 | ------------------- | ---------------------------------------------------- | ----------------------------------------------- |
-| Who may call an API | `> Auth: bearer JWT; owner rows only`                | `@auth Customer` — conformance on roles         |
+| Who may call an API | `> Auth: bearer JWT; owner rows only`                | `@auth { roles: [Customer] }` — conformance on roles         |
 | List behavior       | `> Cursor pagination, default 20`                    | `#list` / `#paginated` — macro defaults in IR   |
 | Response shape      | `> Return workout list + optional nextCursor`        | `@@output WorkoutListResponse` — schema checks  |
 | Wire route          | `> GET /workouts for history`                        | `@api { method, path }` — OpenAPI / route gates |

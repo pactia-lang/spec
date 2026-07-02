@@ -1,6 +1,6 @@
 # Pactia Language Specification
 
-Version: **1.2** (spec, updated for 1.4) — source files declare **`pactia 1.0`** on the version line.  
+Version: **1.2** — source files declare **`pactia 1.0`** on the version line.
 Status: **Specification**
 
 Part of: [overview.md](overview.md) | [registry.md](registry.md) | [packages.md](packages.md) | [grammar-reference.md](grammar-reference.md)
@@ -55,7 +55,7 @@ product MyApp {
 
   module fitness {
     service WorkoutService {
-      @auth Customer
+      @auth { roles: [Customer] }
       @@output WorkoutListResponse
       @api list_workouts {
         > Customers browse their workout history.
@@ -428,7 +428,28 @@ Rules: compile-time literals or prose only; bind once; no expressions; do not lo
 
 ---
 
-## Topology packages (1.3)
+## Multi-file packages
+
+Package `index.pactia` may reference other `.pactia` files via `export "./file"`. The compiler loads each referenced file, extracts the export block or `export def` body, and merges it into the package's export surface during workspace assembly. This works for both registry exports (`export def @/@@/#` and `export def name = value`) and topology exports (`export module/service/model/context`).
+
+**Manifest (`index.pactia`):**
+
+```pactia
+pactia 1.0
+// Multi-file registry package — split export def across files
+export "./tags.pactia"
+export "./macros.pactia"
+
+// Multi-file topology package — reference bare topology files
+export "./commerce.module.pactia"
+export "./orders.service.pactia"
+```
+
+**Internal files** (e.g. `tags.pactia`, `macros.pactia`) carry their own `import` lines and `export def` declarations — see [File-local imports](#file-local-imports). The package's import closure is the union of all imports across `index.pactia` and all manifest-referenced files. Internal files may independently import packages they depend on.
+
+**Merge rules:** All `export def` from manifest-referenced files are merged into the package registry export surface. `export module/service/model/context` from manifest-referenced files are merged into the topology `structuralExports`. A package with both registry and topology exports must opt in with `mixed-exports = true` in `pactia.toml [package]`.
+
+## Topology packages
 
 Packages may publish structural topology — modules, services, models, and contexts — as versioned dependencies for multi-team product composition.
 
@@ -437,10 +458,10 @@ Packages may publish structural topology — modules, services, models, and cont
 | Profile | `index.pactia` contains | Consumer import |
 |---------|------------------------|-----------------|
 | Registry | `export def @/#/@@` and/or `export def name = value` only | `import { @api, max_page } from @pkg` |
-| Topology | `export module/service/model/context` and/or `export "./..."` | `import { commerce, OrderService } from @pkg` |
+| Topology | `export module` / `export service` / `export model` / `export context` and/or `export "./..."` | `import { commerce, OrderService } from @pkg` |
 | Mixed | Both — requires `mixed-exports = true` in `pactia.toml` | Partial imports only |
 
-**Manifest (`export "./file"`):** Package `index.pactia` may declare `export "./commerce.module.pactia"` to reference bare topology files. The compiler loads each referenced file, extracts the export block body, and inlines it during workspace assembly.
+`export context` is a valid topology export alongside `export module` / `export service` / `export model`. Consumers attach it with `context(symbol)` in the product attach tree, same as fragment-attached contexts.
 
 **Rules:**
 - `export def module` is invalid — use `export module` without `def` (`TOPOLOGY_DEF_FORBIDDEN`)
@@ -458,7 +479,7 @@ Packages may publish structural topology — modules, services, models, and cont
 
 ---
 
-## Package constants (1.2)
+## Package constants
 
 Package `index.pactia` may export constants with or without `def`:
 
@@ -779,9 +800,9 @@ Normative spec vs **pactiac** ([feat/pactiac-1.2-compiler](https://github.com/pa
 | `DEF_PLACEMENT_REQUIRED` | `export def` missing `in`                                           |
 | `ATTACH_UNDEFINED`       | Attach references symbol not imported                               |
 | `ATTACH_KIND_MISMATCH`   | Attach expects `export module` but symbol is `export service`, etc. |
-| `IMPORT_UNUSED`          | Partial import symbol never referenced                              |
+| `IMPORT_UNUSED`          | Imported symbol never referenced in the merged workspace source (assembly phase) |
 | `IMPORT_MISSING`         | Symbol used in file without a matching import (error)              |
-| `UNUSED_IMPORT`          | Imported symbol never referenced in file (warning)                 |
+| `UNUSED_IMPORT`          | Imported symbol never referenced in a single file (per-file parse phase; warning) |
 | `REGISTRY_COLLISION`     | Duplicate unqualified name from any two registry sources            |
 | `UNKNOWN_SYMBOL`         | Unregistered `@name` / `#name` / `@@name`                           |
 | `TOPOLOGY_DEF_FORBIDDEN` | `export def module` / `service` / `model` / `context` (use `export` without `def`) |

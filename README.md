@@ -86,7 +86,6 @@ Full index: [docs/README.md](docs/README.md)
 | [platform.md](docs/platform.md) | Stack packages |
 | [compilation.md](docs/compilation.md) | Compiler pipeline, JSON IR |
 | [editor-support.md](docs/editor-support.md) | VS Code / Cursor highlighting |
-| [normative-reference.md](docs/normative-reference.md) | One-page reference — implementer cheat sheet |
 | [schemas/](schemas/) | JSON Schema — `pactia.toml`, `pactia.lock` only |
 
 ## Tooling
