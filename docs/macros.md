@@ -65,7 +65,7 @@ export def #cursor_paginated(arg1) in service, model {
 | **Prose** | `>` and `>> … >>` allowed in **both** tag and macro defs |
 | **Parameters** | `def @name(a, b)` or `def #name(a)` — `${a}` in prose; macro args at `#name(a)` |
 
-Macro body lines may also be **`@tag { }`**, **`@@tag`**, **`#nested`**, and assignments — whatever should be **spliced in place** at `#name`.
+Macro body lines may also be **`@tag { }`**, **`@@tag`**, **`#nested`**, and assignments — whatever should be **spliced in place** at `#name`. Tags inside a `def #` body are validated at **expansion time** against the enclosing block at the invocation site; the macro's own `in` targets do not constrain the tags it contains. Nested macros expand to fixed point during expansion phase. See [registry.md — Macro expansion](registry.md#macro-expansion).
 
 ---
 
@@ -86,7 +86,7 @@ export def #cursor_paginated(arg1) in service, model { … }
 | `service` | inside `service { }` |
 | `field` | on entity field lines |
 
-**`export def` must declare `in`.** Local non-exported defs may omit `in` (all placements).
+**`export def` must declare `in`.** Local non-exported defs may omit `in`, which permits use at `product`, `module`, `model`, and `service` scopes only (not `field` — field-level symbols require explicit `in field`).
 
 Wrong placement → **`PLACEMENT_VIOLATION`**.
 
@@ -111,7 +111,7 @@ Wrong placement → **`PLACEMENT_VIOLATION`**.
 @auth(Admin)
 ```
 
-Maps to fields per the package def (e.g. `roles: [Customer]`). Without `modifier,` in the def, use `{ … }` block form only.
+The `modifier,` field in `def @` enables host-tag prefix shorthand — the author may omit `{ }` and supply a single shorthand token on the same line. The package def documents the shorthand-to-field mapping (e.g. `@auth Customer` → `roles: [Customer]`). For modifier binding (`@@name` before a host), use `def @@name` (preferred in 1.2). The `modifier,` field only enables prefix shorthand on the host tag itself; it does not create a separate `@@` binding. Without `modifier,` in the def, use `{ … }` block form only.
 
 **Register (package):**
 

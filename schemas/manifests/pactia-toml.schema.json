@@ -5,7 +5,7 @@
   "description": "Logical shape after parsing pactia.toml. See spec/docs/packages.md. [package] name, version, optional description, plus [dependencies] only — Cargo-style, no kind field.",
   "type": "object",
   "properties": {
-    "package": {
+      "package": {
       "type": "object",
       "description": "Product or package identity",
       "properties": {
@@ -19,6 +19,17 @@
         },
         "description": {
           "type": "string"
+        },
+        "exports": {
+          "type": "string",
+          "enum": ["registry", "topology"],
+          "default": "registry",
+          "description": "Declared export profile; defaults to 'registry'. Topology packages declare 'topology'."
+        },
+        "mixed-exports": {
+          "type": "boolean",
+          "default": false,
+          "description": "Opt-in for packages exporting both registry defs and topology symbols. Prefer separate packages."
         }
       },
       "additionalProperties": false

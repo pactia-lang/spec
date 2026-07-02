@@ -155,7 +155,7 @@ Package-defined symbols registered via `export def @name` in package `index.pact
 **Prefix shorthand** (when package def includes `modifier`):
 
 ```pactia
-@auth Customer
+@auth { roles: [Customer] }
 @auth(Admin)
 ```
 
@@ -259,8 +259,8 @@ Validation: required fields must be present. Extra fields allowed (warning). All
 
 ```pactia
 import @pactia/kernel;
-import { @api, @@output, #list } from @pactia/kernel;
-import max_page from @pactia/kernel;
+import { @api, @@output } from @pactia/kernel;
+import { #rust-stack } from @pactia/rust-stack;
 ```
 
 Versions in `pactia.toml` / `pactia.lock` only.
@@ -484,7 +484,7 @@ All tags use the same JSON object shape — determined by the registry def. No p
 
 ### Registry / parse / bind
 
-`UNKNOWN_SYMBOL`, `DEF_IN_PRODUCT`, `DEF_PLACEMENT_REQUIRED`, `PLACEMENT_VIOLATION`, `REGISTRY_COLLISION`, `DEPENDENCY_NOT_DECLARED`, `VERSION_IN_IMPORT`, `MACRO_UNKNOWN`, `MACRO_ARGS_INVALID`, `MACRO_EXPANSION_CYCLE`, `IMPORT_UNUSED`, `ATTACH_UNDEFINED`, `ATTACH_KIND_MISMATCH`, `CONTEXT_IMPORT_UNUSED`, `CONTEXT_ATTACH_UNDEFINED`, `CONTEXT_ATTACH_KIND_MISMATCH`, `FRAGMENT_PACKAGE_IMPORT`, `CONSTANT_DEF_REQUIRED`, `CONSTANT_UNDEFINED`.
+`UNKNOWN_SYMBOL`, `DEF_IN_PRODUCT`, `DEF_PLACEMENT_REQUIRED`, `PLACEMENT_VIOLATION`, `REGISTRY_COLLISION`, `DEPENDENCY_NOT_DECLARED`, `VERSION_IN_IMPORT`, `MACRO_UNKNOWN`, `MACRO_ARGS_INVALID`, `MACRO_EXPANSION_CYCLE`, `IMPORT_UNUSED`, `UNUSED_IMPORT`, `IMPORT_MISSING`, `ATTACH_UNDEFINED`, `ATTACH_KIND_MISMATCH`, `CONTEXT_IMPORT_UNUSED`, `CONTEXT_ATTACH_UNDEFINED`, `CONTEXT_ATTACH_KIND_MISMATCH`, `CONSTANT_DEF_REQUIRED`, `CONSTANT_UNDEFINED`.
 
 ### Tag body validation
 
@@ -504,8 +504,8 @@ All tags use the same JSON object shape — determined by the registry def. No p
 
 | Package | Location |
 |---|---|
-| `@pactia/kernel` | [kernel/](https://github.com/pactia-lang/kernel) — `@entity`, `@api`, `@auth`, `@enum`, `@test`, `@@output`, `@@pk`, `#create`, `#database` etc. |
-| `@pactia/rust-stack` | [rust-stack/](https://github.com/pactia-lang/pactia-io/tree/main/rust-stack) — `#rust-stack`, `#list`, `#paginated` |
+| `@pactia/kernel` | [kernel/](https://github.com/pactia-lang/kernel) — `@entity`, `@api`, `@auth`, `@enum`, `@test`, `@@output`, `@@pk`, `@actor`, `@rule`, `@topology`, `@guide`, etc. |
+| `@pactia/rust-stack` | [rust-stack/](https://github.com/pactia-lang/pactia-io/tree/main/rust-stack) — `#rust-stack` |
 | `@pactia/html-css-js` | [html-css-js/](https://github.com/pactia-lang/pactia-io/tree/main/html-css-js) — web stack macros |
 
 ---

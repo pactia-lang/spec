@@ -1,6 +1,6 @@
 # Pactia Packages
 
-Version: **1.2** (updated for 1.4 — multi-file packages, file-local imports)
+Version: **1.2**
 
 Pactia programs compose from **packages**. Each package is **`pactia.toml` + `index.pactia`** plus optional internal `.pactia` files referenced via `export "./file"` — **tags and macros** via `export def`. Package internal files declare their own imports (see [language-spec.md — File-local imports](language-spec.md#file-local-imports)).
 
@@ -290,7 +290,7 @@ All imported packages merge with the same rules. `@stack` lowers as a normal pro
 
 ---
 
-## Topology packages (1.3)
+## Topology packages
 
 Packages may export structural topology (modules, services, models, contexts) for multi-team product composition. See [language-spec.md — Topology packages](language-spec.md#topology-packages-13).
 
