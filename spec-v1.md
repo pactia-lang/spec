@@ -259,8 +259,8 @@ Validation: required fields must be present. Extra fields allowed (warning). All
 
 ```pactia
 import @pactia/kernel;
-import { @api, @@output, #list } from @pactia/kernel;
-import max_page from @pactia/kernel;
+import { @api, @@output } from @pactia/kernel;
+import { #rust-stack } from @pactia/rust-stack;
 ```
 
 Versions in `pactia.toml` / `pactia.lock` only.
@@ -504,8 +504,8 @@ All tags use the same JSON object shape — determined by the registry def. No p
 
 | Package | Location |
 |---|---|
-| `@pactia/kernel` | [kernel/](https://github.com/pactia-lang/kernel) — `@entity`, `@api`, `@auth`, `@enum`, `@test`, `@@output`, `@@pk`, `#create`, `#database` etc. |
-| `@pactia/rust-stack` | [rust-stack/](https://github.com/pactia-lang/pactia-io/tree/main/rust-stack) — `#rust-stack`, `#list`, `#paginated` |
+| `@pactia/kernel` | [kernel/](https://github.com/pactia-lang/kernel) — `@entity`, `@api`, `@auth`, `@enum`, `@test`, `@@output`, `@@pk`, `@actor`, `@rule`, `@topology`, `@guide`, etc. |
+| `@pactia/rust-stack` | [rust-stack/](https://github.com/pactia-lang/pactia-io/tree/main/rust-stack) — `#rust-stack` |
 | `@pactia/html-css-js` | [html-css-js/](https://github.com/pactia-lang/pactia-io/tree/main/html-css-js) — web stack macros |
 
 ---
