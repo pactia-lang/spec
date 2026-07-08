@@ -37,7 +37,7 @@ Highlighting follows [language-spec.md](language-spec.md) and [grammar-reference
 - Block keywords open `{` … `}` nests
 - `@tag { }`, `@@modifier`, and `#macro` are distinct line kinds
 - Attach syntax: `module(name) { service(Name) { model(modelName) } }`, `context(symbol)`
-- `context name { }` blocks: `path` plus prose; `export context`, attach `context(symbol)`, `def alias = context name { }`
+- `context name { }` blocks: `path` plus prose; `export context`, attach `context(symbol)`
 - `def` bodies: field lists, prose; macro bodies may include `@tag` / `@@tag` / `#macro` lines
 - `${identifier}` in prose and macro bodies is a compile-time interpolation token
 

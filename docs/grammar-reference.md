@@ -71,9 +71,6 @@ MultilineProse    ::= ">>" ProseText ">>"
 Interpolation     ::= "${" Identifier "}"
 ```
 
-**Legacy (deprecated):** `#[" Identifier MacroArgs? "]"` — accept during transition; emit `LEGACY_MACRO_SYNTAX` warning.
-
----
 
 ## Tag body items
 
@@ -101,7 +98,6 @@ AssignmentLine    ::= Identifier ":" Value ","
 | `MACRO_ARGS_INVALID` | Wrong arity |
 | `MACRO_EXPANSION_CYCLE` | Recursive macro |
 | `MACRO_EXPANSION_INVALID` | Invalid macro def body or splice result |
-| `LEGACY_MACRO_SYNTAX` | Deprecated `#[name]` bracket form (warning) |
 
 ### Workspace attach
 
@@ -118,6 +114,8 @@ AssignmentLine    ::= Identifier ":" Value ","
 | `CONSTANT_UNDEFINED` | `${name}` references unknown module constant |
 | `CONSTANT_DEF_REQUIRED` | `export name = value` missing `def` keyword |
 | `EXPORT_KIND_AMBIGUITY` | Same bare name used as both constant and topology export |
+| `CONTEXT_MISSING_PATH` | `context` block missing required `path` field |
+| `UNSUPPORTED_VERSION` | `pactia` version line is not `1.0` |
 
 ### Tag bodies
 

@@ -113,7 +113,7 @@ Pactia is a **shareable standard for AI-native product intent**:
 
 ### Reserved (no syntax in 1.2)
 
-`view`, `interface`, `class`, `function`, `field` — `field` is also an **`in`** placement target.
+`view`, `interface`, `class`, `function`.
 
 ---
 
