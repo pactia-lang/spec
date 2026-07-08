@@ -19,7 +19,7 @@ VersionLine    ::= "pactia" number
 ### Keywords
 
 Active: `pactia`, `product`, `module`, `service`, `model`, `import`, `export`, `def`, `in`, `context`.  
-Reserved (not used in v1): `view`, `interface`, `class`, `function`, `field`.
+Reserved (not used in v1): `view`, `interface`, `class`, `function`.
 
 ### Sigils
 
@@ -265,6 +265,18 @@ import { #rust-stack } from @pactia/rust-stack;
 
 Versions in `pactia.toml` / `pactia.lock` only.
 
+**Import aliasing** (`as` keyword) — resolve symbol collisions without renaming packages:
+
+```pactia
+import { @api as @http_api } from @pactia/kernel;
+import { @api as @rpc_api } from @pactia/grpc-api;
+```
+
+Alias must match the original symbol's sigil (`@` → `@`, `@@` → `@@`, `#` → `#`).
+Sigil mismatch → `IMPORT_ALIAS_SIGIL_MISMATCH`.
+Alias collision with another symbol or import → `IMPORT_ALIAS_COLLISION`.
+Collision resolvable via aliasing → `IMPORT_COLLISION_RESOLVABLE` (warning).
+
 ### Fragment
 
 ```pactia
@@ -404,19 +416,26 @@ effectiveRegistry built once per compile. Duplicate unqualified names → `REGIS
 
 ## Compilation pipeline
 
+Phases 0–12 are pactiac. Phases 9 and 11 are reserved for future passes.
+See [compilation.md](docs/compilation.md) for the authoritative phase list.
+
 ```
-0. Assemble workspace (fragment import + attach merge)
-1. Validate version (pactia 1.0)
-2. Lex / strip comments
-3. Parse → AST
-4. Resolve packages via pactia.toml / pactia.lock
-5. Build effectiveRegistry
-6. Bind: attach registry entries to tag/macro nodes
-7. Expand #macro until fixed point
-8. Validate: placement + field spec (uniform for all tags)
-9. Lower @tags → JSON IR with provenance
-10. Emit IR files
+0.  Assemble workspace (fragment import + attach merge)
+1.  Validate version (pactia 1.0)
+2.  Lex / strip comments
+3.  Parse → AST
+4.  Resolve packages via pactia.toml / pactia.lock
+5.  Build effectiveRegistry
+6.  Bind: attach registry entries to tag/macro nodes
+7.  Expand #macro until fixed point
+8.  Validate: placement + field spec (uniform for all tags)
+9.  (Reserved: CrossCheck — cross-module validation, future)
+10. Lower @tags → JSON IR with provenance
+11. (Reserved: Infer — deterministic inference, future)
+12. Emit IR files
 ```
+
+After pactiac: optional BSC render/expand, `pactia build` context index.
 
 ---
 
@@ -484,7 +503,7 @@ All tags use the same JSON object shape — determined by the registry def. No p
 
 ### Registry / parse / bind
 
-`UNKNOWN_SYMBOL`, `DEF_IN_PRODUCT`, `DEF_PLACEMENT_REQUIRED`, `PLACEMENT_VIOLATION`, `REGISTRY_COLLISION`, `DEPENDENCY_NOT_DECLARED`, `VERSION_IN_IMPORT`, `MACRO_UNKNOWN`, `MACRO_ARGS_INVALID`, `MACRO_EXPANSION_CYCLE`, `IMPORT_UNUSED`, `UNUSED_IMPORT`, `IMPORT_MISSING`, `ATTACH_UNDEFINED`, `ATTACH_KIND_MISMATCH`, `CONTEXT_IMPORT_UNUSED`, `CONTEXT_ATTACH_UNDEFINED`, `CONTEXT_ATTACH_KIND_MISMATCH`, `CONSTANT_DEF_REQUIRED`, `CONSTANT_UNDEFINED`.
+`UNKNOWN_SYMBOL`, `DEF_IN_PRODUCT`, `DEF_PLACEMENT_REQUIRED`, `PLACEMENT_VIOLATION`, `REGISTRY_COLLISION`, `DEPENDENCY_NOT_DECLARED`, `VERSION_IN_IMPORT`, `MACRO_UNKNOWN`, `MACRO_ARGS_INVALID`, `MACRO_EXPANSION_CYCLE`, `MACRO_EXPANSION_INVALID`, `IMPORT_UNUSED`, `UNUSED_IMPORT`, `IMPORT_MISSING`, `ATTACH_UNDEFINED`, `ATTACH_KIND_MISMATCH`, `CONTEXT_IMPORT_UNUSED`, `CONTEXT_ATTACH_UNDEFINED`, `CONTEXT_ATTACH_KIND_MISMATCH`, `CONSTANT_DEF_REQUIRED`, `CONSTANT_UNDEFINED`.
 
 ### Tag body validation
 
@@ -492,7 +511,27 @@ All tags use the same JSON object shape — determined by the registry def. No p
 
 ### Package resolution
 
-`PACKAGE_NOT_FOUND`, `PACKAGE_LOCK_MISMATCH`, `LOCK_ENTRY_MISSING`.
+`PACKAGE_NOT_FOUND`, `PACKAGE_LOCK_MISMATCH`, `LOCK_ENTRY_MISSING`, `LOCK_DIGEST_MISMATCH`, `LOCK_STALE`, `LOCK_MISSING`.
+
+### Package import resolution (1.3)
+
+`PACKAGE_IMPORT_UNRESOLVED`, `PACKAGE_SYMBOL_UNRESOLVED`, `PACKAGE_CIRCULAR_DEPENDENCY`, `CONSUMER_REDUNDANT_IMPORT`.
+
+### Import aliasing (1.3)
+
+`IMPORT_ALIAS_SIGIL_MISMATCH`, `IMPORT_ALIAS_COLLISION`, `IMPORT_COLLISION_RESOLVABLE`.
+
+### Version / parse
+
+`UNSUPPORTED_VERSION`, `PARSE_ERROR`.
+
+### Context keyword
+
+`CONTEXT_FILE_NOT_FOUND`, `CONTEXT_PATH_INVALID`, `CONTEXT_DIR_EMPTY`, `CONTEXT_TOO_MANY_FILES`, `CONTEXT_DIGEST_ERROR`.
+
+### Workspace attach (additional)
+
+`IMPORT_DUPLICATE`, `EXPORT_KIND_AMBIGUITY`.
 
 ### Topology packages (1.3)
 

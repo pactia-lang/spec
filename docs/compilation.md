@@ -31,17 +31,20 @@ Canonical phase list — other docs link here rather than renumbering:
 1.  Validate version declaration (pactia 1.0)
 2.  Lex: strip comments (never in IR)
 3.  Parse source → AST
-4.  Resolve packages via pactia.toml / pactia.lock when present; build effectiveRegistry from
-    every imported dependency's index.pactia export defs (IR slots derived at compile)
-5.  Bind: attach registry entries to tag/macro nodes (UNKNOWN_SYMBOL)
-6.  Expand #macro until fixed point — splice def # bodies in-place (package + local);
+4.  Resolve packages via pactia.toml / pactia.lock when present
+5.  Build effectiveRegistry from every imported dependency's index.pactia export defs
+    (IR slots derived at compile)
+6.  Bind: attach registry entries to tag/macro nodes (UNKNOWN_SYMBOL)
+7.  Expand #macro until fixed point — splice def # bodies in-place (package + local);
     check in against enclosing block at each invocation
-7.  Validate every tag/macro use: placement + field spec (uniform for all tag names)
-8.  Lower @tags → JSON IR with provenance (source-order `body[]`); lower `context` keyword → `context[]` on slice (see [Context lowering](#context-lowering))
-9.  Emit IR files: workspace.json (full bundle), manifest.json, slice files
+8.  Validate every tag/macro use: placement + field spec (uniform for all tag names)
+9.  CrossCheck (reserved — cross-module validation, future)
+10. Lower @tags → JSON IR with provenance (source-order `body[]`); lower `context` keyword → `context[]` on slice (see [Context lowering](#context-lowering))
+11. Infer (reserved — deterministic inference, future BSC / pactiac pass)
+12. Emit IR files: workspace.json (full bundle), manifest.json, slice files
 — outside pactiac —
-10. (optional) BSC render / expand from IR
-11. (optional) pactia build: context index — verify paths, expand directories, digests (see [Context index](#context-index-pactia-build))
+13. (optional) BSC render / expand from IR
+14. (optional) pactia build: context index — verify paths, expand directories, digests (see [Context index](#context-index-pactia-build))
 ```
 
 See [language-spec.md — Workspace layout](language-spec.md#workspace-layout) for multi-file merge order.

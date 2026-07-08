@@ -130,6 +130,8 @@ Same language, same compiler, your chosen density. See [language-spec.md — Thr
 | Wire route          | `> GET /workouts for history`                        | `@api { method, path }` — OpenAPI / route gates |
 | Payment states      | `>` lines inside `@states { }` or plain module prose | `@transition { }` — enforceable state graph     |
 
+Tags in the right column are **illustrative** — they live in packages (typically `@pactia/kernel`), not the language itself. The package author defines the tag name, sigil, fields, and semantics. See [registry.md](registry.md).
+
 Start with the left column. Move right only when a gate or package reuse justifies the syntax.
 
 ---
