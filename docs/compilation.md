@@ -4,7 +4,7 @@ Status: **Specification** — Pactia 1.2 compiler pipeline.
 
 Part of: [language-spec.md](language-spec.md) | [overview.md](overview.md#philosophy)
 
-Pactia compiles to **AI-neutral JSON IR** — not vendor-specific prompts. Default output layout uses an `input/` directory tree; `pactiac compile -o <dir>` writes the same structure under `<dir>`. **BSC** renders that IR for Cursor, Claude Code, Copilot, or custom agents, and may optionally use an LLM to expand agent briefs — grounded in JSON IR, provenance `GENERATED`, never overriding formal IR facts.
+Pactia compiles to **AI-neutral YAML IR** (or JSON with `--json`) — not vendor-specific prompts. Default output is `.yaml` files under an `input/` directory tree; `pactiac compile -o <dir>` writes the same structure under `<dir>`. **BSC** renders that IR for Cursor, Claude Code, Copilot, or custom agents, and may optionally use an LLM to expand agent briefs — grounded in IR, provenance `GENERATED`, never overriding formal IR facts.
 
 ---
 
@@ -13,8 +13,9 @@ Pactia compiles to **AI-neutral JSON IR** — not vendor-specific prompts. Defau
 ```
 ┌──────────────┐     ┌──────────────────────────────┐     ┌──────────────────────────────┐
 │  *.pactia    │────▶│  input/  (or -o path)        │────▶│  bsc render + expand (LLM)   │
-│  pactiac     │     │  *.module.json *.model.json  │     │  (optional agent briefs)     │
-│              │     │  *.service.json              │     │                              │
+│  pactiac     │     │  *.module.yaml *.model.yaml  │     │  (optional agent briefs)     │
+│              │     │  *.service.yaml (*.json with │     │                              │
+│              │     │  --json)                     │     │                              │
 └──────────────┘     └──────────────────────────────┘     └──────────────────────────────┘
 ```
 
@@ -41,7 +42,7 @@ Canonical phase list — other docs link here rather than renumbering:
 9.  CrossCheck (reserved — cross-module validation, future)
 10. Lower @tags → JSON IR with provenance (source-order `body[]`); lower `context` keyword → `context[]` on slice (see [Context lowering](#context-lowering))
 11. Infer (reserved — deterministic inference, future BSC / pactiac pass)
-12. Emit IR files: workspace.json (full bundle), manifest.json, slice files
+12. Emit IR files: workspace.yaml (full bundle), manifest.yaml, slice files (YAML default; `.json` with `--json`)
 — outside pactiac —
 13. (optional) BSC render / expand from IR
 14. (optional) pactia build: context index — verify paths, expand directories, digests (see [Context index](#context-index-pactia-build))
